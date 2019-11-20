@@ -6,7 +6,7 @@ institute: "Stat. and OR Department, TAU"
 date: "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
-    css: "slides.css"
+    css: "../slides.css"
     seal: false
     nature:
       highlightStyle: github
