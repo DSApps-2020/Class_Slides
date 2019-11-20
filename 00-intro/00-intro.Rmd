@@ -1,0 +1,51 @@
+---
+title: "Introduction"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: "slides.css"
+    seal: false
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+# Introduction
+
+## Applications of Data Science - Class 0
+
+### Giora Simchoni
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+layout: true
+  
+<div class="my-footer">
+<span>
+<a href="https://github.com/DSApps-2020" target="_blank">Applications of Data Science
+</a>
+</span>
+</div>
+
+---
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: center, middle
+
+# Hello world!
+
+---

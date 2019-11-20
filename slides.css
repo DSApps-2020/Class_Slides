@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css?family=Lato');
+
+body { 
+  font-family: 'Lato', sans-serif;
+  color: #333333;
+}
+
+.title-slide {
+  background-color: #05263b;
+}
+
+.title-slide h1, h2, h3 {
+  text-align: center;
+  color: #f5bd30;
+}
+
+.title-slide .remark-slide-number {
+  display: none;
+}
+
+.title-slide.remark-slide-content:after {
+    content: "";
+    position: absolute;
+    bottom: 5%;
+    right: 43%;
+    height: 14%;
+    width: 14%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url("DSApps_logo.jpg");
+}
+
+.logo-slide {
+  background-image: url("DSApps_logo.jpg");
+  background-position: center;
+  background-size: contain;
+  background-color: #05263b;
+}
+
+div.my-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #05263b;
+    position: absolute;
+    bottom: 0px;
+    left: 80px;
+    height: 35px;
+    width: 100%;
+}
+div.my-footer span {
+    font-size: 12pt;
+    position: absolute;
+    color: #333333;
+    left: 20px;
+    bottom: 10px;
+}
+div.my-footer a {
+    font-size: 12pt;
+    color: #333333;
+}
+
+.remark-slide-number {
+  color: #333333;
+  opacity: 1;
+  font-size: 12pt;
+}
