@@ -2,33 +2,29 @@
 
 body { 
   font-family: 'Lato', sans-serif;
-  color: #333333;
+  color: #000000;
+}
+
+li{
+  margin: 10px 0;
+  font-size: 24px;
+}
+
+img {
+  box-shadow: 5px 5px 1px #ccc;
+}
+
+.title-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{
+  text-align: center;
+  color: #f5bd30;
 }
 
 .title-slide {
   background-color: #05263b;
 }
 
-.title-slide h1, h2, h3 {
-  text-align: center;
-  color: #f5bd30;
-}
-
 .title-slide .remark-slide-number {
   display: none;
-}
-
-.title-slide.remark-slide-content:after {
-    content: "";
-    position: absolute;
-    bottom: 5%;
-    right: 43%;
-    height: 14%;
-    width: 14%;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    background-image: url("DSApps_logo.jpg");
 }
 
 .logo-slide {
@@ -36,6 +32,23 @@ body {
   background-position: center;
   background-size: contain;
   background-color: #05263b;
+}
+
+.logo-slide.remark-slide-content:after {
+    background-image: none;
+}
+
+.title-slide.remark-slide-content:after {
+    content: "";
+    position: absolute;
+    bottom: 3%;
+    right: 40%;
+    height: 20%;
+    width: 20%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url("DSApps_logo.jpg");
 }
 
 div.my-footer {
@@ -63,4 +76,30 @@ div.my-footer a {
   color: #333333;
   opacity: 1;
   font-size: 12pt;
+}
+
+/* Logo */
+.remark-slide-content:after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    right: 810px;
+    height: 70px;
+    width: 81px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url("DSApps_logo_white.jpg");
+}
+
+/* Two-Column Layout */
+.pull-left {
+  float: left;
+  width: 47%;
+}
+.pull-right {
+  float: right;
+  width: 47%;
+}
+.pull-right ~ * {
+  clear: both;
 }
