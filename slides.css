@@ -82,10 +82,10 @@ div.my-footer a {
 .remark-slide-content:after {
     content: "";
     position: absolute;
-    bottom: 5px;
-    right: 810px;
-    height: 70px;
-    width: 81px;
+    bottom: 1%;
+    right: 87.5%;
+    height: 10.5%;
+    width: 10.5%;
     background-repeat: no-repeat;
     background-size: contain;
     background-image: url("DSApps_logo_white.jpg");
