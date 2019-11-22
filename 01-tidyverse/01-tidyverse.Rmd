@@ -1,0 +1,61 @@
+---
+title: "Wrangling Data in the Tidyverse"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Wrangling Data in the Tidyverse
+
+## Applications of Data Science - Class 1
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+# So, what's wrong with Excel?
+
+(MS Excel is one amazing software. But it has no:)
+
+- Structure (or rather, structure is up to the user)
+- Types to variables
+- Automization (you could learn VBA Excel, but the horror)
+- Reproducibility
+- Open Source
+- Extensibility
+- Speed and Scale
+- Modeling (there *is* a t-test, but the horror)
+
+[MS Excel might be the most dangerous software on the planet](https://www.forbes.com/sites/timworstall/2013/02/13/microsofts-excel-might-be-the-most-dangerous-software-on-the-planet/#667084f5633d) (Tim Worstall, Forbes)
+
+---
+
+# So, what's wrong with base R?

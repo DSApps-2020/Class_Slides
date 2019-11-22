@@ -34,16 +34,8 @@ class: title-slide
 ### `r Sys.Date()`
 
 ---
-layout: true
-  
-<div class="my-footer">
-<span>
-<a href="https://github.com/DSApps-2020" target="_blank">Applications of Data Science
-</a>
-</span>
-</div>
-
----
+```{r child = "../setup.Rmd"}
+```
 
 ```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -54,7 +46,7 @@ library(tidyverse)
 - You have a basic background in Statistics, Data Science, Machine Learning
 (Stat. Learning is a prerequisite)
 - You’re OK with R, Python or both
-- (Some CS introduction is a prerequisite)
+(Some CS introduction is a prerequisite)
 - You want to know more
 - You need some experience in real data projects
 - You’re thinking about actually getting a job
