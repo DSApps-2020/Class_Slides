@@ -4,7 +4,7 @@
     <title>Wrangling Data in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-11-21" />
+    <meta name="date" content="2019-11-24" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg"> 
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-11-21
+### 2019-11-24
 
 ---
 
@@ -51,7 +51,7 @@ layout: true
 
 # So, what's wrong with Excel?
 
-(MS Excel is one amazing software. But it has no:)
+(MS Excel is one amazing software. But it lacks:)
 
 - Structure (or rather, structure is up to the user)
 - Types to variables
@@ -67,6 +67,180 @@ layout: true
 ---
 
 # So, what's wrong with base R?
+
+(Base R is one amazing software. But it lacks:)
+
+- Consistency:
+  - Function names
+  - Function arguments names
+  - Function arguments order
+  - Function return types (sometimes the same function!)
+- Meaningful errors and warnings
+- Good choices of default values to arguments
+- Speed
+- Good and easy visualizations
+- One other thing
+
+---
+
+## Consistency - Example 1: Strings
+.font80percent[
+
+```r
+# split a string by pattern: strsplit(string, pattern)
+strsplit("Who dis?", " ")
+```
+
+```
+## [[1]]
+## [1] "Who"  "dis?"
+```
+
+
+```r
+# find if a pattern exists in a string: grepl(pattern, string)
+grepl("di", "Who dis?")
+```
+
+```
+## [1] TRUE
+```
+
+
+```r
+# substitute a pattern in a string: sub(pattern, replace, string)
+sub("di", "thi", "Who dis?")
+```
+
+```
+## [1] "Who this?"
+```
+
+
+```r
+# length of a string: nchar(string); length of object: length(obj)
+nchar("Who dis?"); length("Who dis?")
+```
+
+```
+## [1] 8
+```
+
+```
+## [1] 1
+```
+]
+
+---
+
+## Consistency - Example 2: Models
+
+
+```r
+n &lt;- 10000
+x1 &lt;- runif(n)
+x2 &lt;- runif(n)
+t &lt;- 1 + 2 * x1 + 3 * x2
+y &lt;- rbinom(n, 1, 1 / (1 + exp(-t)))
+```
+
+
+```r
+glm(y ~ x1 + x2, family = "binomial")
+```
+
+
+```r
+glmnet(as.matrix(cbind(x1, x2)), as.factor(y), family = "binomial")
+```
+
+
+```r
+randomForest(as.factor(y) ~ x1 + x2)
+```
+
+
+
+```r
+gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
+```
+
+😱
+
+---
+
+# Meaningful Errors and Warnings - Example
+
+
+```r
+df &lt;- data.frame(Education = 1:5, Ethnicity = c(2, 4, 5, 2, 1))
+table(df$Eduction, df$Ethnicity)
+```
+
+```
+## Error in table(df$Eduction, df$Ethnicity): all arguments must have the same length
+```
+
+---
+
+# Default Values - Example
+
+![](images/bad_args_table.png)
+
+
+```r
+df &lt;- read.csv("read_table_bad_args_test.csv")
+df$col3
+```
+
+```
+## [1] a b c d
+## Levels: a b c d
+```
+
+
+```r
+df &lt;- read.csv("read_table_bad_args_test.csv", stringsAsFactors = FALSE)
+df$col3
+```
+
+```
+## [1] "a" "b" "c" "d"
+```
+
+---
+
+# Speed - Example
+
+
+```r
+df &lt;- read.csv("mediocre_file.csv")
+dim(df)
+```
+
+```
+## [1] 9180   14
+```
+
+
+```r
+library(microbenchmark)
+
+microbenchmark(
+  read_csv_base = read.csv("mediocre_file.csv"),
+  read_csv_tidy = read_csv("mediocre_file.csv", col_types = cols()),
+  times = 10)
+```
+
+```
+## Unit: milliseconds
+##           expr      min       lq      mean   median       uq      max
+##  read_csv_base 261.9175 265.9687 266.62042 266.3133 268.6287 269.8806
+##  read_csv_tidy  18.2760  18.5961  18.82583  18.7843  19.1771  19.3020
+##  neval
+##     10
+##     10
+```
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

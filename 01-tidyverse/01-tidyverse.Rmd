@@ -43,7 +43,7 @@ library(tidyverse)
 
 # So, what's wrong with Excel?
 
-(MS Excel is one amazing software. But it has no:)
+(MS Excel is one amazing software. But it lacks:)
 
 - Structure (or rather, structure is up to the user)
 - Types to variables
@@ -59,3 +59,115 @@ library(tidyverse)
 ---
 
 # So, what's wrong with base R?
+
+(Base R is one amazing software. But it lacks:)
+
+- Consistency:
+  - Function names
+  - Function arguments names
+  - Function arguments order
+  - Function return types (sometimes the same function!)
+- Meaningful errors and warnings
+- Good choices of default values to arguments
+- Speed
+- Good and easy visualizations
+- One other thing
+
+---
+
+## Consistency - Example 1: Strings
+.font80percent[
+```{r Strings1}
+# split a string by pattern: strsplit(string, pattern)
+strsplit("Who dis?", " ")
+```
+
+```{r Strings2}
+# find if a pattern exists in a string: grepl(pattern, string)
+grepl("di", "Who dis?")
+```
+
+```{r String3}
+# substitute a pattern in a string: sub(pattern, replace, string)
+sub("di", "thi", "Who dis?")
+```
+
+```{r String4}
+# length of a string: nchar(string); length of object: length(obj)
+nchar("Who dis?"); length("Who dis?")
+```
+]
+
+---
+
+## Consistency - Example 2: Models
+
+```{r GLM-Data}
+n <- 10000
+x1 <- runif(n)
+x2 <- runif(n)
+t <- 1 + 2 * x1 + 3 * x2
+y <- rbinom(n, 1, 1 / (1 + exp(-t)))
+```
+
+```{r GLM, eval=FALSE}
+glm(y ~ x1 + x2, family = "binomial")
+```
+
+```{r GLMNET, eval=FALSE}
+glmnet(as.matrix(cbind(x1, x2)), as.factor(y), family = "binomial")
+```
+
+```{r RF, eval=FALSE}
+randomForest(as.factor(y) ~ x1 + x2)
+```
+
+
+```{r GBM, eval=FALSE}
+gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
+```
+
+`r emo::ji("scream")`
+
+---
+
+# Meaningful Errors and Warnings - Example
+
+```{r Error, error=TRUE}
+df <- data.frame(Education = 1:5, Ethnicity = c(2, 4, 5, 2, 1))
+table(df$Eduction, df$Ethnicity)
+```
+
+---
+
+# Default Values - Example
+
+![](images/bad_args_table.png)
+
+```{r Args1}
+df <- read.csv("read_table_bad_args_test.csv")
+df$col3
+```
+
+```{r Args2}
+df <- read.csv("read_table_bad_args_test.csv", stringsAsFactors = FALSE)
+df$col3
+```
+
+---
+
+# Speed - Example
+
+```{r, Microbenchmark1}
+df <- read.csv("mediocre_file.csv")
+dim(df)
+```
+
+```{r, Microbenchmark2}
+library(microbenchmark)
+
+microbenchmark(
+  read_csv_base = read.csv("mediocre_file.csv"),
+  read_csv_tidy = read_csv("mediocre_file.csv", col_types = cols()),
+  times = 10)
+```

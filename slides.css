@@ -103,3 +103,7 @@ div.my-footer a {
 .pull-right ~ * {
   clear: both;
 }
+
+.font80percent {
+  font-size: 80%;
+}
