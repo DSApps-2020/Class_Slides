@@ -4,11 +4,7 @@
     <title>Wrangling Data in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-11-24" />
-    <head>
-      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
-      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg"> 
-    </head>
+    <meta name="date" content="2019-11-25" />
     <link rel="stylesheet" href="..\slides.css" type="text/css" />
   </head>
   <body>
@@ -30,19 +26,24 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-11-24
+### 2019-11-25
 
 ---
 
 
 
 layout: true
-  
+
+&lt;head&gt;
+  &lt;link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"&gt; 
+  &lt;link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg"&gt;
+&lt;/head&gt;
+
 &lt;div class="my-footer"&gt;
-&lt;span&gt;
-&lt;a href="https://github.com/DSApps-2020" target="_blank"&gt;Applications of Data Science
-&lt;/a&gt;
-&lt;/span&gt;
+  &lt;span&gt;
+    &lt;a href="https://github.com/DSApps-2020" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
 &lt;/div&gt;
 
 ---
@@ -83,7 +84,8 @@ layout: true
 
 ---
 
-## Consistency - Example 1: Strings
+### Consistency - Example 1: Strings
+
 .font80percent[
 
 ```r
@@ -133,7 +135,7 @@ nchar("Who dis?"); length("Who dis?")
 
 ---
 
-## Consistency - Example 2: Models
+### Consistency - Example 2: Models
 
 
 ```r
@@ -169,7 +171,7 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ---
 
-# Meaningful Errors and Warnings - Example
+### Meaningful Errors - Example
 
 
 ```r
@@ -183,13 +185,13 @@ table(df$Eduction, df$Ethnicity)
 
 ---
 
-# Default Values - Example
+### Default Values - Example
 
 ![](images/bad_args_table.png)
 
 
 ```r
-df &lt;- read.csv("read_table_bad_args_test.csv")
+df &lt;- read.csv("data/bad_args_test.csv")
 df$col3
 ```
 
@@ -200,7 +202,7 @@ df$col3
 
 
 ```r
-df &lt;- read.csv("read_table_bad_args_test.csv", stringsAsFactors = FALSE)
+df &lt;- read.csv("data/bad_args_test.csv", stringsAsFactors = FALSE)
 df$col3
 ```
 
@@ -210,11 +212,12 @@ df$col3
 
 ---
 
-# Speed - Example
+### Speed - Example
 
 
 ```r
-df &lt;- read.csv("mediocre_file.csv")
+file_path &lt;- "data/mediocre_file.csv"
+df &lt;- read.csv(file_path)
 dim(df)
 ```
 
@@ -227,23 +230,101 @@ dim(df)
 library(microbenchmark)
 
 microbenchmark(
-  read_csv_base = read.csv("mediocre_file.csv"),
-  read_csv_tidy = read_csv("mediocre_file.csv", col_types = cols()),
+  read_base = read.csv(file_path),
+  read_tidy = read_csv(file_path, col_types = cols()),
+  read_dt = data.table::fread(file_path),
   times = 10)
 ```
 
 ```
 ## Unit: milliseconds
-##           expr      min       lq      mean   median       uq      max
-##  read_csv_base 261.9175 265.9687 266.62042 266.3133 268.6287 269.8806
-##  read_csv_tidy  18.2760  18.5961  18.82583  18.7843  19.1771  19.3020
-##  neval
-##     10
-##     10
+##       expr      min       lq      mean   median       uq      max neval
+##  read_base 263.5143 264.9628 267.53728 266.7593 271.0074 272.9688    10
+##  read_tidy  21.2825  21.4158  21.74514  21.7749  22.0747  22.4137    10
+##    read_dt  10.9574  11.0356  11.34987  11.1433  11.5086  12.5438    10
+```
+
+---
+
+### Good Vizualizations - Example
+
+
+```r
+df &lt;- read_csv(file_path, col_types = cols())
+```
+
+
+```r
+plot(df$var10, df$var12,
+     col = c("red", "green", "blue", "purple", "pink")[
+       as.factor(df$var9)])
+```
+
+&lt;img src="01-tidyverse_files/figure-html/Viz-Base-1.png" width="40%" /&gt;
+
+---
+
+
+```r
+ggplot(df, aes(var10, var12, color = var9)) + geom_point()
+```
+
+&lt;img src="01-tidyverse_files/figure-html/Viz-Tidy-1.png" width="40%" /&gt;
+
+---
+
+### One other thing
+
+Manager: "Give me the average Horse Power of automatic Toyota cars with 4 cylinders and weight in tons smaller than no. of gears"
+
+You:
+
+
+```r
+mean(mtcars$hp[startsWith(rownames(mtcars), "Toyota") &amp; mtcars$am == 0 &amp; mtcars$cyl == 4 &amp; mtcars$wt &lt; mtcars$gear], na.rm = TRUE)
+```
+
+```
+## [1] 97
+```
+
+Or the slightly better you:
+
+
+```r
+car_names &lt;- rownames(mtcars)
+mean(
+  with(mtcars,
+       hp[startsWith(car_names, "Toyota") &amp; am == 0 &amp; wt &lt; gear]),
+  na.rm = TRUE)
+```
+
+```
+## [1] 97
+```
+
+---
+
+Or the best you:
+
+
+```r
+is_toyota &lt;- startsWith(rownames(mtcars), "Toyota")
+is_automatic &lt;- mtcars$am == 0
+is_4_cylinders &lt;- mtcars$cyl == 4
+is_weight_smaller_gear &lt;- mtcars$wt &lt; mtcars$gear
+
+mtcars_filtered &lt;- mtcars[is_toyota &amp; is_automatic &amp; is_4_cylinders &amp; is_weight_smaller_gear, ]
+
+mean(mtcars_filtered$hp, na.rm = TRUE)
+```
+
+```
+## [1] 97
 ```
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
-<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../libs/remark-latest.min.js"></script>
 <script>var slideshow = remark.create({
 "highlightStyle": "github",
 "highlightLines": true,

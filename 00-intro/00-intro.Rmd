@@ -8,6 +8,7 @@ output:
   xaringan::moon_reader:
     css: "../slides.css"
     seal: false
+    chakra: "../libs/remark-latest.min.js"
     includes:
       in_header: "../header.html"
     nature:

@@ -8,8 +8,9 @@ output:
   xaringan::moon_reader:
     css: "../slides.css"
     seal: false
-    includes:
-      in_header: "../header.html"
+    chakra: "../libs/remark-latest.min.js"
+    # includes:
+    #   in_header: "../header.html"
     nature:
       highlightStyle: github
       highlightLines: true
@@ -75,7 +76,8 @@ library(tidyverse)
 
 ---
 
-## Consistency - Example 1: Strings
+### Consistency - Example 1: Strings
+
 .font80percent[
 ```{r Strings1}
 # split a string by pattern: strsplit(string, pattern)
@@ -100,7 +102,7 @@ nchar("Who dis?"); length("Who dis?")
 
 ---
 
-## Consistency - Example 2: Models
+### Consistency - Example 2: Models
 
 ```{r GLM-Data}
 n <- 10000
@@ -131,7 +133,7 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ---
 
-# Meaningful Errors and Warnings - Example
+### Meaningful Errors - Example
 
 ```{r Error, error=TRUE}
 df <- data.frame(Education = 1:5, Ethnicity = c(2, 4, 5, 2, 1))
@@ -140,26 +142,27 @@ table(df$Eduction, df$Ethnicity)
 
 ---
 
-# Default Values - Example
+### Default Values - Example
 
 ![](images/bad_args_table.png)
 
 ```{r Args1}
-df <- read.csv("read_table_bad_args_test.csv")
+df <- read.csv("data/bad_args_test.csv")
 df$col3
 ```
 
 ```{r Args2}
-df <- read.csv("read_table_bad_args_test.csv", stringsAsFactors = FALSE)
+df <- read.csv("data/bad_args_test.csv", stringsAsFactors = FALSE)
 df$col3
 ```
 
 ---
 
-# Speed - Example
+### Speed - Example
 
 ```{r, Microbenchmark1}
-df <- read.csv("mediocre_file.csv")
+file_path <- "data/mediocre_file.csv"
+df <- read.csv(file_path)
 dim(df)
 ```
 
@@ -167,7 +170,66 @@ dim(df)
 library(microbenchmark)
 
 microbenchmark(
-  read_csv_base = read.csv("mediocre_file.csv"),
-  read_csv_tidy = read_csv("mediocre_file.csv", col_types = cols()),
+  read_base = read.csv(file_path),
+  read_tidy = read_csv(file_path, col_types = cols()),
+  read_dt = data.table::fread(file_path),
   times = 10)
 ```
+
+---
+
+### Good Vizualizations - Example
+
+```{r Viz-Read}
+df <- read_csv(file_path, col_types = cols())
+```
+
+```{r Viz-Base, out.width = "40%"}
+plot(df$var10, df$var12,
+     col = c("red", "green", "blue", "purple", "pink")[
+       as.factor(df$var9)])
+```
+
+---
+
+```{r Viz-Tidy, out.width = "40%"}
+ggplot(df, aes(var10, var12, color = var9)) + geom_point()
+```
+
+---
+
+### One other thing
+
+Manager: "Give me the average Horse Power of automatic Toyota cars with 4 cylinders and weight in tons smaller than no. of gears"
+
+You:
+
+```{r Not-Functional}
+mean(mtcars$hp[startsWith(rownames(mtcars), "Toyota") & mtcars$am == 0 & mtcars$cyl == 4 & mtcars$wt < mtcars$gear], na.rm = TRUE)
+```
+
+Or the slightly better you:
+
+```{r Not-Functional-Better}
+car_names <- rownames(mtcars)
+mean(
+  with(mtcars,
+       hp[startsWith(car_names, "Toyota") & am == 0 & wt < gear]),
+  na.rm = TRUE)
+```
+
+---
+
+Or the best you:
+
+```{r Not-Functional-Best}
+is_toyota <- startsWith(rownames(mtcars), "Toyota")
+is_automatic <- mtcars$am == 0
+is_4_cylinders <- mtcars$cyl == 4
+is_weight_smaller_gear <- mtcars$wt < mtcars$gear
+
+mtcars_filtered <- mtcars[is_toyota & is_automatic & is_4_cylinders & is_weight_smaller_gear, ]
+
+mean(mtcars_filtered$hp, na.rm = TRUE)
+```
+

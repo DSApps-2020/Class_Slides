@@ -1,4 +1,18 @@
-@import url('https://fonts.googleapis.com/css?family=Lato');
+/*@import url('https://fonts.googleapis.com/css?family=Lato');*/
+
+/* lato-regular - latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  src: url('libs/fonts/lato-v16-latin-regular.eot'); /* IE9 Compat Modes */
+  src: local('Lato Regular'), local('Lato-Regular'),
+       url('libs/fonts/lato-v16-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('libs/fonts/lato-v16-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('libs/fonts/lato-v16-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('libs/fonts/lato-v16-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('libs/fonts/lato-v16-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+}
 
 body { 
   font-family: 'Lato', sans-serif;
@@ -11,7 +25,7 @@ li{
 }
 
 img {
-  box-shadow: 5px 5px 1px #ccc;
+  box-shadow: -1px 1px 12px 6px #CCC;
 }
 
 .title-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{

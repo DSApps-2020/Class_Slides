@@ -6,9 +6,7 @@
 #   warn = 1
 #   )
 # figure height, width, dpi
-knitr::opts_chunk$set(fig.height = 2.5, fig.width = 5, dpi = 300)
-# fontawesome
-# htmltools::tagList(rmarkdown::html_dependency_font_awesome())
+# knitr::opts_chunk$set(fig.height = 2.5, fig.width = 5, dpi = 300)
 # magick
 dev.off <- function(){
   invisible(grDevices::dev.off())
@@ -22,12 +20,17 @@ knitr::knit_hooks$set(source = function(x, options) {
 ```
 
 layout: true
-  
+
+<head>
+  <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+  <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+</head>
+
 <div class="my-footer">
-<span>
-<a href="https://github.com/DSApps-2020" target="_blank">Applications of Data Science
-</a>
-</span>
+  <span>
+    <a href="https://github.com/DSApps-2020" target="_blank">Applications of Data Science
+    </a>
+  </span>
 </div>
 
 ---
