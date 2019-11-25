@@ -38,11 +38,6 @@ class: title-slide
 
 layout: true
 
-&lt;head&gt;
-  &lt;link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"&gt; 
-  &lt;link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg"&gt;
-&lt;/head&gt;
-
 &lt;div class="my-footer"&gt;
   &lt;span&gt;
     &lt;a href="https://github.com/DSApps-2020" target="_blank"&gt;Applications of Data Science
@@ -243,9 +238,9 @@ microbenchmark(
 ```
 ## Unit: milliseconds
 ##       expr      min       lq      mean    median       uq      max neval
-##  read_base 271.5465 274.4455 291.75558 276.52475 288.4623 414.7158    10
-##  read_tidy  22.1744  22.3346  22.56223  22.50825  22.8182  22.9883    10
-##    read_dt  11.3834  11.7380  12.05817  11.96985  12.5316  12.8134    10
+##  read_base 269.2851 271.7893 288.08414 277.70480 300.8533 343.0765    10
+##  read_tidy  21.8271  22.5431  23.88833  23.33610  23.5320  29.9463    10
+##    read_dt  11.4736  11.6138  12.46862  11.89345  12.3547  15.1705    10
 ```
 
 ---
@@ -264,7 +259,7 @@ plot(df$var10, df$var12,
        as.factor(df$var9)])
 ```
 
-&lt;img src="01-tidyverse_files/figure-html/Viz-Base-1.png" width="40%" /&gt;
+&lt;img src="images/Viz-Base-1.png" width="40%" /&gt;
 
 ---
 
@@ -273,7 +268,7 @@ plot(df$var10, df$var12,
 ggplot(df, aes(var10, var12, color = var9)) + geom_point()
 ```
 
-&lt;img src="01-tidyverse_files/figure-html/Viz-Tidy-1.png" width="40%" /&gt;
+&lt;img src="images/Viz-Tidy-1.png" width="40%" /&gt;
 
 ---
 

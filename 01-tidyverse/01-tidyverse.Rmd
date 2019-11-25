@@ -4,6 +4,7 @@ subtitle: "Applications of Data Science"
 author: "Giora Simchoni"
 institute: "Stat. and OR Department, TAU"
 date: "`r Sys.Date()`"
+output_dir: "images"
 output:
   xaringan::moon_reader:
     css: "../slides.css"
