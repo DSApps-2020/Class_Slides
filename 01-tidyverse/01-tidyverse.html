@@ -178,9 +178,9 @@ df &lt;- data.frame(Education = 1:5, Ethnicity = c(2, 4, 5, 2, 1))
 table(df$Eduction, df$Ethnicity)
 ```
 
-```
-## Error in table(df$Eduction, df$Ethnicity): all arguments must have the same length
-```
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Error in table(df$Eduction, df$Ethnicity): all arguments must have the same
+length
+&lt;/code&gt;&lt;/pre&gt;
 
 ---
 
@@ -237,10 +237,10 @@ microbenchmark(
 
 ```
 ## Unit: milliseconds
-##       expr      min       lq      mean    median       uq      max neval
-##  read_base 269.2851 271.7893 288.08414 277.70480 300.8533 343.0765    10
-##  read_tidy  21.8271  22.5431  23.88833  23.33610  23.5320  29.9463    10
-##    read_dt  11.4736  11.6138  12.46862  11.89345  12.3547  15.1705    10
+##       expr      min       lq      mean   median       uq     max neval
+##  read_base 274.0100 278.7160 287.87145 283.7276 296.3622 318.065    10
+##  read_tidy  21.8216  23.3759  25.02884  24.1912  26.1395  30.436    10
+##    read_dt  10.7459  11.8436  13.86521  12.3961  12.9712  24.787    10
 ```
 
 ---
