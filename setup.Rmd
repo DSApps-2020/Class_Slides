@@ -35,7 +35,7 @@ layout: true
 
 <div class="my-footer">
   <span>
-    <a href="https://github.com/DSApps-2020" target="_blank">Applications of Data Science
+    <a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank">Applications of Data Science
     </a>
   </span>
 </div>
