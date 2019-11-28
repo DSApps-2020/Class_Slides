@@ -4,7 +4,7 @@
     <title>Wrangling Data in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-11-25" />
+    <meta name="date" content="2019-11-28" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-11-25
+### 2019-11-28
 
 ---
 
@@ -40,7 +40,7 @@ layout: true
 
 &lt;div class="my-footer"&gt;
   &lt;span&gt;
-    &lt;a href="https://github.com/DSApps-2020" target="_blank"&gt;Applications of Data Science
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
     &lt;/a&gt;
   &lt;/span&gt;
 &lt;/div&gt;
@@ -170,7 +170,7 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ---
 
-### Meaningful Errors - Example
+### (Un) Meaningful Errors - Example
 
 
 ```r
@@ -237,15 +237,19 @@ microbenchmark(
 
 ```
 ## Unit: milliseconds
-##       expr      min       lq      mean   median       uq     max neval
-##  read_base 274.0100 278.7160 287.87145 283.7276 296.3622 318.065    10
-##  read_tidy  21.8216  23.3759  25.02884  24.1912  26.1395  30.436    10
-##    read_dt  10.7459  11.8436  13.86521  12.3961  12.9712  24.787    10
+##       expr        min         lq      mean     median       uq      max
+##  read_base 273.975101 275.858601 279.35987 280.004901 283.0261 284.2829
+##  read_tidy  20.123200  20.461401  20.74242  20.712201  21.0230  21.5353
+##    read_dt   9.165102   9.333401  10.03789   9.666201  10.5696  12.0074
+##  neval
+##     10
+##     10
+##     10
 ```
 
 ---
 
-### Good Vizualizations - Example
+### (Not) Good Vizualizations - Example
 
 
 ```r

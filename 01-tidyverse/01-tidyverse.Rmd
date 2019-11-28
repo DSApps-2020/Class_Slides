@@ -134,7 +134,7 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ---
 
-### Meaningful Errors - Example
+### (Un) Meaningful Errors - Example
 
 ```{r Error, error=TRUE, linewidth=80}
 df <- data.frame(Education = 1:5, Ethnicity = c(2, 4, 5, 2, 1))
@@ -179,7 +179,7 @@ microbenchmark(
 
 ---
 
-### Good Vizualizations - Example
+### (Not) Good Vizualizations - Example
 
 ```{r Viz-Read}
 df <- read_csv(file_path, col_types = cols())
