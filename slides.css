@@ -28,16 +28,25 @@ img {
   box-shadow: -1px 1px 12px 6px #CCC;
 }
 
-.title-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{
+blockquote {
+  border-left: solid 5px lightgray;
+  padding-left: 1em;
+}
+
+.title-slide h1, .section-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{
   text-align: center;
   color: #f5bd30;
 }
 
-.title-slide {
+.title-slide, .section-slide {
   background-color: #05263b;
 }
 
 .title-slide .remark-slide-number {
+  display: none;
+}
+
+.section-slide .remark-slide-number {
   display: none;
 }
 
@@ -52,7 +61,7 @@ img {
     background-image: none;
 }
 
-.title-slide.remark-slide-content:after {
+.title-slide.remark-slide-content:after, .section-slide.remark-slide-content:after {
     content: "";
     position: absolute;
     bottom: 3%;
@@ -63,6 +72,14 @@ img {
     background-repeat: no-repeat;
     background-size: contain;
     background-image: url("DSApps_logo.jpg");
+}
+
+.section-slide h1, .section-slide h2 {
+  margin-top: 30%;
+}
+
+.section-slide .my-footer {
+  display: none;
 }
 
 div.my-footer {

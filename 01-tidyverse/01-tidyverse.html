@@ -49,6 +49,12 @@ layout: true
 
 
 
+class: section-slide
+
+# I don't need to know about wrangling data, I get by.
+
+---
+
 # So, what's wrong with Excel?
 
 (MS Excel is one amazing software. But it lacks:)
@@ -134,7 +140,7 @@ nchar("Who dis?"); length("Who dis?")
 
 ---
 
-### Consistency - Example 2: Models
+### (In) Consistency - Example 2: Models
 
 
 ```r
@@ -184,7 +190,7 @@ length
 
 ---
 
-### Default Values - Example
+### (Bad) Default Values - Example
 
 ![](images/bad_args_table.png)
 
@@ -211,7 +217,7 @@ df$col3
 
 ---
 
-### Speed - Example
+### (No) Speed - Example
 
 
 ```r
@@ -237,73 +243,131 @@ microbenchmark(
 
 ```
 ## Unit: milliseconds
-##       expr        min         lq      mean     median       uq      max
-##  read_base 273.975101 275.858601 279.35987 280.004901 283.0261 284.2829
-##  read_tidy  20.123200  20.461401  20.74242  20.712201  21.0230  21.5353
-##    read_dt   9.165102   9.333401  10.03789   9.666201  10.5696  12.0074
-##  neval
-##     10
-##     10
-##     10
+##       expr      min       lq      mean   median       uq      max neval
+##  read_base 276.5518 283.8096 291.73996 294.0824 297.5442 302.4386    10
+##  read_tidy  22.5499  23.1066  25.15011  25.3612  27.1411  27.4730    10
+##    read_dt  11.5879  11.8634  13.03260  13.1422  13.5709  15.2618    10
 ```
+
+---
+class: section-slide
+
+# Detour: The OKCupid Dataset
+
+---
+
+## The OKCupid Dataset
+
+- ~60K active OKCupid users scraped on June 2012
+- 35K Male, 25K Female (less awareness for non-binary back then)
+- Answers to questions like:
+  - Body Type
+  - Diet
+  - Substance Abuse
+  - Education
+  - Do you like pets?
+  - Open questions, e.g. "On a typical Friday night I am..."
+  - And the more boring demographic details like age, height, location, sign, religion etc.
+- See [here](https://github.com/rudeboybert/JSE_OkCupid/blob/master/okcupid_codebook.txt) for the full codebook
 
 ---
 
 ### (Not) Good Vizualizations - Example
-
+.font80percent[
 
 ```r
-df &lt;- read_csv(file_path, col_types = cols())
+okcupid &lt;- read_csv("data/okcupid.csv.zip", col_types = cols())
+okcupid$income[okcupid$income == -1] &lt;- NA
+okcupid$height_cm &lt;- okcupid$height * 2.54
 ```
 
 
 ```r
-plot(df$var10, df$var12,
-     col = c("red", "green", "blue", "purple", "pink")[
-       as.factor(df$var9)])
+plot(okcupid$height_cm, log10(okcupid$income + 1), col = c("red", "green")[as.factor(okcupid$sex)])
 ```
 
 &lt;img src="images/Viz-Base-1.png" width="40%" /&gt;
+]
 
 ---
 
 
 ```r
-ggplot(df, aes(var10, var12, color = var9)) + geom_point()
+ggplot(okcupid, aes(height_cm, log10(income + 1), color = sex)) + geom_point()
 ```
 
-&lt;img src="images/Viz-Tidy-1.png" width="40%" /&gt;
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Warning: Removed 48442 rows containing missing values (geom_point).
+&lt;/code&gt;&lt;/pre&gt;&lt;img src="images/Viz-Tidy-1.png" width="50%" /&gt;
 
 ---
 
-### One other thing
+## One other thing
 
-Manager: "Give me the average Horse Power of automatic Toyota cars with 4 cylinders and weight in tons smaller than no. of gears"
+Manager: "Give me the average income of women respondents above age 30 grouped by sexual orientation!"
 
 You:
 
 
 ```r
-mean(mtcars$hp[startsWith(rownames(mtcars), "Toyota") &amp; mtcars$am == 0 &amp; mtcars$cyl == 4 &amp; mtcars$wt &lt; mtcars$gear], na.rm = TRUE)
+mean_bi &lt;- mean(okcupid$income[okcupid$sex == "f" &amp; okcupid$age &gt; 30 &amp; okcupid$orientation == "bisexual"], na.rm = TRUE)
+mean_gay &lt;- mean(okcupid$income[okcupid$sex == "f" &amp; okcupid$age &gt; 30 &amp; okcupid$orientation == "gay"], na.rm = TRUE)
+mean_straight &lt;- mean(okcupid$income[okcupid$sex == "f" &amp; okcupid$age &gt; 30 &amp; okcupid$orientation == "straight"], na.rm = TRUE)
+
+data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
 ```
 
 ```
-## [1] 97
+##   orientation income_mean
+## 1    bisexual   133421.05
+## 2         gay    86489.36
+## 3    straight    85219.74
 ```
+
+---
 
 Or the slightly better you:
 
 
 ```r
-car_names &lt;- rownames(mtcars)
-mean(
-  with(mtcars,
-       hp[startsWith(car_names, "Toyota") &amp; am == 0 &amp; wt &lt; gear]),
-  na.rm = TRUE)
+mean_income_function &lt;- function(orientation) {
+  mean(okcupid$income[okcupid$sex == "f" &amp; okcupid$age &gt; 30 &amp; okcupid$orientation == orientation], na.rm = TRUE)
+}
+
+mean_bi &lt;- mean_income_function("bisexual")
+mean_gay &lt;- mean_income_function("gay")
+mean_straight &lt;- mean_income_function("straight")
+
+data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
 ```
 
 ```
-## [1] 97
+##   orientation income_mean
+## 1    bisexual   133421.05
+## 2         gay    86489.36
+## 3    straight    85219.74
+```
+
+---
+
+Or the even better you:
+
+
+```r
+orientations &lt;- c("bisexual", "gay", "straight")
+income_means &lt;- numeric(3)
+
+for (i in seq_along(orientation)) {
+  income_means[i] &lt;- mean_income_function(orientations[i])
+}
+
+data.frame(orientation = orientations, income_mean = income_means)
+```
+
+```
+##   orientation income_mean
+## 1    bisexual   133421.05
+## 2         gay    86489.36
+## 3    straight    85219.74
 ```
 
 ---
@@ -312,19 +376,46 @@ Or the best you:
 
 
 ```r
-is_toyota &lt;- startsWith(rownames(mtcars), "Toyota")
-is_automatic &lt;- mtcars$am == 0
-is_4_cylinders &lt;- mtcars$cyl == 4
-is_weight_smaller_gear &lt;- mtcars$wt &lt; mtcars$gear
-
-mtcars_filtered &lt;- mtcars[is_toyota &amp; is_automatic &amp; is_4_cylinders &amp; is_weight_smaller_gear, ]
-
-mean(mtcars_filtered$hp, na.rm = TRUE)
+okcupid_females_over30 &lt;- with(okcupid, okcupid[sex == "f" &amp; age &gt; 30, ])
+aggregate(okcupid_females_over30$income,
+          by = list(orientation = okcupid_females_over30$orientation),
+          FUN = mean, na.rm = TRUE)
 ```
 
 ```
-## [1] 97
+##   orientation         x
+## 1    bisexual 133421.05
+## 2         gay  86489.36
+## 3    straight  85219.74
 ```
+
+&lt;br&gt;
+
+Manager: "What? Why would bisexual women have a higher income than straight or gay women? Could you add the median, trimmed mean, standard error and n?"
+
+You: 😱
+
+---
+class: section-slide
+
+# The Tidyverse
+
+---
+
+## What *is* The Tidyverse?
+
+&gt; The [tidyverse](https://www.tidyverse.org/) is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures.
+
+- `tibble`: the `data.frame` re-imagined
+- `readr`: importing/exporting (mostly rectangular) data for humans
+- `dplyr` + `tidyr`: a grammar of data manipulation
+- `purrr`: functional programming in R
+- `stringr`: string manipulation
+- `ggplot2`: a grammar of graphics
+- And many more:
+  - `lubridate`: manipulating dates
+  - `modelr`, `recipes`, `rsample`, `infer`: tidy modeling/statistics
+  - `rvest`: web scraping
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>

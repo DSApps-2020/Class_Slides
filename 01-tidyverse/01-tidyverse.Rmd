@@ -43,6 +43,12 @@ class: title-slide
 library(tidyverse)
 ```
 
+class: section-slide
+
+# I don't need to know about wrangling data, I get by.
+
+---
+
 # So, what's wrong with Excel?
 
 (MS Excel is one amazing software. But it lacks:)
@@ -103,7 +109,7 @@ nchar("Who dis?"); length("Who dis?")
 
 ---
 
-### Consistency - Example 2: Models
+### (In) Consistency - Example 2: Models
 
 ```{r GLM-Data}
 n <- 10000
@@ -143,7 +149,7 @@ table(df$Eduction, df$Ethnicity)
 
 ---
 
-### Default Values - Example
+### (Bad) Default Values - Example
 
 ![](images/bad_args_table.png)
 
@@ -159,7 +165,7 @@ df$col3
 
 ---
 
-### Speed - Example
+### (No) Speed - Example
 
 ```{r, Microbenchmark1}
 file_path <- "data/mediocre_file.csv"
@@ -178,45 +184,92 @@ microbenchmark(
 ```
 
 ---
+class: section-slide
+
+# Detour: The OKCupid Dataset
+
+---
+
+## The OKCupid Dataset
+
+- ~60K active OKCupid users scraped on June 2012
+- 35K Male, 25K Female (less awareness for non-binary back then)
+- Answers to questions like:
+  - Body Type
+  - Diet
+  - Substance Abuse
+  - Education
+  - Do you like pets?
+  - Open questions, e.g. "On a typical Friday night I am..."
+  - And the more boring demographic details like age, height, location, sign, religion etc.
+- See [here](https://github.com/rudeboybert/JSE_OkCupid/blob/master/okcupid_codebook.txt) for the full codebook
+
+---
 
 ### (Not) Good Vizualizations - Example
-
+.font80percent[
 ```{r Viz-Read}
-df <- read_csv(file_path, col_types = cols())
+okcupid <- read_csv("data/okcupid.csv.zip", col_types = cols())
+okcupid$income[okcupid$income == -1] <- NA
+okcupid$height_cm <- okcupid$height * 2.54
 ```
 
 ```{r Viz-Base, out.width = "40%"}
-plot(df$var10, df$var12,
-     col = c("red", "green", "blue", "purple", "pink")[
-       as.factor(df$var9)])
+plot(okcupid$height_cm, log10(okcupid$income + 1), col = c("red", "green")[as.factor(okcupid$sex)])
+```
+]
+
+---
+
+```{r Viz-Tidy, out.width = "50%"}
+ggplot(okcupid, aes(height_cm, log10(income + 1), color = sex)) + geom_point()
 ```
 
 ---
 
-```{r Viz-Tidy, out.width = "40%"}
-ggplot(df, aes(var10, var12, color = var9)) + geom_point()
-```
+## One other thing
 
----
-
-### One other thing
-
-Manager: "Give me the average Horse Power of automatic Toyota cars with 4 cylinders and weight in tons smaller than no. of gears"
+Manager: "Give me the average income of women respondents above age 30 grouped by sexual orientation!"
 
 You:
 
 ```{r Not-Functional}
-mean(mtcars$hp[startsWith(rownames(mtcars), "Toyota") & mtcars$am == 0 & mtcars$cyl == 4 & mtcars$wt < mtcars$gear], na.rm = TRUE)
+mean_bi <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "bisexual"], na.rm = TRUE)
+mean_gay <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "gay"], na.rm = TRUE)
+mean_straight <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "straight"], na.rm = TRUE)
+
+data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
 ```
+
+---
 
 Or the slightly better you:
 
 ```{r Not-Functional-Better}
-car_names <- rownames(mtcars)
-mean(
-  with(mtcars,
-       hp[startsWith(car_names, "Toyota") & am == 0 & wt < gear]),
-  na.rm = TRUE)
+mean_income_function <- function(orientation) {
+  mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == orientation], na.rm = TRUE)
+}
+
+mean_bi <- mean_income_function("bisexual")
+mean_gay <- mean_income_function("gay")
+mean_straight <- mean_income_function("straight")
+
+data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
+```
+
+---
+
+Or the even better you:
+
+```{r Not-Functional-Even-Better}
+orientations <- c("bisexual", "gay", "straight")
+income_means <- numeric(3)
+
+for (i in seq_along(orientation)) {
+  income_means[i] <- mean_income_function(orientations[i])
+}
+
+data.frame(orientation = orientations, income_mean = income_means)
 ```
 
 ---
@@ -224,13 +277,36 @@ mean(
 Or the best you:
 
 ```{r Not-Functional-Best}
-is_toyota <- startsWith(rownames(mtcars), "Toyota")
-is_automatic <- mtcars$am == 0
-is_4_cylinders <- mtcars$cyl == 4
-is_weight_smaller_gear <- mtcars$wt < mtcars$gear
-
-mtcars_filtered <- mtcars[is_toyota & is_automatic & is_4_cylinders & is_weight_smaller_gear, ]
-
-mean(mtcars_filtered$hp, na.rm = TRUE)
+okcupid_females_over30 <- with(okcupid, okcupid[sex == "f" & age > 30, ])
+aggregate(okcupid_females_over30$income,
+          by = list(orientation = okcupid_females_over30$orientation),
+          FUN = mean, na.rm = TRUE)
 ```
 
+<br>
+
+Manager: "What? Why would bisexual women have a higher income than straight or gay women? Could you add the median, trimmed mean, standard error and n?"
+
+You: `r emo::ji("scream")`
+
+---
+class: section-slide
+
+# The Tidyverse
+
+---
+
+## What *is* The Tidyverse?
+
+> The [tidyverse](https://www.tidyverse.org/) is an opinionated collection of R packages designed for data science. All packages share an underlying design philosophy, grammar, and data structures.
+
+- `tibble`: the `data.frame` re-imagined
+- `readr`: importing/exporting (mostly rectangular) data for humans
+- `dplyr` + `tidyr`: a grammar of data manipulation
+- `purrr`: functional programming in R
+- `stringr`: string manipulation
+- `ggplot2`: a grammar of graphics
+- And many more:
+  - `lubridate`: manipulating dates
+  - `modelr`, `recipes`, `rsample`, `infer`: tidy modeling/statistics
+  - `rvest`: web scraping
