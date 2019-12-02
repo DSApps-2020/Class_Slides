@@ -60,6 +60,10 @@ blockquote {
   background-color: #05263b;
 }
 
+.logo-slide .remark-slide-number {
+  display: none;
+}
+
 .logo-slide.remark-slide-content:after {
     background-image: none;
 }

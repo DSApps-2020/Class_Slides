@@ -1,5 +1,5 @@
 ---
-title: "Wrangling Data in the Tidyverse"
+title: "The Tidyverse"
 subtitle: "Applications of Data Science"
 author: "Giora Simchoni"
 institute: "Stat. and OR Department, TAU"
@@ -24,9 +24,9 @@ class: logo-slide
 
 class: title-slide
 
-## Wrangling Data in the Tidyverse
+## The Tidyverse
 
-## Applications of Data Science - Class 1
+### Applications of Data Science - Class 1
 
 ### Giora Simchoni
 
