@@ -21,7 +21,6 @@ body {
 
 li{
   margin: 10px 0;
-  font-size: 24px;
 }
 
 img {
@@ -31,6 +30,10 @@ img {
 blockquote {
   border-left: solid 5px lightgray;
   padding-left: 1em;
+}
+
+.remark-slide-content {
+  font-size: 24px;
 }
 
 .title-slide h1, .section-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{

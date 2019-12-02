@@ -83,7 +83,7 @@ class: section-slide
 
 ---
 
-### Consistency - Example 1: Strings
+### (In) Consistency - Example 1: Strings
 
 .font80percent[
 ```{r Strings1}
@@ -205,8 +205,14 @@ class: section-slide
 - See [here](https://github.com/rudeboybert/JSE_OkCupid/blob/master/okcupid_codebook.txt) for the full codebook
 
 ---
+class: section-slide
+
+# End of Detour
+
+---
 
 ### (Not) Good Vizualizations - Example
+
 .font80percent[
 ```{r Viz-Read}
 okcupid <- read_csv("data/okcupid.csv.zip", col_types = cols())
@@ -215,14 +221,16 @@ okcupid$height_cm <- okcupid$height * 2.54
 ```
 
 ```{r Viz-Base, out.width = "40%"}
-plot(okcupid$height_cm, log10(okcupid$income + 1), col = c("red", "green")[as.factor(okcupid$sex)])
+plot(okcupid$height_cm, log10(okcupid$income + 1),
+     col = c("red", "green")[as.factor(okcupid$sex)])
 ```
 ]
 
 ---
 
 ```{r Viz-Tidy, out.width = "50%"}
-ggplot(okcupid, aes(height_cm, log10(income + 1), color = sex)) + geom_point()
+ggplot(okcupid, aes(height_cm, log10(income + 1), color = sex)) +
+  geom_point()
 ```
 
 ---
@@ -238,7 +246,8 @@ mean_bi <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$o
 mean_gay <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "gay"], na.rm = TRUE)
 mean_straight <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "straight"], na.rm = TRUE)
 
-data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
+data.frame(orientation = c("bisexual", "gay", "straight"),
+           income_mean = c(mean_bi, mean_gay, mean_straight))
 ```
 
 ---
@@ -254,7 +263,8 @@ mean_bi <- mean_income_function("bisexual")
 mean_gay <- mean_income_function("gay")
 mean_straight <- mean_income_function("straight")
 
-data.frame(orientation = c("bisexual", "gay", "straight"), income_mean = c(mean_bi, mean_gay, mean_straight))
+data.frame(orientation = c("bisexual", "gay", "straight"),
+           income_mean = c(mean_bi, mean_gay, mean_straight))
 ```
 
 ---
@@ -265,7 +275,7 @@ Or the even better you:
 orientations <- c("bisexual", "gay", "straight")
 income_means <- numeric(3)
 
-for (i in seq_along(orientation)) {
+for (i in seq_along(orientations)) {
   income_means[i] <- mean_income_function(orientations[i])
 }
 
@@ -306,7 +316,385 @@ class: section-slide
 - `purrr`: functional programming in R
 - `stringr`: string manipulation
 - `ggplot2`: a grammar of graphics
-- And many more:
-  - `lubridate`: manipulating dates
-  - `modelr`, `recipes`, `rsample`, `infer`: tidy modeling/statistics
-  - `rvest`: web scraping
+
+---
+
+The above can all be installed and loaded under the `tidyverse` package:
+
+```{r Load-Tidyverse}
+library(tidyverse)
+```
+
+Many more:
+- `lubridate`: manipulating dates
+- `modelr`, `recipes`, `rsample`, `infer`: tidy modeling/statistics
+- `rvest`: web scraping
+- `tidytext`: tidy text analysis (life saver)
+- `tidygraph` + `ggraph`: manipulating and plotting networks
+- `glue`: print like a boss
+- countless `gg` extensions (`ggmosaic`, `ggbeeswarm`, `gganimate`, `ggridges` etc.)
+
+---
+
+# What's so great about the Tidyverse?
+
+- Tidy Data
+- Consistentcy (in function names, args, return types, documentation)
+- The Pipe
+- `ggplot2`
+- The Community
+
+---
+
+## Tidy Data
+
+- Each variable must have its own column.
+- Each observation must have its own row.
+- Each value must have its own cell.
+
+<br>
+
+<img src="images/tidy_data.png" style="width: 90%" />
+
+---
+
+### Which one of these datasets is tidy? (I)
+
+```{r Read-Tidy-Tables, echo=FALSE}
+tidy_tables <- read_rds("data/tidy_tables.rds")
+table1 <- tidy_tables$table1
+table2 <- tidy_tables$table2
+table3 <- tidy_tables$table3
+table4 <- tidy_tables$table4
+```
+
+```{r Table1}
+table1
+```
+
+---
+
+### Which one of these datasets is tidy? (II)
+
+```{r Table2}
+table2
+```
+
+---
+
+### Which one of these datasets is tidy? (III)
+
+```{r Table3}
+table3
+```
+
+---
+
+### Which one of these datasets is tidy? (IV)
+
+```{r Table4}
+table4
+```
+
+---
+
+### Why Tidy?
+
+> Happy families are all alike; every unhappy family is unhappy in its own way. (Leo Tolstoy)
+
+<br>
+
+> It allows R’s vectorised nature to shine. (Hadley Wickham)
+
+---
+
+### A Tidy dataset will be much easier to transform
+
+```{r Table1-Add-Column}
+table1$pct_straight = table1$n_straight / table1$n_total
+table1
+```
+
+---
+
+### A Tidy dataset will be much easier to plot
+
+```{r Table1-Plot, warning=FALSE, out.width = "50%"}
+ggplot(table1, aes(x = yob, y = pct_straight, color = religion)) +
+  geom_smooth(method = "loess", se = FALSE)
+```
+
+---
+class: section-slide
+
+# Detour: The `tibble`
+
+---
+
+### The `tibble`: the `data.frame` re-imagined
+
+- Prints nicer:
+
+```{r Tibble-Print}
+tib1 <- tibble(day = lubridate::today() + runif(1e3) * 30,
+               type = sample(letters, 1e3, replace = TRUE),
+               quantity = sample(seq(0, 100, 10), 1e3, replace = TRUE))
+tib1
+```
+
+---
+
+```{r DF-Print}
+df1 <- data.frame(day = lubridate::today() + runif(1e3) * 30,
+                  type = sample(letters, 1e3, replace = TRUE),
+                  quantity = sample(seq(0, 100, 10), 1e3, replace = TRUE))
+df1
+```
+
+---
+
+- Warns you when you make mistakes (!):
+
+```{r Tibble-Subset}
+tib1$quanitty
+```
+
+```{r DF-Subset}
+df1$quanitty
+```
+
+---
+
+- Can also create via `tribble()`:
+
+```{r Tibble-Tribble}
+tribble(
+  ~a, ~b, ~c,
+  "a", 1, 2.2,
+  "b", 2, 4.3,
+  "c", 3, 3.4
+)
+```
+
+---
+
+- Can build on top variables during creation:
+
+```{r Tibble-Existing-Vars}
+tibble(x = 1:5, y = x^2)
+```
+
+```{r DF-Existing-Vars, error=TRUE, linewidth=80}
+data.frame(x = 1:5, y = x^2)
+```
+
+---
+
+- Will never turn your strings into factors, will never change your column names:
+
+```{r Read_CSV}
+tib1 <- readr::read_csv("data/bad_args_test.csv", col_types = cols())
+colnames(tib1)
+tib1$col3
+```
+
+```{r Read.CSV}
+df1 <- read.csv("data/bad_args_test.csv")
+colnames(df1)
+df1$col3
+```
+
+---
+
+Though one ought to remember a `tibble` is still a `data.frame`:
+
+```{r Tibble-Class}
+class(tib1)
+```
+
+```{r DF-Class}
+class(df1)
+```
+
+---
+class: section-slide
+
+# End of Detour
+
+---
+
+## Consistency - Example: `stringr`
+
+> a cohesive set of functions designed to make working with strings as easy as possible.
+
+```{r Stringr-Basic}
+strings_vec <- c("I'm feeling fine", "I'm perfectly OK",
+                 "Nothing is wrong!")
+str_length(strings_vec)
+
+str_c(strings_vec, collapse = ", ")
+
+str_sub(strings_vec, 1, 3)
+```
+
+---
+
+```{r Stringr-Basic2}
+str_detect(strings_vec, "I'm")
+
+str_replace(strings_vec, "I'm", "You're")
+
+str_split("Do you know regex?", " ")
+
+str_extract(strings_vec, "[aeiou]")
+
+str_count(strings_vec, "[A-Z]")
+```
+
+---
+
+## The Pipe
+
+Remember you?
+
+```{r Not-Functional-Again}
+mean_bi <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "bisexual"], na.rm = TRUE)
+mean_gay <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "gay"], na.rm = TRUE)
+mean_straight <- mean(okcupid$income[okcupid$sex == "f" & okcupid$age > 30 & okcupid$orientation == "straight"], na.rm = TRUE)
+
+data.frame(orientation = c("bisexual", "gay", "straight"),
+           income_mean = c(mean_bi, mean_gay, mean_straight))
+```
+
+---
+
+Doesn't this make much more sense?
+
+```{r Functional}
+okcupid %>%
+  filter(sex == "f", age > 30) %>%
+  group_by(orientation) %>%
+  summarize(income_mean = mean(income, na.rm = TRUE))
+```
+
+- Read as:
+  - Take the OKCupid data,
+  - Filter only women above the age of 30,
+  - And for each group of sexual orientation,
+  - Give me the average income
+
+---
+
+- Make verbs, not nouns
+- Can always access the dataset last stage with "`.`":
+```{r Pipe1, eval=FALSE}
+okcupid %>%
+  filter(str_count(essay0) > median(str_count(.$essay0), na.rm = T))
+```
+- Operates not just on data frames or tibbles:
+```{r Pipe2}
+strings_vec %>% str_to_title()
+```
+- No intermediate objects
+- Don't strive to make the longest possible pipe (though it is a fun experiment)
+- Tools exist for debugging
+
+---
+
+And, if you want to throw in the n, the median:
+
+```{r Functional2}
+okcupid %>%
+  filter(sex == "f", age > 30) %>%
+  group_by(orientation) %>%
+  summarize(income_mean = mean(income, na.rm = TRUE),
+            income_median = median(income, na.rm = TRUE),
+            n = n())
+```
+
+---
+
+And if you want this for the age as well:
+
+```{r Functional3}
+okcupid %>%
+  filter(sex == "f", age > 30) %>%
+  group_by(orientation) %>%
+  summarize_at(vars(income, age),
+               list(mean = mean, median = median), na.rm = TRUE)
+```
+
+Now *this* is a language for Data Science.
+
+But we're getting ahead of ourselves.
+
+---
+
+## `ggplot2`
+
+<img src="images/ave_mariah_ggridges.png" style="width: 80%" />
+
+.font80percent[
+[Ave Mariah / Giora Simchoni](http://giorasimchoni.com/2017/12/10/2017-12-10-ave-mariah/)
+]
+---
+
+## `ggplot2`
+
+<img src="images/soviet_space_dogs.png" style="width: 50%" />
+
+.font80percent[
+[Soviet Space Dogs / David Smale](https://davidsmale.netlify.com/portfolio/soviet-space-dogs-part-2/)
+]
+---
+
+## `ggplot2`
+
+<img src="images/tennisBig4.gif" style="width: 70%" />
+
+.font80percent[
+[Federer, Nadal, Djokovic and Murray, Love. / Giora Simchoni](http://giorasimchoni.com/2017/05/01/2017-05-01-federer-nadal-djokovic-and-murray-love/)
+]
+---
+
+## `ggplot2`
+
+<img src="images/washington_heat.png" style="width: 40%" />
+
+.font80percent[
+[NYT-style urban heat island maps / Katie Jolly](https://www.katiejolly.io/blog/2019-08-28/nyt-urban-heat)
+]
+---
+
+## `ggplot2`
+
+<img src="images/marriage_by_state.png" style="width: 90%" />
+
+.font80percent[
+[A map of marriage rates, state by state / Unkown](https://www.r-graph-gallery.com/328-hexbin-map-of-the-usa.html)
+]
+---
+
+## `ggplot2`
+
+<img src="images/calendar_graph.png" style="width: 70%" />
+
+.font80percent[
+[Calendar-based graphics for visualizing people’s daily schedules / Earo Wang](https://pdf.earo.me/calendar-vis.pdf)
+]
+---
+
+## The Community
+
+.pull-left[
+- 100% Open Source on Github
+- Cheatsheet for everything
+- Documentation for humans, Packages websites, Webinars
+- [Rstudio Community forum](https://community.rstudio.com/)
+- [RLadies](https://rladies.org/) worldwide branches .font80percent[(who will pick up the `r emo::ji("boxing")` and create RLadies TLV?)]
+- Very strong on Twitter #rstats
+]
+
+.pull-right[
+<a href="https://rstudio.com/resources/cheatsheets/"><img src="images/stringr_cheatsheet.png" style="width: 100%" /></a>
+]
