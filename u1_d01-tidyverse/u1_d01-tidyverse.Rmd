@@ -341,6 +341,7 @@ Many more:
 - Tidy Data
 - Consistentcy (in function names, args, return types, documentation)
 - The Pipe
+- Speed (C++ under the hood)
 - `ggplot2`
 - The Community
 
