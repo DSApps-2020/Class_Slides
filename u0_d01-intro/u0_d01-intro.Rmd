@@ -23,9 +23,9 @@ class: logo-slide
 
 class: title-slide
 
-# Introduction
+## Introduction
 
-## Applications of Data Science - Class 0
+### Applications of Data Science - Class 0
 
 ### Giora Simchoni
 

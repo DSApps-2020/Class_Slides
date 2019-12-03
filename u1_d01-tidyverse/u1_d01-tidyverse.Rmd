@@ -689,10 +689,10 @@ But we're getting ahead of ourselves.
 .pull-left[
 - 100% Open Source on Github
 - Cheatsheet for everything
-- Documentation for humans, Packages websites, Webinars
+- Documentation for humans, Packages websites, Webinars, Free Books (start with [R4DS](https://r4ds.had.co.nz/))
 - [Rstudio Community forum](https://community.rstudio.com/)
 - [RLadies](https://rladies.org/) worldwide branches .font80percent[(who will pick up the `r emo::ji("boxing")` and create RLadies TLV?)]
-- Very strong on Twitter #rstats
+- Very strong on Twitter [#rstats](https://twitter.com/search?q=%23rstats)
 ]
 
 .pull-right[
