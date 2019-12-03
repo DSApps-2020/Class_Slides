@@ -1,0 +1,275 @@
+---
+title: "Wrangling Data in the Tidyverse"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Wrangling Data in the Tidyverse
+
+### Applications of Data Science - Class 2
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# `dplyr`: Basic Data Verbs
+
+---
+
+# Basic Data Verbs
+
+- `filter()` rows based on one or more conditions
+- `mutate()` one or more columns, usually based on existing columns
+- `select()` the column(s) you want
+- `arrange()` rows by one or more columns order
+- `summarize()` or `summarise()` that single quantity off a column
+- `pull()` a column as a vector, don't want it as a column no more
+
+And the much beloved `group_by()`: do *whatever* by groups of one or more variables.
+
+---
+## Read in the data
+
+```{r Basic1, message=FALSE}
+library(tidyverse)
+
+okcupid <- read_csv("../u1_d01-tidyverse/data/okcupid.csv.zip")
+```
+
+.font80percent[Reminder:]
+
+```{r Basics2}
+dim(okcupid)
+colnames(okcupid)
+```
+
+## `mutate()`
+
+Add a column `height_cm`, the `height` in centimeters:
+
+```{r Basic3}
+okcupid <- okcupid %>%
+  mutate(height_cm = 2.54 * height)
+```
+
+> if you also load the `magrittr` package you could do: `okcupid %<>% mutate(height_cm = 2.54 * height)`
+
+---
+
+## `filter()` and `select()`
+
+Filter only women, select only age and height:
+
+```{r Basics4}
+okcupid %>%
+  filter(sex == "f") %>%
+  select(age, height)
+```
+
+---
+
+Same but income over 100K, and select all essay questions:
+
+```{r Basic5}
+okcupid %>%
+  filter(sex == "f", income > 100000) %>%
+  select(starts_with("essay"))
+```
+
+---
+
+Same but using a range of columns:
+
+```{r Basic5B}
+okcupid %>%
+  filter(sex == "f", income > 100000) %>%
+  select(essay0:essay9)
+```
+
+Many, many such gifts, see [`tidyselect`](https://tidyselect.r-lib.org/reference/select_helpers.html)
+
+---
+
+## `summarize()`
+
+Find the average height of women
+
+```{r Basic6}
+okcupid %>%
+  filter(sex == "f") %>%
+  summarize(avg_height = mean(height_cm, na.rm = NA))
+```
+
+Notice we got a `tibble`. We could either `pull` this single number:
+
+```{r Basics7}
+okcupid %>%
+  filter(sex == "f") %>%
+  summarize(avg_height = mean(height_cm, na.rm = NA)) %>%
+  pull()
+```
+
+---
+
+Or pull the vector of heights first, then calculate their mean:
+
+```{r Basics8}
+okcupid %>%
+  filter(sex == "f") %>%
+  pull(height_cm) %>%
+  mean(na.rm = TRUE)
+```
+
+Amazingly, this would also work:
+
+```{r Basic8-non-functional}
+mean(pull(filter(okcupid, sex == "f"), height_cm), na.rm = TRUE)
+```
+
+---
+
+## `group_by()`
+
+But why settle for women only?
+
+```{r Basics9}
+okcupid %>%
+  group_by(sex) %>%
+  summarize(avg_height = mean(height_cm, na.rm = NA))
+```
+
+And you might want to consider `rename()`ing sex!
+
+```{r Basics9B, eval=FALSE}
+okcupid %>%
+  group_by(sex) %>%
+  summarize(avg_height = mean(height_cm, na.rm = NA)) %>%
+  rename(gender = sex)
+```
+
+---
+
+Group by multiple variables, get more summaries, arrange by descending average height:
+
+```{r Basics10}
+okcupid %>%
+  group_by(sex, status) %>%
+  summarize(avg_height = mean(height_cm, na.rm = TRUE),
+            med_height = median(height_cm, na.rm = TRUE),
+            n = n()) %>%
+  arrange(-med_height)
+```
+
+---
+
+## Pro tip: `count()`
+
+When all you want is, well, `count`, no need to `group_by`:
+
+```{r Basics-Count}
+okcupid %>% count(body_type, sort = TRUE)
+```
+
+---
+
+## Pro tip: `add_count()`
+
+Add count without first creating an initial table, joining etc.:
+
+```{r Basics-Add-Count}
+okcupid %>%
+  mutate(id = row_number()) %>%
+  select(id, body_type, sex) %>%
+  add_count(body_type, name = "n_bt") %>%
+  filter(n_bt > 10000) %>%
+  head(5)
+```
+
+---
+
+class: section-slide
+
+# Beyond Basics
+
+---
+
+## A simple answer to the religion question?
+
+```{r Advanced1}
+okcupid %>% count(religion)
+```
+
+---
+
+## Recoding with `case_when()`
+
+```{r Case-When}
+okcupid <- okcupid %>% mutate(religion2 = case_when(
+  str_detect(religion, "agnosticism") | str_detect(religion, "atheism") ~ "atheist",
+  str_detect(religion, "buddhism") ~ "buddhist",
+  str_detect(religion, "christianity") | str_detect(religion, "catholicism") ~ "christian",
+  str_detect(religion, "judaism") ~ "jewish",
+  str_detect(religion, "hinduism") ~ "hindu",
+  str_detect(religion, "islam") ~ "muslim",
+  TRUE ~ "NA"))
+
+okcupid %>% count(religion2, sort = TRUE)
+```
+
+---
+
+### Getting extreme observations with `top_n()` and `top_frac()`
+
+```{r Top-N}
+okcupid %>%
+  select(sex, age) %>%
+  group_by(sex) %>%
+  top_n(5, age)
+```
+
+---
+
+Unfortunately `top_n` does not deal with ties, could use `slice` for that:
+
+```{r Top-N2}
+okcupid %>%
+  select(sex, age) %>%
+  group_by(sex) %>%
+  top_n(5, age) %>%
+  slice(1:5)
+```
+
+Or use `rank()`, enjoy your homework!
