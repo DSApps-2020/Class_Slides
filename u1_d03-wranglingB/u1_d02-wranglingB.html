@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Tidy Data Wrangling - Part B</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2019-12-06" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Tidy Data Wrangling - Part B
+
+### Applications of Data Science - Class 3
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2019-12-06
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# Detour: The Starwars Dataset(s)
+
+---
+
+## The Starwars Dataset(s)
+
+&lt;img src = "images/starwars_db_schema.png" style="width: 100%"&gt;
+
+
+```r
+sw_tables &lt;- read_rds("data/sw_tables.rds")
+characters &lt;- sw_tables$characters
+planets &lt;- sw_tables$planets
+films &lt;- sw_tables$films
+```
+
+.insight[
+💡 What are the advantages/disadvantages of storing data in such a way?
+]
+---
+
+
+```r
+glimpse(characters)
+```
+
+```
+## Observations: 173
+## Variables: 14
+## $ character_id &lt;int&gt; 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3...
+## $ name         &lt;chr&gt; "Luke Skywalker", "Luke Skywalker", "Luke Skywalk...
+## $ gender       &lt;chr&gt; "male", "male", "male", "male", "male", NA, NA, N...
+## $ homeworld_id &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 8, 8, 8, 8, 8...
+## $ height       &lt;dbl&gt; 172, 172, 172, 172, 172, 167, 167, 167, 167, 167,...
+## $ mass         &lt;dbl&gt; 77, 77, 77, 77, 77, 75, 75, 75, 75, 75, 75, 32, 3...
+## $ hair_color   &lt;chr&gt; "blond", "blond", "blond", "blond", "blond", NA, ...
+## $ skin_color   &lt;chr&gt; "fair", "fair", "fair", "fair", "fair", "gold", "...
+## $ eye_color    &lt;chr&gt; "blue", "blue", "blue", "blue", "blue", "yellow",...
+## $ birth_year   &lt;chr&gt; "19BBY", "19BBY", "19BBY", "19BBY", "19BBY", "112...
+## $ film_id      &lt;dbl&gt; 1, 2, 3, 6, 7, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6...
+## $ species      &lt;list&gt; ["http://swapi.co/api/species/1/", "http://swapi...
+## $ vehicles     &lt;list&gt; [&lt;"http://swapi.co/api/vehicles/14/", "http://sw...
+## $ starships    &lt;list&gt; [&lt;"http://swapi.co/api/starships/12/", "http://s...
+```
+
+---
+
+
+```r
+glimpse(planets)
+```
+
+```
+## Observations: 61
+## Variables: 10
+## $ planet_id       &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,...
+## $ name            &lt;chr&gt; "Tatooine", "Alderaan", "Yavin IV", "Hoth", "D...
+## $ rotation_period &lt;dbl&gt; 23, 24, 24, 23, 23, 12, 18, 26, 24, 27, 30, 27...
+## $ orbital_period  &lt;dbl&gt; 304, 364, 4818, 549, 341, 5110, 402, 312, 368,...
+## $ diameter        &lt;dbl&gt; 10465, 12500, 10200, 7200, 8900, 118000, 4900,...
+## $ climate         &lt;chr&gt; "arid", "temperate", "temperate, tropical", "f...
+## $ gravity         &lt;chr&gt; "1 standard", "1 standard", "1 standard", "1.1...
+## $ terrain         &lt;chr&gt; "desert", "grasslands, mountains", "jungle, ra...
+## $ surface_water   &lt;dbl&gt; 1.0, 40.0, 8.0, 100.0, 8.0, 0.0, 8.0, 12.0, NA...
+## $ population      &lt;dbl&gt; 2.0e+05, 2.0e+09, 1.0e+03, NA, NA, 6.0e+06, 3....
+```
+
+
+```r
+glimpse(films)
+```
+
+```
+## Observations: 7
+## Variables: 7
+## $ film_id       &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7
+## $ title         &lt;chr&gt; "A New Hope", "The Empire Strikes Back", "Return...
+## $ episode_id    &lt;int&gt; 4, 5, 6, 1, 2, 3, 7
+## $ opening_crawl &lt;chr&gt; "It is a period of civil war.\r\nRebel spaceship...
+## $ director      &lt;chr&gt; "George Lucas", "Irvin Kershner", "Richard Marqu...
+## $ producer      &lt;chr&gt; "Gary Kurtz, Rick McCallum", "Gary Kutz, Rick Mc...
+## $ release_date  &lt;chr&gt; "1977-05-25", "1980-05-17", "1983-05-25", "1999-...
+```
+
+---
+class: section-slide
+
+# End of Detour
+
+---
+class: section-slide
+
+# Joining Tables
+
+---
+
+#### Q: Which characters appear in SW films directed by George Lucas?
+
+
+```r
+unique(
+  characters$name[
+    characters$film_id %in%
+      films$film_id[films$director == "George Lucas"]
+    ]
+  )
+
+# or dplyr approach:
+characters %&gt;%
+    filter(film_id %in% (films %&gt;%
+                           filter(director=="George Lucas") %&gt;%
+                           pull(film_id))) %&gt;%
+    pull(name) %&gt;%
+    unique()
+```
+
+First problem with this approach: code gets messier and messier, prone to bugs and hard to debug.
+---
+
+#### Q: Which characters, whose homeworld is Alderaan, appear in SW films directed by George Lucas?
+
+
+```r
+unique(
+  characters$name[
+    characters$film_id %in%
+      films$film_id[films$director == "George Lucas"] &amp;
+    characters$homeworld_id ==
+      planets$planet_id[planets$name == "Alderaan"]
+  ]
+)
+
+# or dplyr approach:
+characters %&gt;%
+    filter(film_id %in% (films %&gt;%
+                           filter(director=="George Lucas") %&gt;%
+                           pull(film_id)),
+           homeworld_id == (planets %&gt;%
+                              filter(name == "Alderaan") %&gt;%
+                              pull(planet_id))) %&gt;%
+    pull(name) %&gt;%
+    unique()
+
+# [1] "Leia Organa"         "Bail Prestor Organa" "Raymus Antilles"
+```
+
+---
+
+#### Now imagine these two tables
+
+`lines`: each film, each scene, each minute, each character, the line
+
+
+```r
+lines &lt;- tibble::tribble(
+  ~film_id, ~scene_id, ~minute_id, ~character_id,                           ~line,
+         1,         1,          1,            23,                "blah blah blah",
+         1,         1,          2,            15,           "something something",
+         1,         1,          2,            23, "something something to you to",
+         1,         1,          3,            15,                              NA,
+         1,         1,          3,            23,                              NA,
+         1,         1,          4,             8,             "whatever whatever"
+  )
+```
+
+`locations`: for each film, each scene, each minute, its location
+
+
+```r
+locations &lt;- tibble::tribble(
+  ~film_id, ~scene_id, ~minute_id,            ~location,
+         1,         1,          1,          "spaceship",
+         1,         1,          2, "Alderaan, outdoors",
+         1,         1,          3,          "spaceship",
+         1,         1,          4,                "bar"
+  )
+```
+
+---
+
+#### Q: Which characters say "something" in a bar?
+
+- filter only `lines` which contain "something"
+- filter only "bar" `locations` and then...
+- if the two filtered tables match on film, scene and minute...
+- we take the unique characters
+- but how do we match? `for` loop*?
+
+➡️ Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match
+
+And third problem: speed .font80percent[(but only in a complex scenario!)]
+
+.font80percent[&amp;#42; There *is* a way without using a for loop, without joining, still not recommended.]
+
+---
+
+## `inner_join()`
+
+(Inner) Joining two tables:
+
+
+```r
+characters %&gt;%
+  inner_join(films) %&gt;%
+  select(character_id, name, film_id, title, director) %&gt;%
+  head(7)
+```
+
+```
+## Joining, by = "film_id"
+```
+
+```
+## # A tibble: 7 x 5
+##   character_id name           film_id title                 director       
+##          &lt;int&gt; &lt;chr&gt;            &lt;dbl&gt; &lt;chr&gt;                 &lt;chr&gt;          
+## 1            1 Luke Skywalker       1 A New Hope            George Lucas   
+## 2            1 Luke Skywalker       2 The Empire Strikes B~ Irvin Kershner 
+## 3            1 Luke Skywalker       3 Return of the Jedi    Richard Marqua~
+## 4            1 Luke Skywalker       6 Revenge of the Sith   George Lucas   
+## 5            1 Luke Skywalker       7 The Force Awakens     J. J. Abrams   
+## 6            2 C-3PO                1 A New Hope            George Lucas   
+## 7            2 C-3PO                2 The Empire Strikes B~ Irvin Kershner
+```
+
+---
+
+(Inner) Joining multiple tables:
+
+
+```r
+characters %&gt;%
+  inner_join(films) %&gt;%
+  inner_join(planets, by = c("homeworld_id" = "planet_id")) %&gt;%
+  select(character_id, name.x, film_id, title, director, name.y, climate) %&gt;% head(7)
+```
+
+```
+## Joining, by = "film_id"
+```
+
+```
+## # A tibble: 7 x 7
+##   character_id name.x     film_id title         director     name.y climate
+##          &lt;int&gt; &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;         &lt;chr&gt;        &lt;chr&gt;  &lt;chr&gt;  
+## 1            1 Luke Skyw~       1 A New Hope    George Lucas Tatoo~ arid   
+## 2            1 Luke Skyw~       2 The Empire S~ Irvin Kersh~ Tatoo~ arid   
+## 3            1 Luke Skyw~       3 Return of th~ Richard Mar~ Tatoo~ arid   
+## 4            1 Luke Skyw~       6 Revenge of t~ George Lucas Tatoo~ arid   
+## 5            1 Luke Skyw~       7 The Force Aw~ J. J. Abrams Tatoo~ arid   
+## 6            2 C-3PO            1 A New Hope    George Lucas Tatoo~ arid   
+## 7            2 C-3PO            2 The Empire S~ Irvin Kersh~ Tatoo~ arid
+```
+
+---
+
+(Inner) Joining on multiple keys:
+
+
+```r
+lines %&gt;%
+  inner_join(locations, by = c("film_id", "scene_id", "minute_id"))
+```
+
+```
+## # A tibble: 6 x 6
+##   film_id scene_id minute_id character_id line                location     
+##     &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;               &lt;chr&gt;        
+## 1       1        1         1           23 blah blah blah      spaceship    
+## 2       1        1         2           15 something something Alderaan, ou~
+## 3       1        1         2           23 something somethin~ Alderaan, ou~
+## 4       1        1         3           15 &lt;NA&gt;                spaceship    
+## 5       1        1         3           23 &lt;NA&gt;                spaceship    
+## 6       1        1         4            8 whatever whatever   bar
+```
+
+.insight[
+💡 The base R function for joining is `merge()` which tends to be slower.
+]
+
+---
+
+## What would `inner_join()` do?
+
+Q: Which characters appear in SW films directed by George Lucas?
+
+
+```r
+# naive
+characters %&gt;%
+  inner_join(films, by = "film_id") %&gt;%
+  filter(director == "George Lucas") %&gt;%
+  pull(name) %&gt;%
+  unique()
+
+# smarter
+characters %&gt;%
+  inner_join(films %&gt;% filter(director == "George Lucas"),
+             by = "film_id") %&gt;%
+  pull(name) %&gt;%
+  unique()
+```
+
+.insight[
+💡 What else could you do to make `inner_join`'s life easier?
+]
+---
+
+## What would `inner_join()` do?
+
+Q: Which characters, whose homeworld is Alderaan, appear in SW films directed by George Lucas?
+
+
+```r
+characters %&gt;%
+  inner_join(films %&gt;% filter(director == "George Lucas"),
+             by = "film_id") %&gt;%
+  inner_join(planets %&gt;% filter(name == "Alderaan"),
+             by = c("homeworld_id" = "planet_id"),
+                    suffix = c("_char", "_planet")) %&gt;%
+  pull(name_char) %&gt;%
+  unique()
+```
+
+```
+## [1] "Leia Organa"         "Bail Prestor Organa" "Raymus Antilles"
+```
+
+---
+
+### Note of caution: Join is not always faster!
+
+
+```r
+baseR_no_join &lt;- function() {
+  unique(characters$name[characters$film_id %in% films$film_id[films$director == "George Lucas"]])
+}
+
+baseR_with_join &lt;- function() {
+  unique(merge(characters, films[films$director == "George Lucas", ], by = "film_id")$name)
+}
+
+dplyr_no_join &lt;- function() {
+  characters %&gt;%
+    filter(film_id %in% (films %&gt;%
+                           filter(director=="George Lucas") %&gt;%
+                           pull(film_id))) %&gt;%
+    pull(name) %&gt;%
+    unique()
+}
+
+dplyr_with_join &lt;- function() {
+  characters %&gt;%
+    inner_join(films %&gt;% filter(director=="George Lucas"), by = "film_id") %&gt;%
+    pull(name) %&gt;%
+    unique()
+}
+```
+
+---
+
+
+```r
+library(microbenchmark)
+res &lt;- microbenchmark(baseR_no_join(), baseR_with_join(),
+                      dplyr_no_join(), dplyr_with_join(), times = 20)
+autoplot(res)
+```
+
+![](images/Join-Slow2-1.png)&lt;!-- --&gt;
+
+---
+
+### So when does it shine?
+
+- See [this](https://stackoverflow.com/q/59183599/4095235) StackOverflow question and answer for a good example*
+- But in general: when data gets bigger, when multiple keys are involved
+
+.font80percent[&amp;#42; Yes, I know, I answered my own question, 🤦]
+
+### Other types of Joins?
+
+Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](https://r4ds.had.co.nz/relational-data.html) about:
+- `left_join()`
+- `right_join()`
+- `full_join()`
+- `anti_join()`
+- `semi_join()`
+
+---
+
+class: section-slide
+
+# Tidying Tables
+
+---
+class: section-slide
+
+# Iteration: I don't `for`, I `purrr`
+
+---
+class: section-slide
+
+# The Magic of List Columns
+
+---
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

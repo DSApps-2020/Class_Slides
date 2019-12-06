@@ -1,0 +1,340 @@
+---
+title: "Tidy Data Wrangling - Part B"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Tidy Data Wrangling - Part B
+
+### Applications of Data Science - Class 3
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# Detour: The Starwars Dataset(s)
+
+---
+
+## The Starwars Dataset(s)
+
+<img src = "images/starwars_db_schema.png" style="width: 100%">
+
+```{r Read-Starwars}
+sw_tables <- read_rds("data/sw_tables.rds")
+characters <- sw_tables$characters
+planets <- sw_tables$planets
+films <- sw_tables$films
+```
+
+.insight[
+`r emo::ji("bulb")` What are the advantages/disadvantages of storing data in such a way?
+]
+---
+
+```{r Characters}
+glimpse(characters)
+```
+
+---
+
+```{r Planets}
+glimpse(planets)
+```
+
+```{r Films}
+glimpse(films)
+```
+
+---
+class: section-slide
+
+# End of Detour
+
+---
+class: section-slide
+
+# Joining Tables
+
+---
+
+#### Q: Which characters appear in SW films directed by George Lucas?
+
+```{r BaseR-NoJoin, eval=FALSE}
+unique(
+  characters$name[
+    characters$film_id %in%
+      films$film_id[films$director == "George Lucas"]
+    ]
+  )
+
+# or dplyr approach:
+characters %>%
+    filter(film_id %in% (films %>%
+                           filter(director=="George Lucas") %>%
+                           pull(film_id))) %>%
+    pull(name) %>%
+    unique()
+```
+
+First problem with this approach: code gets messier and messier, prone to bugs and hard to debug.
+---
+
+#### Q: Which characters, whose homeworld is Alderaan, appear in SW films directed by George Lucas?
+
+```{r BaseR-NoJoin2, eval=FALSE}
+unique(
+  characters$name[
+    characters$film_id %in%
+      films$film_id[films$director == "George Lucas"] &
+    characters$homeworld_id ==
+      planets$planet_id[planets$name == "Alderaan"]
+  ]
+)
+
+# or dplyr approach:
+characters %>%
+    filter(film_id %in% (films %>%
+                           filter(director=="George Lucas") %>%
+                           pull(film_id)),
+           homeworld_id == (planets %>%
+                              filter(name == "Alderaan") %>%
+                              pull(planet_id))) %>%
+    pull(name) %>%
+    unique()
+
+# [1] "Leia Organa"         "Bail Prestor Organa" "Raymus Antilles"
+```
+
+---
+
+#### Now imagine these two tables
+
+`lines`: each film, each scene, each minute, each character, the line
+
+```{r SW-Lines}
+lines <- tibble::tribble(
+  ~film_id, ~scene_id, ~minute_id, ~character_id,                           ~line,
+         1,         1,          1,            23,                "blah blah blah",
+         1,         1,          2,            15,           "something something",
+         1,         1,          2,            23, "something something to you to",
+         1,         1,          3,            15,                              NA,
+         1,         1,          3,            23,                              NA,
+         1,         1,          4,             8,             "whatever whatever"
+  )
+```
+
+`locations`: for each film, each scene, each minute, its location
+
+```{r SW-Locations}
+locations <- tibble::tribble(
+  ~film_id, ~scene_id, ~minute_id,            ~location,
+         1,         1,          1,          "spaceship",
+         1,         1,          2, "Alderaan, outdoors",
+         1,         1,          3,          "spaceship",
+         1,         1,          4,                "bar"
+  )
+```
+
+---
+
+#### Q: Which characters say "something" in a bar?
+
+- filter only `lines` which contain "something"
+- filter only "bar" `locations` and then...
+- if the two filtered tables match on film, scene and minute...
+- we take the unique characters
+- but how do we match? `for` loop*?
+
+`r emo::ji("right arrow")` Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match
+
+And third problem: speed .font80percent[(but only in a complex scenario!)]
+
+.font80percent[&#42; There *is* a way without using a for loop, without joining, still not recommended.]
+
+---
+
+## `inner_join()`
+
+(Inner) Joining two tables:
+
+```{r Join-Two-Tables}
+characters %>%
+  inner_join(films) %>%
+  select(character_id, name, film_id, title, director) %>%
+  head(7)
+```
+
+---
+
+(Inner) Joining multiple tables:
+
+```{r Join-Three-Tables}
+characters %>%
+  inner_join(films) %>%
+  inner_join(planets, by = c("homeworld_id" = "planet_id")) %>%
+  select(character_id, name.x, film_id, title, director, name.y, climate) %>% head(7)
+```
+
+---
+
+(Inner) Joining on multiple keys:
+
+```{r Join-Multiple-Keys}
+lines %>%
+  inner_join(locations, by = c("film_id", "scene_id", "minute_id"))
+```
+
+.insight[
+`r emo::ji("bulb")` The base R function for joining is `merge()` which tends to be slower.
+]
+
+---
+
+## What would `inner_join()` do?
+
+Q: Which characters appear in SW films directed by George Lucas?
+
+```{r Join1, eval=FALSE}
+# naive
+characters %>%
+  inner_join(films, by = "film_id") %>%
+  filter(director == "George Lucas") %>%
+  pull(name) %>%
+  unique()
+
+# smarter
+characters %>%
+  inner_join(films %>% filter(director == "George Lucas"),
+             by = "film_id") %>%
+  pull(name) %>%
+  unique()
+```
+
+.insight[
+`r emo::ji("bulb")` What else could you do to make `inner_join`'s life easier?
+]
+---
+
+## What would `inner_join()` do?
+
+Q: Which characters, whose homeworld is Alderaan, appear in SW films directed by George Lucas?
+
+```{r Join2}
+characters %>%
+  inner_join(films %>% filter(director == "George Lucas"),
+             by = "film_id") %>%
+  inner_join(planets %>% filter(name == "Alderaan"),
+             by = c("homeworld_id" = "planet_id"),
+                    suffix = c("_char", "_planet")) %>%
+  pull(name_char) %>%
+  unique()
+```
+
+---
+
+### Note of caution: Join is not always faster!
+
+```{r Join-Slow}
+baseR_no_join <- function() {
+  unique(characters$name[characters$film_id %in% films$film_id[films$director == "George Lucas"]])
+}
+
+baseR_with_join <- function() {
+  unique(merge(characters, films[films$director == "George Lucas", ], by = "film_id")$name)
+}
+
+dplyr_no_join <- function() {
+  characters %>%
+    filter(film_id %in% (films %>%
+                           filter(director=="George Lucas") %>%
+                           pull(film_id))) %>%
+    pull(name) %>%
+    unique()
+}
+
+dplyr_with_join <- function() {
+  characters %>%
+    inner_join(films %>% filter(director=="George Lucas"), by = "film_id") %>%
+    pull(name) %>%
+    unique()
+}
+```
+
+---
+
+```{r Join-Slow2, message=FALSE}
+library(microbenchmark)
+res <- microbenchmark(baseR_no_join(), baseR_with_join(),
+                      dplyr_no_join(), dplyr_with_join(), times = 20)
+autoplot(res)
+```
+
+---
+
+### So when does it shine?
+
+- See [this](https://stackoverflow.com/q/59183599/4095235) StackOverflow question and answer for a good example*
+- But in general: when data gets bigger, when multiple keys are involved
+
+.font80percent[&#42; Yes, I know, I answered my own question, `r emo::ji("person_facepalming")`]
+
+### Other types of Joins?
+
+Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](https://r4ds.had.co.nz/relational-data.html) about:
+- `left_join()`
+- `right_join()`
+- `full_join()`
+- `anti_join()`
+- `semi_join()`
+
+---
+
+class: section-slide
+
+# Tidying Tables
+
+---
+class: section-slide
+
+# Iteration: I don't `for`, I `purrr`
+
+---
+class: section-slide
+
+# The Magic of List Columns
+
+---

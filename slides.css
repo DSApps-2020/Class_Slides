@@ -145,3 +145,12 @@ div.my-footer a {
 .font80percent {
   font-size: 80%;
 }
+
+.insight {
+  border-left: solid 5px #FFD748;
+  background-color: #FFD74850;
+  font-size: 80%;
+  padding: 1px 16px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
