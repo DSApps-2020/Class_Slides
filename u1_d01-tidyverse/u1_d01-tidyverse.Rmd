@@ -154,12 +154,12 @@ table(df$Eduction, df$Ethnicity)
 ![](images/bad_args_table.png)
 
 ```{r Args1}
-df <- read.csv("data/bad_args_test.csv")
+df <- read.csv("../data/bad_args_test.csv")
 df$col3
 ```
 
 ```{r Args2}
-df <- read.csv("data/bad_args_test.csv", stringsAsFactors = FALSE)
+df <- read.csv("../data/bad_args_test.csv", stringsAsFactors = FALSE)
 df$col3
 ```
 
@@ -168,7 +168,7 @@ df$col3
 ### (No) Speed - Example
 
 ```{r, Microbenchmark1}
-file_path <- "data/mediocre_file.csv"
+file_path <- "../data/mediocre_file.csv"
 df <- read.csv(file_path)
 dim(df)
 ```
@@ -215,7 +215,7 @@ class: section-slide
 
 .font80percent[
 ```{r Viz-Read}
-okcupid <- read_csv("data/okcupid.csv.zip", col_types = cols())
+okcupid <- read_csv("../data/okcupid.csv.zip", col_types = cols())
 okcupid$income[okcupid$income == -1] <- NA
 okcupid$height_cm <- okcupid$height * 2.54
 ```
@@ -362,7 +362,7 @@ Many more:
 ### Which one of these datasets is tidy? (I)
 
 ```{r Read-Tidy-Tables, echo=FALSE}
-tidy_tables <- read_rds("data/tidy_tables.rds")
+tidy_tables <- read_rds("../data/tidy_tables.rds")
 table1 <- tidy_tables$table1
 table2 <- tidy_tables$table2
 table3 <- tidy_tables$table3
@@ -494,13 +494,13 @@ data.frame(x = 1:5, y = x^2)
 - Will never turn your strings into factors, will never change your column names:
 
 ```{r Read_CSV}
-tib1 <- readr::read_csv("data/bad_args_test.csv", col_types = cols())
+tib1 <- readr::read_csv("../data/bad_args_test.csv", col_types = cols())
 colnames(tib1)
 tib1$col3
 ```
 
 ```{r Read.CSV}
-df1 <- read.csv("data/bad_args_test.csv")
+df1 <- read.csv("../data/bad_args_test.csv")
 colnames(df1)
 df1$col3
 ```

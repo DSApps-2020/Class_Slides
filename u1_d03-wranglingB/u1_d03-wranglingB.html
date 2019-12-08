@@ -51,6 +51,11 @@ layout: true
 
 class: section-slide
 
+# Joining Tables
+
+---
+class: section-slide
+
 # Detour: The Starwars Dataset(s)
 
 ---
@@ -139,11 +144,6 @@ glimpse(films)
 class: section-slide
 
 # End of Detour
-
----
-class: section-slide
-
-# Joining Tables
 
 ---
 
@@ -433,7 +433,7 @@ autoplot(res)
 
 ### Other types of Joins?
 
-Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](https://r4ds.had.co.nz/relational-data.html) about:
+Definitely, read [here](https://stat545.com/join-cheatsheet.html), [here](https://r4ds.had.co.nz/relational-data.html) and [here](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins) about:
 - `left_join()`
 - `right_join()`
 - `full_join()`
@@ -442,9 +442,413 @@ Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](htt
 
 ---
 
+## All Joins
+
+&lt;img src = "images/joins_explained1.png" style="width: 90%"&gt;
+
+.font80percent[
+Source: [The Tidyverse Cookbook](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins)
+]
+---
+
+## All Joins
+
+&lt;img src = "images/joins_explained2.png" style="width: 90%"&gt;
+
+.font80percent[
+Source: [The Tidyverse Cookbook](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins)
+]
+---
 class: section-slide
 
 # Tidying Tables
+
+---
+class: section-slide
+
+# Detour: The Migration Dataset
+
+---
+
+## The Migration Dataset
+
+- Straight from the [UN, Dept. of Economic and Social Affairs, Population Division](https://www.un.org/en/development/desa/population/index.asp)
+- "Monitoring global population trends"
+- For each country, how many (men, women and total) migrated to each country
+- In 1990, 1995, 2000, 2005, 2010, 2015, 2019
+- How would *you* give access to these data?
+
+---
+
+### You want dirty data? Well dirty data costs!
+
+&lt;img src = "images/migration_excel.png" style="width: 100%"&gt;
+
+---
+
+### What's untidy about the migration Excel file?
+
+- It's an Excel file 😠
+- Multiple sheets
+- Color coded, font coded (bold), space coded!
+- Logo, free text in header lines
+- Merged cells
+- French letters (anything but [A-Za-z] can break code)
+- Spaces, parentheses in column names
+- Different `NA` values: "..", "-"
+- Variable "country_dest" contains sub-total and totals for categories, continents...
+- Variable "country_orig" violates Tidy rule no. 1: not in its own column
+
+---
+
+### "Today Only, The Landlord Went Nuts!"
+
+- ~~It's an Excel file 😠~~
+- ~~Multiple sheets~~
+- ~~Color coded, font coded (bold), space coded!~~
+- ~~Logo, free text in header lines~~
+- ~~Merged cells~~
+- ~~French letters (anything but [A-Za-z] can break code)~~
+- ~~Spaces, parentheses in column names~~
+- ~~Different `NA` values: "..", "-"~~
+- ~~Variable "country_dest" contains sub-total and totals for categories, continents...~~
+- Variable "country_orig" violates Tidy rule no. 1: not in its own column
+
+---
+
+## The much nicer `migration` table
+
+
+```r
+migration &lt;- read_rds("../data/migration.rds")
+
+migration
+```
+
+```
+## # A tibble: 3,248 x 236
+##    gender  year  code country_dest afghanistan albania algeria
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;              &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 men     1990   108 burundi                0       0       0
+##  2 men     1990   174 comoros                0       0       0
+##  3 men     1990   262 djibouti               0       0       0
+##  4 men     1990   232 eritrea                0       0       0
+##  5 men     1990   231 ethiopia               0       0       0
+##  6 men     1990   404 kenya                  0       0       0
+##  7 men     1990   450 madagascar             0       0       0
+##  8 men     1990   454 malawi                 0       0       0
+##  9 men     1990   480 mauritius              0       0       0
+## 10 men     1990   175 mayotte                0       0       0
+## # ... with 3,238 more rows, and 229 more variables: american_samoa &lt;dbl&gt;,
+## #   andorra &lt;dbl&gt;, angola &lt;dbl&gt;, anguilla &lt;dbl&gt;,
+## #   antigua_and_barbuda &lt;dbl&gt;, argentina &lt;dbl&gt;, armenia &lt;dbl&gt;,
+## #   aruba &lt;dbl&gt;, australia &lt;dbl&gt;, austria &lt;dbl&gt;, azerbaijan &lt;dbl&gt;,
+## #   bahamas &lt;dbl&gt;, bahrain &lt;dbl&gt;, bangladesh &lt;dbl&gt;, barbados &lt;dbl&gt;,
+## #   belarus &lt;dbl&gt;, belgium &lt;dbl&gt;, belize &lt;dbl&gt;, benin &lt;dbl&gt;,
+## #   bermuda &lt;dbl&gt;, bhutan &lt;dbl&gt;, bolivia_plurinational_state_of &lt;dbl&gt;,
+## #   bonaire_sint_eustatius_and_saba &lt;dbl&gt;, bosnia_and_herzegovina &lt;dbl&gt;,
+## #   botswana &lt;dbl&gt;, brazil &lt;dbl&gt;, british_virgin_islands &lt;dbl&gt;,
+## #   brunei_darussalam &lt;dbl&gt;, bulgaria &lt;dbl&gt;, burkina_faso &lt;dbl&gt;,
+## #   burundi &lt;dbl&gt;, cabo_verde &lt;dbl&gt;, cambodia &lt;dbl&gt;, cameroon &lt;dbl&gt;,
+## #   canada &lt;dbl&gt;, cayman_islands &lt;dbl&gt;, central_african_republic &lt;dbl&gt;,
+## #   chad &lt;dbl&gt;, channel_islands &lt;dbl&gt;, chile &lt;dbl&gt;, china &lt;dbl&gt;,
+## #   china_hong_kong_sar &lt;dbl&gt;, china_macao_sar &lt;dbl&gt;, colombia &lt;dbl&gt;,
+## #   comoros &lt;dbl&gt;, congo &lt;dbl&gt;, cook_islands &lt;dbl&gt;, costa_rica &lt;dbl&gt;,
+## #   côte_divoire &lt;dbl&gt;, croatia &lt;dbl&gt;, cuba &lt;dbl&gt;, curaçao &lt;dbl&gt;,
+## #   cyprus &lt;dbl&gt;, czechia &lt;dbl&gt;, dem._peoples_republic_of_korea &lt;dbl&gt;,
+## #   democratic_republic_of_the_congo &lt;dbl&gt;, denmark &lt;dbl&gt;, djibouti &lt;dbl&gt;,
+## #   dominica &lt;dbl&gt;, dominican_republic &lt;dbl&gt;, ecuador &lt;dbl&gt;, egypt &lt;dbl&gt;,
+## #   el_salvador &lt;dbl&gt;, equatorial_guinea &lt;dbl&gt;, eritrea &lt;dbl&gt;,
+## #   estonia &lt;dbl&gt;, eswatini &lt;dbl&gt;, ethiopia &lt;dbl&gt;,
+## #   falkland_islands_malvinas &lt;dbl&gt;, faroe_islands &lt;dbl&gt;, fiji &lt;dbl&gt;,
+## #   finland &lt;dbl&gt;, france &lt;dbl&gt;, french_guiana &lt;dbl&gt;,
+## #   french_polynesia &lt;dbl&gt;, gabon &lt;dbl&gt;, gambia &lt;dbl&gt;, georgia &lt;dbl&gt;,
+## #   germany &lt;dbl&gt;, ghana &lt;dbl&gt;, gibraltar &lt;dbl&gt;, greece &lt;dbl&gt;,
+## #   greenland &lt;dbl&gt;, grenada &lt;dbl&gt;, guadeloupe &lt;dbl&gt;, guam &lt;dbl&gt;,
+## #   guatemala &lt;dbl&gt;, guinea &lt;dbl&gt;, guinea_bissau &lt;dbl&gt;, guyana &lt;dbl&gt;,
+## #   haiti &lt;dbl&gt;, holy_see &lt;dbl&gt;, honduras &lt;dbl&gt;, hungary &lt;dbl&gt;,
+## #   iceland &lt;dbl&gt;, india &lt;dbl&gt;, indonesia &lt;dbl&gt;,
+## #   iran_islamic_republic_of &lt;dbl&gt;, iraq &lt;dbl&gt;, ireland &lt;dbl&gt;, ...
+```
+
+---
+
+## It's not right, but it's Ok:
+
+- How many men immigrated from Russia to Israel in 1990?
+
+
+```r
+migration %&gt;%
+  filter(country_dest == "israel", year == 1990, gender == "men") %&gt;%
+  pull(russian_federation)
+```
+
+```
+## [1] 80450
+```
+
+- How many men immigrated from Israel to Russia in 1990?
+
+
+```r
+migration %&gt;%
+  filter(country_dest == "russian_federation", year == 1990, gender == "men") %&gt;%
+  pull(israel)
+```
+
+```
+## [1] 1395
+```
+
+---
+
+## It would have been much nicer to have:
+
+
+```r
+migration %&gt;%
+  filter(country_orig == "israel", country_dest == "russian_fedration",
+         year == 1990, gender == "men") %&gt;%
+  pull(n_migrants)
+```
+
+Then we could put in a (simpler) function and call the opposite:
+
+
+```r
+get_1way_migration &lt;- function(orig, dest, gen, .year) {
+  migration %&gt;%
+  filter(country_orig == orig, country_dest == dest,
+         year == .year, gender == gen) %&gt;%
+  pull(n_migrants)
+}
+
+get_1way_migration("russian_federation", "israel")
+```
+
+---
+
+## `pivot_longer()`
+
+
+```r
+migration_long &lt;- migration %&gt;%
+  pivot_longer(cols = -c(1:4),
+               names_to = "country_orig",
+               values_to = "n_migrants")
+
+migration_long
+```
+
+```
+## # A tibble: 753,536 x 6
+##    gender  year  code country_dest country_orig        n_migrants
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;        &lt;chr&gt;                    &lt;dbl&gt;
+##  1 men     1990   108 burundi      afghanistan                  0
+##  2 men     1990   108 burundi      albania                      0
+##  3 men     1990   108 burundi      algeria                      0
+##  4 men     1990   108 burundi      american_samoa               0
+##  5 men     1990   108 burundi      andorra                      0
+##  6 men     1990   108 burundi      angola                       0
+##  7 men     1990   108 burundi      anguilla                     0
+##  8 men     1990   108 burundi      antigua_and_barbuda          0
+##  9 men     1990   108 burundi      argentina                    0
+## 10 men     1990   108 burundi      armenia                      0
+## # ... with 753,526 more rows
+```
+
+---
+
+## What sorcery is this?
+
+&lt;img src = "images/pivot_longer_explained.png" style="width: 100%"&gt;
+
+.font80percent[Source: [The Carpentries](http://swcarpentry.github.io/r-novice-gapminder/14-tidyr/index.html)]
+
+---
+
+## `pivot_wider()`
+
+
+```r
+migration_wide &lt;- migration_long %&gt;%
+  pivot_wider(id_cols = 1:4,
+              names_from = country_orig,
+              values_from = n_migrants)
+
+migration_wide
+```
+
+```
+## # A tibble: 3,248 x 236
+##    gender  year  code country_dest afghanistan albania algeria
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;              &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 men     1990   108 burundi                0       0       0
+##  2 men     1990   174 comoros                0       0       0
+##  3 men     1990   262 djibouti               0       0       0
+##  4 men     1990   232 eritrea                0       0       0
+##  5 men     1990   231 ethiopia               0       0       0
+##  6 men     1990   404 kenya                  0       0       0
+##  7 men     1990   450 madagascar             0       0       0
+##  8 men     1990   454 malawi                 0       0       0
+##  9 men     1990   480 mauritius              0       0       0
+## 10 men     1990   175 mayotte                0       0       0
+## # ... with 3,238 more rows, and 229 more variables: american_samoa &lt;dbl&gt;,
+## #   andorra &lt;dbl&gt;, angola &lt;dbl&gt;, anguilla &lt;dbl&gt;,
+## #   antigua_and_barbuda &lt;dbl&gt;, argentina &lt;dbl&gt;, armenia &lt;dbl&gt;,
+## #   aruba &lt;dbl&gt;, australia &lt;dbl&gt;, austria &lt;dbl&gt;, azerbaijan &lt;dbl&gt;,
+## #   bahamas &lt;dbl&gt;, bahrain &lt;dbl&gt;, bangladesh &lt;dbl&gt;, barbados &lt;dbl&gt;,
+## #   belarus &lt;dbl&gt;, belgium &lt;dbl&gt;, belize &lt;dbl&gt;, benin &lt;dbl&gt;,
+## #   bermuda &lt;dbl&gt;, bhutan &lt;dbl&gt;, bolivia_plurinational_state_of &lt;dbl&gt;,
+## #   bonaire_sint_eustatius_and_saba &lt;dbl&gt;, bosnia_and_herzegovina &lt;dbl&gt;,
+## #   botswana &lt;dbl&gt;, brazil &lt;dbl&gt;, british_virgin_islands &lt;dbl&gt;,
+## #   brunei_darussalam &lt;dbl&gt;, bulgaria &lt;dbl&gt;, burkina_faso &lt;dbl&gt;,
+## #   burundi &lt;dbl&gt;, cabo_verde &lt;dbl&gt;, cambodia &lt;dbl&gt;, cameroon &lt;dbl&gt;,
+## #   canada &lt;dbl&gt;, cayman_islands &lt;dbl&gt;, central_african_republic &lt;dbl&gt;,
+## #   chad &lt;dbl&gt;, channel_islands &lt;dbl&gt;, chile &lt;dbl&gt;, china &lt;dbl&gt;,
+## #   china_hong_kong_sar &lt;dbl&gt;, china_macao_sar &lt;dbl&gt;, colombia &lt;dbl&gt;,
+## #   comoros &lt;dbl&gt;, congo &lt;dbl&gt;, cook_islands &lt;dbl&gt;, costa_rica &lt;dbl&gt;,
+## #   côte_divoire &lt;dbl&gt;, croatia &lt;dbl&gt;, cuba &lt;dbl&gt;, curaçao &lt;dbl&gt;,
+## #   cyprus &lt;dbl&gt;, czechia &lt;dbl&gt;, dem._peoples_republic_of_korea &lt;dbl&gt;,
+## #   democratic_republic_of_the_congo &lt;dbl&gt;, denmark &lt;dbl&gt;, djibouti &lt;dbl&gt;,
+## #   dominica &lt;dbl&gt;, dominican_republic &lt;dbl&gt;, ecuador &lt;dbl&gt;, egypt &lt;dbl&gt;,
+## #   el_salvador &lt;dbl&gt;, equatorial_guinea &lt;dbl&gt;, eritrea &lt;dbl&gt;,
+## #   estonia &lt;dbl&gt;, eswatini &lt;dbl&gt;, ethiopia &lt;dbl&gt;,
+## #   falkland_islands_malvinas &lt;dbl&gt;, faroe_islands &lt;dbl&gt;, fiji &lt;dbl&gt;,
+## #   finland &lt;dbl&gt;, france &lt;dbl&gt;, french_guiana &lt;dbl&gt;,
+## #   french_polynesia &lt;dbl&gt;, gabon &lt;dbl&gt;, gambia &lt;dbl&gt;, georgia &lt;dbl&gt;,
+## #   germany &lt;dbl&gt;, ghana &lt;dbl&gt;, gibraltar &lt;dbl&gt;, greece &lt;dbl&gt;,
+## #   greenland &lt;dbl&gt;, grenada &lt;dbl&gt;, guadeloupe &lt;dbl&gt;, guam &lt;dbl&gt;,
+## #   guatemala &lt;dbl&gt;, guinea &lt;dbl&gt;, guinea_bissau &lt;dbl&gt;, guyana &lt;dbl&gt;,
+## #   haiti &lt;dbl&gt;, holy_see &lt;dbl&gt;, honduras &lt;dbl&gt;, hungary &lt;dbl&gt;,
+## #   iceland &lt;dbl&gt;, india &lt;dbl&gt;, indonesia &lt;dbl&gt;,
+## #   iran_islamic_republic_of &lt;dbl&gt;, iraq &lt;dbl&gt;, ireland &lt;dbl&gt;, ...
+```
+
+---
+
+### Where is this going to?
+.font80percent[
+
+```r
+get_1way_migration &lt;- function(.country_dest, .country_orig) {
+  migration_long %&gt;%
+    filter(country_dest == .country_dest, country_orig == .country_orig) %&gt;%
+    group_by(year) %&gt;%
+    tally(n_migrants) %&gt;%
+    mutate(direction = str_c(.country_orig, " to ", .country_dest))
+}
+get_2way_migration &lt;- function(country_a, country_b) {
+  a2b &lt;- get_1way_migration(country_b, country_a)
+  b2a &lt;- get_1way_migration(country_a, country_b)
+  bind_rows(a2b, b2a)
+}
+
+get_2way_migration("israel", "russian_federation") %&gt;%
+  ggplot(aes(year, n)) + geom_line() +
+  geom_point(color = "orange", size = 5) +
+  labs(x = "", y = "", title = "Israel-Russia Yearly No. of immigrants") +
+  theme_dark() +
+  facet_wrap(~direction, scales = "free", labeller = labeller(direction = rus_isr_names)) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  theme(axis.text = element_text(size = 12, hjust=0.9, family = "mono"),
+        strip.text.x = element_text(size = 14, family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 18, family = "mono"))
+```
+]
+
+---
+
+&lt;img src="images/Where-Is-This-Going-To2-1.png" width="100%" /&gt;
+
+---
+
+## Some more useful Tidying up verbs
+
+Remember?
+
+
+```r
+table3 &lt;- read_rds("../data/tidy_tables.rds")$table3
+
+table3
+```
+
+```
+## # A tibble: 315 x 3
+##    religion      yob pct_straight
+##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;       
+##  1 atheist      1950 26/29       
+##  2 buddhist     1950 6/6         
+##  3 christian    1950 28/32       
+##  4 hindu        1950 0/0         
+##  5 jewish       1950 21/24       
+##  6 muslim       1950 0/0         
+##  7 unspecified  1950 71/76       
+##  8 atheist      1951 31/33       
+##  9 buddhist     1951 11/11       
+## 10 christian    1951 23/24       
+## # ... with 305 more rows
+```
+
+---
+
+## `separate()`
+
+
+```r
+table3_tidy &lt;- table3 %&gt;%
+  separate(pct_straight, into = c("straight", "total"), sep = "/")
+
+table3_tidy
+```
+
+```
+## # A tibble: 315 x 4
+##    religion      yob straight total
+##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;
+##  1 atheist      1950 26       29   
+##  2 buddhist     1950 6        6    
+##  3 christian    1950 28       32   
+##  4 hindu        1950 0        0    
+##  5 jewish       1950 21       24   
+##  6 muslim       1950 0        0    
+##  7 unspecified  1950 71       76   
+##  8 atheist      1951 31       33   
+##  9 buddhist     1951 11       11   
+## 10 christian    1951 23       24   
+## # ... with 305 more rows
+```
+
+---
+
+## `unite()`
+
+(Though see a much more generalizable approach with `purrr`)
+
+
+```r
+table3_tidy %&gt;%
+  unite(col = "pct_straight", straight, total, sep = "/")
+```
+
+```
+## # A tibble: 315 x 3
+##    religion      yob pct_straight
+##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;       
+##  1 atheist      1950 26/29       
+##  2 buddhist     1950 6/6         
+##  3 christian    1950 28/32       
+##  4 hindu        1950 0/0         
+##  5 jewish       1950 21/24       
+##  6 muslim       1950 0/0         
+##  7 unspecified  1950 71/76       
+##  8 atheist      1951 31/33       
+##  9 buddhist     1951 11/11       
+## 10 christian    1951 23/24       
+## # ... with 305 more rows
+```
 
 ---
 class: section-slide

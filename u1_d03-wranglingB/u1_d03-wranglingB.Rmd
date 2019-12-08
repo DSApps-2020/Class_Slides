@@ -45,6 +45,11 @@ library(tidyverse)
 
 class: section-slide
 
+# Joining Tables
+
+---
+class: section-slide
+
 # Detour: The Starwars Dataset(s)
 
 ---
@@ -83,11 +88,6 @@ glimpse(films)
 class: section-slide
 
 # End of Detour
-
----
-class: section-slide
-
-# Joining Tables
 
 ---
 
@@ -314,7 +314,7 @@ autoplot(res)
 
 ### Other types of Joins?
 
-Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](https://r4ds.had.co.nz/relational-data.html) about:
+Definitely, read [here](https://stat545.com/join-cheatsheet.html), [here](https://r4ds.had.co.nz/relational-data.html) and [here](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins) about:
 - `left_join()`
 - `right_join()`
 - `full_join()`
@@ -323,9 +323,266 @@ Definitely, read [here](https://stat545.com/join-cheatsheet.html) and [here](htt
 
 ---
 
+## All Joins
+
+<img src = "images/joins_explained1.png" style="width: 90%">
+
+.font80percent[
+Source: [The Tidyverse Cookbook](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins)
+]
+---
+
+## All Joins
+
+<img src = "images/joins_explained2.png" style="width: 90%">
+
+.font80percent[
+Source: [The Tidyverse Cookbook](https://rstudio-education.github.io/tidyverse-cookbook/transform-tables.html#joins)
+]
+---
 class: section-slide
 
 # Tidying Tables
+
+---
+class: section-slide
+
+# Detour: The Migration Dataset
+
+---
+
+## The Migration Dataset
+
+- Straight from the [UN, Dept. of Economic and Social Affairs, Population Division](https://www.un.org/en/development/desa/population/index.asp)
+- "Monitoring global population trends"
+- For each country, how many (men, women and total) migrated to each country
+- In 1990, 1995, 2000, 2005, 2010, 2015, 2019
+- How would *you* give access to these data?
+
+---
+
+### You want dirty data? Well dirty data costs!
+
+<img src = "images/migration_excel.png" style="width: 100%">
+
+---
+
+### What's untidy about the migration Excel file?
+
+- It's an Excel file `r emo::ji("angry")`
+- Multiple sheets
+- Color coded, font coded (bold), space coded!
+- Logo, free text in header lines
+- Merged cells
+- French letters (anything but [A-Za-z] can break code)
+- Spaces, parentheses in column names
+- Different `NA` values: "..", "-"
+- Variable "country_dest" contains sub-total and totals for categories, continents...
+- Variable "country_orig" violates Tidy rule no. 1: not in its own column
+
+---
+
+### "Today Only, The Landlord Went Nuts!"
+
+- ~~It's an Excel file `r emo::ji("angry")`~~
+- ~~Multiple sheets~~
+- ~~Color coded, font coded (bold), space coded!~~
+- ~~Logo, free text in header lines~~
+- ~~Merged cells~~
+- ~~French letters (anything but [A-Za-z] can break code)~~
+- ~~Spaces, parentheses in column names~~
+- ~~Different `NA` values: "..", "-"~~
+- ~~Variable "country_dest" contains sub-total and totals for categories, continents...~~
+- Variable "country_orig" violates Tidy rule no. 1: not in its own column
+
+---
+
+## The much nicer `migration` table
+
+```{r Migration1}
+migration <- read_rds("../data/migration.rds")
+
+migration
+```
+
+---
+
+## It's not right, but it's Ok:
+
+- How many men immigrated from Russia to Israel in 1990?
+
+```{r Migration2}
+migration %>%
+  filter(country_dest == "israel", year == 1990, gender == "men") %>%
+  pull(russian_federation)
+```
+
+- How many men immigrated from Israel to Russia in 1990?
+
+```{r Migration3}
+migration %>%
+  filter(country_dest == "russian_federation", year == 1990, gender == "men") %>%
+  pull(israel)
+```
+
+---
+
+## It would have been much nicer to have:
+
+```{r Migration4, eval=FALSE}
+migration %>%
+  filter(country_orig == "israel", country_dest == "russian_fedration",
+         year == 1990, gender == "men") %>%
+  pull(n_migrants)
+```
+
+Then we could put in a (simpler) function and call the opposite:
+
+```{r Migration5, eval=FALSE}
+get_1way_migration <- function(orig, dest, gen, .year) {
+  migration %>%
+  filter(country_orig == orig, country_dest == dest,
+         year == .year, gender == gen) %>%
+  pull(n_migrants)
+}
+
+get_1way_migration("russian_federation", "israel")
+```
+
+---
+
+## `pivot_longer()`
+
+```{r Pivot-Longer}
+migration_long <- migration %>%
+  pivot_longer(cols = -c(1:4),
+               names_to = "country_orig",
+               values_to = "n_migrants")
+
+migration_long
+```
+
+---
+
+## What sorcery is this?
+
+<img src = "images/pivot_longer_explained.png" style="width: 100%">
+
+.font80percent[Source: [The Carpentries](http://swcarpentry.github.io/r-novice-gapminder/14-tidyr/index.html)]
+
+---
+
+## `pivot_wider()`
+
+```{r Pivot-Wider}
+migration_wide <- migration_long %>%
+  pivot_wider(id_cols = 1:4,
+              names_from = country_orig,
+              values_from = n_migrants)
+
+migration_wide
+```
+
+---
+
+### Where is this going to?
+.font80percent[
+```{r Where-Is-This-Going-To, eval=FALSE}
+get_1way_migration <- function(.country_dest, .country_orig) {
+  migration_long %>%
+    filter(country_dest == .country_dest, country_orig == .country_orig) %>%
+    group_by(year) %>%
+    tally(n_migrants) %>%
+    mutate(direction = str_c(.country_orig, " to ", .country_dest))
+}
+get_2way_migration <- function(country_a, country_b) {
+  a2b <- get_1way_migration(country_b, country_a)
+  b2a <- get_1way_migration(country_a, country_b)
+  bind_rows(a2b, b2a)
+}
+
+get_2way_migration("israel", "russian_federation") %>%
+  ggplot(aes(year, n)) + geom_line() +
+  geom_point(color = "orange", size = 5) +
+  labs(x = "", y = "", title = "Israel-Russia Yearly No. of immigrants") +
+  theme_dark() +
+  facet_wrap(~direction, scales = "free", labeller = labeller(direction = rus_isr_names)) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  theme(axis.text = element_text(size = 12, hjust=0.9, family = "mono"),
+        strip.text.x = element_text(size = 14, family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 18, family = "mono"))
+```
+]
+
+---
+
+```{r Where-Is-This-Going-To2, echo=FALSE, fig.asp=0.62, out.width="100%"}
+get_1way_migration <- function(.country_dest, .country_orig) {
+  migration_long %>%
+    filter(country_dest == .country_dest, country_orig == .country_orig) %>%
+    group_by(year) %>%
+    tally(n_migrants) %>%
+    mutate(direction = str_c(.country_orig, " to ", .country_dest))
+}
+
+get_2way_migration <- function(country_a, country_b) {
+  a2b <- get_1way_migration(country_b, country_a)
+  b2a <- get_1way_migration(country_a, country_b)
+  bind_rows(a2b, b2a)
+}
+
+rus_isr_names <- c(
+  "israel to russian_federation" = "Israel to Russia",
+  "russian_federation to israel" = "Russia to Israel"
+)
+
+get_2way_migration("israel", "russian_federation") %>%
+  ggplot(aes(year, n)) +
+  geom_line() +
+  geom_point(color = "orange", size = 5) +
+  labs(x = "", y = "", title = "Israel-Russia Yearly No. of immigrants") +
+  theme_dark() +
+  facet_wrap(~direction, scales = "free",
+             labeller = labeller(direction = rus_isr_names)) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  theme(axis.text = element_text(size = 12, hjust=0.9, family = "mono"),
+        strip.text.x = element_text(size = 14, family = "mono"),
+        plot.title = element_text(hjust = 0.5, size = 18, family = "mono"))
+```
+
+---
+
+## Some more useful Tidying up verbs
+
+Remember?
+
+```{r Untidy-Okcupid}
+table3 <- read_rds("../data/tidy_tables.rds")$table3
+
+table3
+```
+
+---
+
+## `separate()`
+
+```{r Unite}
+table3_tidy <- table3 %>%
+  separate(pct_straight, into = c("straight", "total"), sep = "/")
+
+table3_tidy
+```
+
+---
+
+## `unite()`
+
+(Though see a much more generalizable approach with `purrr`)
+
+```{r Separate}
+table3_tidy %>%
+  unite(col = "pct_straight", straight, total, sep = "/")
+```
 
 ---
 class: section-slide
