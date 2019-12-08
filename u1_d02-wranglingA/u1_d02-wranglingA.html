@@ -4,7 +4,7 @@
     <title>Tidy Data Wrangling - Part A</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-06" />
+    <meta name="date" content="2019-12-08" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-06
+### 2019-12-08
 
 ---
 
@@ -73,7 +73,7 @@ And the much beloved `group_by()`: do *whatever* by groups of one or more variab
 ```r
 library(tidyverse)
 
-okcupid &lt;- read_csv("../u1_d01-tidyverse/data/okcupid.csv.zip")
+okcupid &lt;- read_csv("../data/okcupid.csv.zip")
 ```
 
 .font80percent[Reminder:]
@@ -817,20 +817,20 @@ okcupid %&gt;% select(drugs, age, income, sex) %&gt;%
 ```
 ## # A tibble: 12 x 4
 ## # Groups:   drugs [4]
-##    drugs       age income sex  
-##    &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;
-##  1 never        51  70000 m    
-##  2 never        35     NA m    
-##  3 never        25  20000 m    
-##  4 often        26     NA f    
-##  5 often        23     NA f    
-##  6 often        35     NA m    
-##  7 sometimes    25     NA f    
-##  8 sometimes    30     NA f    
-##  9 sometimes    23 100000 m    
-## 10 &lt;NA&gt;         31     NA f    
-## 11 &lt;NA&gt;         24     NA m    
-## 12 &lt;NA&gt;         36     NA f
+##    drugs       age  income sex  
+##    &lt;chr&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;
+##  1 never        44      NA m    
+##  2 never        32   50000 m    
+##  3 never        34      NA m    
+##  4 often        36   40000 m    
+##  5 often        24 1000000 m    
+##  6 often        26      NA m    
+##  7 sometimes    34      NA f    
+##  8 sometimes    26      NA m    
+##  9 sometimes    64      NA f    
+## 10 &lt;NA&gt;         29      NA m    
+## 11 &lt;NA&gt;         35      NA m    
+## 12 &lt;NA&gt;         22      NA f
 ```
 
 ---

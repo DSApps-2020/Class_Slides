@@ -54,7 +54,7 @@ class: section-slide
 <img src = "images/starwars_db_schema.png" style="width: 100%">
 
 ```{r Read-Starwars}
-sw_tables <- read_rds("data/sw_tables.rds")
+sw_tables <- read_rds("../data/sw_tables.rds")
 characters <- sw_tables$characters
 planets <- sw_tables$planets
 films <- sw_tables$films
@@ -179,7 +179,7 @@ locations <- tibble::tribble(
 - we take the unique characters
 - but how do we match? `for` loop*?
 
-`r emo::ji("right arrow")` Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match
+`r emo::ji("right arrow")` Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match on multiple criteria
 
 And third problem: speed .font80percent[(but only in a complex scenario!)]
 

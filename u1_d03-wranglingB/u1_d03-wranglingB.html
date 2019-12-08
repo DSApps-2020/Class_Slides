@@ -4,7 +4,7 @@
     <title>Tidy Data Wrangling - Part B</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-06" />
+    <meta name="date" content="2019-12-08" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-06
+### 2019-12-08
 
 ---
 
@@ -61,7 +61,7 @@ class: section-slide
 
 
 ```r
-sw_tables &lt;- read_rds("data/sw_tables.rds")
+sw_tables &lt;- read_rds("../data/sw_tables.rds")
 characters &lt;- sw_tables$characters
 planets &lt;- sw_tables$planets
 films &lt;- sw_tables$films
@@ -239,7 +239,7 @@ locations &lt;- tibble::tribble(
 - we take the unique characters
 - but how do we match? `for` loop*?
 
-➡️ Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match
+➡️ Clearly, second problem with this approach: it doesn't generalize well to more complex scenarios, where we need to match on multiple criteria
 
 And third problem: speed .font80percent[(but only in a complex scenario!)]
 
