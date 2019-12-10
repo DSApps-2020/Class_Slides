@@ -32,6 +32,11 @@ blockquote {
   padding-left: 1em;
 }
 
+td, th {
+    border-bottom: 1px solid grey;
+    border-right: 1px solid grey;
+}
+
 .remark-slide-content {
   font-size: 24px;
 }

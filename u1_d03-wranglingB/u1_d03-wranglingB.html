@@ -4,7 +4,7 @@
     <title>Tidy Data Wrangling - Part B</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-08" />
+    <meta name="date" content="2019-12-10" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-08
+### 2019-12-10
 
 ---
 
@@ -628,6 +628,11 @@ get_1way_migration("russian_federation", "israel")
 ```
 
 ---
+class: section-slide
+
+# End of Detour
+
+---
 
 ## `pivot_longer()`
 
@@ -853,14 +858,582 @@ table3_tidy %&gt;%
 ---
 class: section-slide
 
-# Iteration: I don't `for`, I `purrr`
+# Iteration without looping
 
 ---
-class: section-slide
 
-# The Magic of List Columns
+## Fun fact: you're already not-looping!
+
+- Say you want the lengths of all of these strings:
+
+
+```r
+strings_vec &lt;- c("I'm feeling fine", "I'm perfectly OK",
+                 "Nothing is wrong!")
+```
+
+- Do you `for` loop?
+
+
+```r
+strings_len &lt;- numeric(length(strings_vec))
+for (i in seq_along(strings_vec)) {
+  strings_len[i] &lt;- nchar(strings_vec[i])
+}
+strings_len
+```
+
+```
+## [1] 16 16 17
+```
 
 ---
+
+- No, you use R's vectorized functions nature:
+
+
+```r
+nchar(strings_vec)
+```
+
+```
+## [1] 16 16 17
+```
+
+- In case you were wondering:
+
+
+
+```r
+microbenchmark(nchar_loop(), nchar_vectorized())
+```
+
+```
+## Unit: nanoseconds
+##                expr  min   lq  mean median   uq     max neval
+##        nchar_loop() 2200 2400 51070   2600 2800 4767600   100
+##  nchar_vectorized()  700  800 21586    900  900 2020700   100
+```
+
+- So why should iterating through a `data.frame` columns or rows be any different?
+
+---
+
+## The problem:
+
+
+```r
+okcupid &lt;- read_csv("../data/okcupid.csv.zip", col_types = cols())
+okcupid %&gt;% select(essay0:essay2) %&gt;% head(3)
+```
+
+```
+## # A tibble: 3 x 3
+##   essay0                   essay1                   essay2                 
+##   &lt;chr&gt;                    &lt;chr&gt;                    &lt;chr&gt;                  
+## 1 "about me:&lt;br /&gt;\n&lt;br /~ "currently working as a~ "making people laugh.&lt;~
+## 2 "i am a chef: this is w~ dedicating everyday to ~ "being silly. having r~
+## 3 "i'm not ashamed of muc~ "i make nerdy software ~ "improvising in differ~
+```
+
+- I want to apply some transformation to one or more columns (say the length of each `essay` question for each user)
+- I want to apply some transformation to one or more rows (say the average length of all `essay` questions for each user)
+
+- BTW, you can always use a `for` loop, see how it is done [here](https://r4ds.had.co.nz/iteration.html#for-loops)
+
+---
+
+## The `apply` family
+
+- There *is* a solution in base R
+  - `apply()`
+  - `sapply()`
+  - `lapply()`
+  - `tapply()`
+  - `vapply()`
+  - `mapply()`
+- What do you think is the issue with these? See [this](https://stackoverflow.com/questions/45101045/why-use-purrrmap-instead-of-lapply).
+
+---
+
+## I don't `for`, I `purrr`
+
+The `purrr` package provides a set of functions to make iteration easier:
+
+- No boilerplate code for looping --&gt; less looping bugs
+- Focus on the function, the action, not the plumbing
+- Generally faster (implemented in C)
+- Definitely more clear, concise and elegant code
+
+TBH, I'm addicted 😢
+
+---
+
+## You get a `map()`, you get a `map()`!
+
+
+| Single | Two | Multiple | Returns | Of |
+|---------------|-------------|------|--------|-------|
+| `map()`      | `map2()` | `pmap()` | `list` | `?`|
+| `map_lgl()`      | `map2_lgl()`      |   `pmap_lgl()` |`vector`| `logical` |
+| `map_chr()`      | `map2_chr()`      |   `pmap_chr()` |`vector`| `character` |
+| `map_int()`      | `map2_int()`      |   `pmap_int()` |`vector`| `integer` |
+| `map_dbl()`      | `map2_dbl()`      |   `pmap_dbl()` |`vector`| `double` |
+| `map_df()` | `map2_df()`      |    `pmap_df()` | `tibble` | `?` |
+
+Where "Single" means "single vector/column input", "Two" means "two vectors/columns input" etc.
+
+.font80percent[(Tip of the iceberg really, I want you to survive this slide)]
+
+---
+
+### Example1: Vectorizing a Function
+
+Take a clearly not-vectorized function:
+
+
+```r
+my_func &lt;- function(x) {
+  if (x %% 2 == 0) return("even")
+  "odd"
+}
+
+my_func(10)
+```
+
+```
+## [1] "even"
+```
+
+```r
+my_func(1:5)
+```
+
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Warning in if (x%%2 == 0) return("even"): the condition has length &gt; 1 and
+## only the first element will be used
+&lt;/code&gt;&lt;/pre&gt;
+
+```
+## [1] "odd"
+```
+
+.insight[
+💡 This is silly example, do you know how to easily vectorize this function?
+]
+
+---
+
+`map()` will always return a list:
+
+
+```r
+map(1:3, my_func)
+```
+
+```
+## [[1]]
+## [1] "odd"
+## 
+## [[2]]
+## [1] "even"
+## 
+## [[3]]
+## [1] "odd"
+```
+
+```r
+1:3 %&gt;% map(my_func)
+```
+
+```
+## [[1]]
+## [1] "odd"
+## 
+## [[2]]
+## [1] "even"
+## 
+## [[3]]
+## [1] "odd"
+```
+
+---
+
+`map_chr()` will always return a vector of `character`:
+
+
+```r
+map_chr(1:3, my_func)
+```
+
+```
+## [1] "odd"  "even" "odd"
+```
+
+```r
+1:3 %&gt;% map_chr(my_func)
+```
+
+```
+## [1] "odd"  "even" "odd"
+```
+
+But here is the beautiful thing:
+
+
+```r
+my_func_vectorized &lt;- function(vec) map_chr(vec, my_func)
+
+my_func_vectorized(1:3)
+```
+
+```
+## [1] "odd"  "even" "odd"
+```
+
+Look Ma, no loops!
+
+---
+
+### Example2: Complex `mutate()`
+
+Manager: Add me a column, for each OkCupid user, whether he/she's above average height.
+
+
+
+
+```r
+is_above_average_height &lt;- function(sex, height_cm) {
+  ifelse(sex == "m", height_cm &gt; 180, height_cm &gt; 165)
+}
+
+okcupid &lt;- okcupid %&gt;%
+  mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height))
+
+okcupid %&gt;% select(sex, height_cm, is_tall) %&gt;% sample_n(4)
+```
+
+```
+## # A tibble: 4 x 3
+##   sex   height_cm is_tall
+##   &lt;chr&gt;     &lt;dbl&gt; &lt;lgl&gt;  
+## 1 f          183. TRUE   
+## 2 m          178. FALSE  
+## 3 f          163. FALSE  
+## 4 f          173. TRUE
+```
+
+.font80percent[Girl, I dare you to do this in base R.]
+
+---
+
+### Example2: You could even supply args
+
+
+```r
+is_above_average_height &lt;- function(sex, height_cm, men_avg, women_avg) {
+  ifelse(sex == "m", height_cm &gt; men_avg, height_cm &gt; women_avg)
+}
+
+okcupid &lt;- okcupid %&gt;%
+  mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height,
+                            men_avg = 180, women_avg = 165))
+
+okcupid %&gt;% select(sex, height_cm, is_tall) %&gt;% sample_n(4)
+```
+
+```
+## # A tibble: 4 x 3
+##   sex   height_cm is_tall
+##   &lt;chr&gt;     &lt;dbl&gt; &lt;lgl&gt;  
+## 1 m          185. TRUE   
+## 2 f          160. FALSE  
+## 3 f          168. TRUE   
+## 4 f          163. FALSE
+```
+
+---
+
+### Example2: Anonymous Functions
+
+
+```r
+okcupid &lt;- okcupid %&gt;%
+  mutate(is_tall = map2_lgl(sex, height_cm,
+                            function(x, y) ifelse(x == "m", y &gt; 180, y &gt; 165)))
+```
+
+Heck, you can even:
+
+
+```r
+okcupid &lt;- okcupid %&gt;%
+  mutate(is_tall = map2_lgl(sex, height_cm,
+                            ~ifelse(.x == "m", .y &gt; 180, .y &gt; 165)))
+```
+
+.insight[
+💡 There's a thin line between elegance and unreadable undebuggable bragging.
+]
+---
+
+### Example 3: Remember our problem?
+
+For each `essay` column, add a column with its length:
+
+
+```r
+okcupid %&gt;%
+  mutate_at(vars(essay0:essay9), list("len" = str_length)) %&gt;%
+  select(starts_with("essay")) %&gt;%
+  head(3)
+```
+
+```
+## # A tibble: 3 x 20
+##   essay0 essay1 essay2 essay3 essay4 essay5 essay6 essay7 essay8 essay9
+##   &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt; 
+## 1 "abou~ "curr~ "maki~ "the ~ "book~ "food~ duali~ "tryi~ "i am~ "you ~
+## 2 "i am~ dedic~ "bein~ &lt;NA&gt;   "i am~ "deli~ &lt;NA&gt;   &lt;NA&gt;   i am ~ &lt;NA&gt;  
+## 3 "i'm ~ "i ma~ "impr~ "my l~ "okay~ "move~ &lt;NA&gt;   viewi~ "when~ "you ~
+## # ... with 10 more variables: essay0_len &lt;int&gt;, essay1_len &lt;int&gt;,
+## #   essay2_len &lt;int&gt;, essay3_len &lt;int&gt;, essay4_len &lt;int&gt;,
+## #   essay5_len &lt;int&gt;, essay6_len &lt;int&gt;, essay7_len &lt;int&gt;,
+## #   essay8_len &lt;int&gt;, essay9_len &lt;int&gt;
+```
+
+`purrr` not needed, like I said, you've already been non-looping!
+
+---
+
+### Example 3: Input multiple columns
+
+~~For each user, compute the average `essay` length:~~
+
+Wait, before that, for each user compute the average of the 3 first `essay`s:
+
+
+```r
+mean_length_3essay &lt;- function(x, y, z) {
+  mean(str_length(c(x, y, z)), na.rm = TRUE)
+}
+
+okcupid %&gt;%
+  mutate(essay3_avglen = pmap_dbl(
+    list(essay0, essay1, essay2),
+    mean_length_3essay)) %&gt;%
+  select(essay0:essay2, essay3_avglen) %&gt;%
+  head(2)
+```
+
+```
+## # A tibble: 2 x 4
+##   essay0              essay1              essay2              essay3_avglen
+##   &lt;chr&gt;               &lt;chr&gt;               &lt;chr&gt;                       &lt;dbl&gt;
+## 1 "about me:&lt;br /&gt;\n~ "currently working~ "making people lau~          557.
+## 2 "i am a chef: this~ dedicating everyda~ "being silly. havi~          280.
+```
+
+---
+
+OK now, for each user, compute the average `essay` length:
+
+
+```r
+mean_length_essay &lt;- function(...) {
+  mean(str_length(c(...)), na.rm = TRUE)
+}
+
+okcupid %&gt;%
+  mutate(essay_avglen = pmap_dbl(
+    select(., starts_with("essay")),
+    mean_length_essay)) %&gt;%
+  select(essay0:essay3, essay_avglen) %&gt;%
+  head(3)
+```
+
+```
+## # A tibble: 3 x 5
+##   essay0          essay1         essay2         essay3         essay_avglen
+##   &lt;chr&gt;           &lt;chr&gt;          &lt;chr&gt;          &lt;chr&gt;                 &lt;dbl&gt;
+## 1 "about me:&lt;br ~ "currently wo~ "making peopl~ "the way i lo~         264.
+## 2 "i am a chef: ~ dedicating ev~ "being silly.~ &lt;NA&gt;                   241.
+## 3 "i'm not asham~ "i make nerdy~ "improvising ~ "my large jaw~         612
+```
+
+---
+
+### Example4: Output multiple columns
+
+
+```r
+essay0_features &lt;- function(essay0) {
+ contains_love &lt;- str_detect(essay0, "love")
+ contains_obama &lt;- str_detect(essay0, "obama")
+ contains_rel &lt;- str_detect(essay0, "relationship")
+ list(
+   essay0_love = contains_love,
+   essay0_obama = contains_obama,
+   essay0_ser_rel = contains_rel
+ )
+}
+
+okcupid %&gt;% select(essay0) %&gt;% map_dfc(essay0_features)
+```
+
+```
+## # A tibble: 59,946 x 3
+##    essay0_love essay0_obama essay0_ser_rel
+##    &lt;lgl&gt;       &lt;lgl&gt;        &lt;lgl&gt;         
+##  1 TRUE        FALSE        FALSE         
+##  2 TRUE        FALSE        FALSE         
+##  3 TRUE        FALSE        FALSE         
+##  4 FALSE       FALSE        FALSE         
+##  5 FALSE       FALSE        FALSE         
+##  6 TRUE        FALSE        FALSE         
+##  7 TRUE        FALSE        FALSE         
+##  8 NA          NA           NA            
+##  9 NA          NA           NA            
+## 10 TRUE        FALSE        FALSE         
+## # ... with 59,936 more rows
+```
+
+```r
+# or: map_dfc(okcupid$essay0, essay0_features)
+```
+
+---
+
+Or if you want those features as additional columns, you could bind them with `bind_cols()`:
+
+
+```r
+okcupid %&gt;%
+  bind_cols(
+    okcupid %&gt;% select(essay0) %&gt;% map_dfc(essay0_features)
+  ) %&gt;%
+  select(age, sex, starts_with("essay0"))
+```
+
+```
+## # A tibble: 59,946 x 6
+##      age sex   essay0               essay0_love essay0_obama essay0_ser_rel
+##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;                &lt;lgl&gt;       &lt;lgl&gt;        &lt;lgl&gt;         
+##  1    22 m     "about me:&lt;br /&gt;\n&lt;~ TRUE        FALSE        FALSE         
+##  2    35 m     "i am a chef: this ~ TRUE        FALSE        FALSE         
+##  3    38 m     "i'm not ashamed of~ TRUE        FALSE        FALSE         
+##  4    23 m     i work in a library~ FALSE       FALSE        FALSE         
+##  5    29 m     "hey how's it going~ FALSE       FALSE        FALSE         
+##  6    29 m     "i'm an australian ~ TRUE        FALSE        FALSE         
+##  7    32 f     "life is about the ~ TRUE        FALSE        FALSE         
+##  8    31 f     &lt;NA&gt;                 NA          NA           NA            
+##  9    24 f     &lt;NA&gt;                 NA          NA           NA            
+## 10    37 m     "my names jake.&lt;br ~ TRUE        FALSE        FALSE         
+## # ... with 59,936 more rows
+```
+
+---
+
+## Dealing with failure
+
+
+```r
+my_func("a")
+```
+
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Error in x%%2: non-numeric argument to binary operator
+&lt;/code&gt;&lt;/pre&gt;
+
+Silly example, but:
+
+(a) When dealing with big data expect the unexpected (input)
+
+(b) You don't want your app to crash
+
+Look at: `safely()`, `quietly()` and `possibly()` which wrap your code nicely and protect you from the unexpected (crash).
+
+---
+
+### My favorite: `possibly()`
+
+
+```r
+my_func_safe &lt;- possibly(my_func, otherwise = NA)
+
+my_func_safe("a")
+```
+
+```
+## [1] NA
+```
+
+```r
+map_lgl(c(1, 2, "3", 4), my_func_safe)
+```
+
+```
+## [1] NA NA NA NA
+```
+
+.insight[
+💡 See a more realistic when we talk about Web Scraping
+]
+
+---
+
+## `walk()`, `walk2()`, `pwalk()`
+
+You don't always need to *return* anything, you just wanna loop
+
+
+```r
+walk(1:10, ~print("Hey Girrrl"))
+```
+
+```
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+## [1] "Hey Girrrl"
+```
+
+---
+
+
+```r
+plot_norm &lt;- function(mu, sd) {
+  plot(density(rnorm(100, mu, sd)),
+       main = str_c("mu: ", mu, ", sd: ", sd))
+}
+
+par(mfcol = c(1, 2))
+walk2(c(0, 10), c(1, 0.1), plot_norm)
+```
+
+&lt;img src="images/Walk2-1.png" width="80%" /&gt;
+
+---
+
+### In the words of Hadley
+
+&gt; Once you master these functions, you’ll find it takes much less time to solve iteration problems.
+
+&lt;br&gt;
+
+&gt; But you should never feel bad about using a for loop instead of a map function.
+
+&lt;br&gt;
+
+&gt; The important thing is that you solve the problem that you’re working on, not write the most concise and elegant code.
+
+&lt;br&gt;
+
+&gt; Some people will tell you to avoid for loops because they are slow. They’re wrong!
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>

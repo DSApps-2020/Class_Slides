@@ -450,6 +450,11 @@ get_1way_migration("russian_federation", "israel")
 ```
 
 ---
+class: section-slide
+
+# End of Detour
+
+---
 
 ## `pivot_longer()`
 
@@ -587,11 +592,386 @@ table3_tidy %>%
 ---
 class: section-slide
 
-# Iteration: I don't `for`, I `purrr`
+# Iteration without looping
 
 ---
-class: section-slide
 
-# The Magic of List Columns
+## Fun fact: you're already not-looping!
+
+- Say you want the lengths of all of these strings:
+
+```{r Not-Looping1}
+strings_vec <- c("I'm feeling fine", "I'm perfectly OK",
+                 "Nothing is wrong!")
+```
+
+- Do you `for` loop?
+
+```{r Not-Looping2}
+strings_len <- numeric(length(strings_vec))
+for (i in seq_along(strings_vec)) {
+  strings_len[i] <- nchar(strings_vec[i])
+}
+strings_len
+```
 
 ---
+
+- No, you use R's vectorized functions nature:
+
+```{r Not-Looping3}
+nchar(strings_vec)
+```
+
+- In case you were wondering:
+
+```{r Not-Looping4a, echo=FALSE}
+nchar_loop <- function() {
+  strings_len <- numeric(length(strings_vec))
+  for (i in seq_along(strings_vec)) {
+    strings_len[i] <- nchar(strings_vec[i])
+  }
+  strings_len
+}
+
+nchar_vectorized <- function() {
+  nchar(strings_vec)
+}
+```
+```{r Not-Looping4b}
+microbenchmark(nchar_loop(), nchar_vectorized())
+```
+
+- So why should iterating through a `data.frame` columns or rows be any different?
+
+---
+
+## The problem:
+
+```{r Iteration1}
+okcupid <- read_csv("../data/okcupid.csv.zip", col_types = cols())
+okcupid %>% select(essay0:essay2) %>% head(3)
+```
+
+- I want to apply some transformation to one or more columns (say the length of each `essay` question for each user)
+- I want to apply some transformation to one or more rows (say the average length of all `essay` questions for each user)
+
+- BTW, you can always use a `for` loop, see how it is done [here](https://r4ds.had.co.nz/iteration.html#for-loops)
+
+---
+
+## The `apply` family
+
+- There *is* a solution in base R
+  - `apply()`
+  - `sapply()`
+  - `lapply()`
+  - `tapply()`
+  - `vapply()`
+  - `mapply()`
+- What do you think is the issue with these? See [this](https://stackoverflow.com/questions/45101045/why-use-purrrmap-instead-of-lapply).
+
+---
+
+## I don't `for`, I `purrr`
+
+The `purrr` package provides a set of functions to make iteration easier:
+
+- No boilerplate code for looping --> less looping bugs
+- Focus on the function, the action, not the plumbing
+- Generally faster (implemented in C)
+- Definitely more clear, concise and elegant code
+
+TBH, I'm addicted `r emo::ji("cry")`
+
+---
+
+## You get a `map()`, you get a `map()`!
+
+```{r Maps-Table, results="asis", echo=FALSE}
+tabl <- "
+| Single | Two | Multiple | Returns | Of |
+|---------------|-------------|------|--------|-------|
+| `map()`      | `map2()` | `pmap()` | `list` | `?`|
+| `map_lgl()`      | `map2_lgl()`      |   `pmap_lgl()` |`vector`| `logical` |
+| `map_chr()`      | `map2_chr()`      |   `pmap_chr()` |`vector`| `character` |
+| `map_int()`      | `map2_int()`      |   `pmap_int()` |`vector`| `integer` |
+| `map_dbl()`      | `map2_dbl()`      |   `pmap_dbl()` |`vector`| `double` |
+| `map_df()` | `map2_df()`      |    `pmap_df()` | `tibble` | `?` |
+"
+cat(tabl)
+```
+
+Where "Single" means "single vector/column input", "Two" means "two vectors/columns input" etc.
+
+.font80percent[(Tip of the iceberg really, I want you to survive this slide)]
+
+---
+
+### Example1: Vectorizing a Function
+
+Take a clearly not-vectorized function:
+
+```{r Map-Example1A}
+my_func <- function(x) {
+  if (x %% 2 == 0) return("even")
+  "odd"
+}
+
+my_func(10)
+
+my_func(1:5)
+```
+
+.insight[
+`r emo::ji("bulb")` This is silly example, do you know how to easily vectorize this function?
+]
+
+---
+
+`map()` will always return a list:
+
+```{r Map-Example1B}
+map(1:3, my_func)
+
+1:3 %>% map(my_func)
+```
+
+---
+
+`map_chr()` will always return a vector of `character`:
+
+```{r Map-Example1C}
+map_chr(1:3, my_func)
+
+1:3 %>% map_chr(my_func)
+```
+
+But here is the beautiful thing:
+
+```{r Map-Example1D}
+my_func_vectorized <- function(vec) map_chr(vec, my_func)
+
+my_func_vectorized(1:3)
+```
+
+Look Ma, no loops!
+
+---
+
+### Example2: Complex `mutate()`
+
+Manager: Add me a column, for each OkCupid user, whether he/she's above average height.
+
+```{r Example20, echo=FALSE}
+okcupid <- okcupid %>%
+  mutate(height_cm = height * 2.54,
+         income = ifelse(income == -1, NA, income))
+```
+
+```{r Example2A}
+is_above_average_height <- function(sex, height_cm) {
+  ifelse(sex == "m", height_cm > 180, height_cm > 165)
+}
+
+okcupid <- okcupid %>%
+  mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height))
+
+okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
+```
+
+.font80percent[Girl, I dare you to do this in base R.]
+
+---
+
+### Example2: You could even supply args
+
+```{r Example2B}
+is_above_average_height <- function(sex, height_cm, men_avg, women_avg) {
+  ifelse(sex == "m", height_cm > men_avg, height_cm > women_avg)
+}
+
+okcupid <- okcupid %>%
+  mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height,
+                            men_avg = 180, women_avg = 165))
+
+okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
+```
+
+---
+
+### Example2: Anonymous Functions
+
+```{r Example2C}
+okcupid <- okcupid %>%
+  mutate(is_tall = map2_lgl(sex, height_cm,
+                            function(x, y) ifelse(x == "m", y > 180, y > 165)))
+```
+
+Heck, you can even:
+
+```{r Example2D}
+okcupid <- okcupid %>%
+  mutate(is_tall = map2_lgl(sex, height_cm,
+                            ~ifelse(.x == "m", .y > 180, .y > 165)))
+```
+
+.insight[
+`r emo::ji("bulb")` There's a thin line between elegance and unreadable undebuggable bragging.
+]
+---
+
+### Example 3: Remember our problem?
+
+For each `essay` column, add a column with its length:
+
+```{r Example3A}
+okcupid %>%
+  mutate_at(vars(essay0:essay9), list("len" = str_length)) %>%
+  select(starts_with("essay")) %>%
+  head(3)
+```
+
+`purrr` not needed, like I said, you've already been non-looping!
+
+---
+
+### Example 3: Input multiple columns
+
+~~For each user, compute the average `essay` length:~~
+
+Wait, before that, for each user compute the average of the 3 first `essay`s:
+
+```{r Example3B}
+mean_length_3essay <- function(x, y, z) {
+  mean(str_length(c(x, y, z)), na.rm = TRUE)
+}
+
+okcupid %>%
+  mutate(essay3_avglen = pmap_dbl(
+    list(essay0, essay1, essay2),
+    mean_length_3essay)) %>%
+  select(essay0:essay2, essay3_avglen) %>%
+  head(2)
+```
+
+---
+
+OK now, for each user, compute the average `essay` length:
+
+```{r Example3C}
+mean_length_essay <- function(...) {
+  mean(str_length(c(...)), na.rm = TRUE)
+}
+
+okcupid %>%
+  mutate(essay_avglen = pmap_dbl(
+    select(., starts_with("essay")),
+    mean_length_essay)) %>%
+  select(essay0:essay3, essay_avglen) %>%
+  head(3)
+```
+
+---
+
+### Example4: Output multiple columns
+
+```{r Example4A}
+essay0_features <- function(essay0) {
+ contains_love <- str_detect(essay0, "love")
+ contains_obama <- str_detect(essay0, "obama")
+ contains_rel <- str_detect(essay0, "relationship")
+ list(
+   essay0_love = contains_love,
+   essay0_obama = contains_obama,
+   essay0_ser_rel = contains_rel
+ )
+}
+
+okcupid %>% select(essay0) %>% map_dfc(essay0_features)
+# or: map_dfc(okcupid$essay0, essay0_features)
+```
+
+---
+
+Or if you want those features as additional columns, you could bind them with `bind_cols()`:
+
+```{r Example4B}
+okcupid %>%
+  bind_cols(
+    okcupid %>% select(essay0) %>% map_dfc(essay0_features)
+  ) %>%
+  select(age, sex, starts_with("essay0"))
+```
+
+---
+
+## Dealing with failure
+
+```{r Safely1, error=TRUE, linewidth=80}
+my_func("a")
+```
+
+Silly example, but:
+
+(a) When dealing with big data expect the unexpected (input)
+
+(b) You don't want your app to crash
+
+Look at: `safely()`, `quietly()` and `possibly()` which wrap your code nicely and protect you from the unexpected (crash).
+
+---
+
+### My favorite: `possibly()`
+
+```{r Safely2}
+my_func_safe <- possibly(my_func, otherwise = NA)
+
+my_func_safe("a")
+
+map_lgl(c(1, 2, "3", 4), my_func_safe)
+```
+
+.insight[
+`r emo::ji("bulb")` See a more realistic when we talk about Web Scraping
+]
+
+---
+
+## `walk()`, `walk2()`, `pwalk()`
+
+You don't always need to *return* anything, you just wanna loop
+
+```{r Walk}
+walk(1:10, ~print("Hey Girrrl"))
+```
+
+---
+
+```{r Walk2, fig.asp=0.62, out.width="80%"}
+plot_norm <- function(mu, sd) {
+  plot(density(rnorm(100, mu, sd)),
+       main = str_c("mu: ", mu, ", sd: ", sd))
+}
+
+par(mfcol = c(1, 2))
+walk2(c(0, 10), c(1, 0.1), plot_norm)
+```
+
+---
+
+### In the words of Hadley
+
+> Once you master these functions, you’ll find it takes much less time to solve iteration problems.
+
+<br>
+
+> But you should never feel bad about using a for loop instead of a map function.
+
+<br>
+
+> The important thing is that you solve the problem that you’re working on, not write the most concise and elegant code.
+
+<br>
+
+> Some people will tell you to avoid for loops because they are slow. They’re wrong!
