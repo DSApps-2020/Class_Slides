@@ -929,13 +929,16 @@ my_func_safe <- possibly(my_func, otherwise = NA)
 
 my_func_safe("a")
 
-map_lgl(c(1, 2, "3", 4), my_func_safe)
+map_chr(list(1, 2, "3", 4), my_func_safe)
 ```
 
 .insight[
-`r emo::ji("bulb")` See a more realistic when we talk about Web Scraping
+`r emo::ji("bulb")` See a more realistic example when we talk about Web Scraping
 ]
 
+.insight[
+`r emo::ji("bulb")` What would `map_chr(c(1, 2, "3", 4), my_func_safe)` return?
+]
 ---
 
 ## `walk()`, `walk2()`, `pwalk()`
