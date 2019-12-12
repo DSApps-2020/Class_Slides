@@ -236,7 +236,7 @@ ggplot(data = characters,
   geom_point()
 ```
 
-&lt;img src="images/GGplot3-1.png" width="70%" /&gt;
+&lt;img src="images/Ggplot3-1.png" width="70%" /&gt;
 
 ---
 
@@ -359,7 +359,257 @@ ggplot(data = characters, mapping = aes(x = height, y = mass)) +
 ---
 class: section-slide
 
+# Take Control
+
+---
+
+
+
+
+```r
+okcupid_lgbt_relig &lt;- okcupid %&gt;%
+  group_by(religion2) %&gt;%
+  summarise(pct_lgbt = mean(orientation %in% c("gay", "bisexual"))) %&gt;%
+  mutate(religion = fct_reorder(religion2, desc(pct_lgbt)))
+
+okcupid_lgbt_relig
+```
+
+```
+## # A tibble: 7 x 3
+##   religion2 pct_lgbt religion 
+##   &lt;chr&gt;        &lt;dbl&gt; &lt;fct&gt;    
+## 1 atheist     0.152  atheist  
+## 2 buddhist    0.210  buddhist 
+## 3 christian   0.0974 christian
+## 4 hindu       0.0778 hindu    
+## 5 jewish      0.117  jewish   
+## 6 muslim      0.101  muslim   
+## 7 NA          0.146  NA
+```
+
+---
+
+
+```r
+okcupid_lgbt_relig %&gt;%
+  ggplot(aes(religion, pct_lgbt)) +
+  geom_bar(stat="identity")
+```
+
+&lt;img src="images/Control2-1.png" width="60%" /&gt;
+
+.font80percent[Meh.]
+
+---
+
+## Pimp my plot
+
+
+```r
+p &lt;- ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  labs(x = "", y = "",
+       title = "OkCupid: %Reported LGBTQ+ by Religion") +
+  theme(text = element_text(size = 14, color = "#163f59", family = "mono"),
+        axis.text.y = element_text(size = 14)) +
+  scale_y_continuous(breaks = seq(0.05, 0.2, 0.05),
+                     labels=scales::percent_format(accuracy = 1)) +
+  coord_flip()
+p
+```
+
+---
+
+## Pimp my plot
+
+&lt;img src="images/Control4-1.png" width="100%" /&gt;
+
+---
+
+## Annotate, Add lines
+
+
+```r
+p + geom_hline(yintercept = 0.139, lty = 2, color = "#163f59") +
+  annotate("text", x = 4, y = 0.139 + 0.02, label = "Overall %",
+           color = "#163f59", family = "mono")
+```
+
+&lt;img src="images/Control5-1.png" width="100%" /&gt;
+
+---
+class: section-slide
+
+# Themes
+
+---
+
+
+```r
+p + theme_classic()
+```
+
+&lt;img src="images/Themes1-1.png" width="100%" /&gt;
+---
+
+
+```r
+p + theme_light()
+```
+
+&lt;img src="images/Themes2-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+p + theme_dark()
+```
+
+&lt;img src="images/Themes3-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+p + theme_linedraw()
+```
+
+&lt;img src="images/Themes4-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+library(tvthemes)
+# import_simpsons()
+extrafont::loadfonts(device="win")
+
+p + theme_simpsons(title.font = "Akbar",
+                 text.font = "Akbar",
+                 axis.text.size = 12)
+```
+
+&lt;img src="images/Themes5-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
+  geom_bar(aes(fill = pct_lgbt), stat="identity", alpha=.6, width=.4) +
+  labs(x = "", y = "", title = "This was supposed to be GoT") +
+  scale_y_continuous(breaks = seq(0.05, 0.2, 0.05), labels=scales::percent_format(accuracy = 1)) +
+  coord_flip() +
+  scale_fill_westeros(palette = "Tyrell", type = "continuous") + theme_minimal() +
+  theme(text = element_text(family = "Cinzel", size = 12),
+        title = element_text(family = "Cinzel", size = 14)) + guides(fill=FALSE)
+```
+
+&lt;img src="images/Themes6-1.png" width="100%" /&gt;
+
+---
+class: section-slide
+
 # Common Plots à la GG
+
+---
+
+## Line Plot
+
+---
+
+## Histogram
+
+---
+
+## Density Plot
+
+---
+
+## Box Plot
+
+---
+
+## Swarm Plot
+
+---
+
+## Bar Plot
+
+---
+
+## Segmented Bar Plots: Counts
+
+---
+
+## Segmented Bar Plots: Proportions
+
+---
+
+## Mosaic Plots
+
+---
+
+## Dumbbel Plot
+
+---
+
+## Radar Chart
+
+---
+
+## Sankey Diagram (Alluvial Plot)
+
+---
+
+## Heatmap
+
+---
+class: logo-slide
+
+# Amazing Extensions
+
+---
+
+## `ggraph`
+
+---
+
+## `gganimate`
+
+---
+
+## `ggrepel`
+
+---
+
+## `ggridges`
+
+---
+
+## `ggExtra`
+
+---
+
+## `sf`, `ggmap`
+
+---
+
+## `ggchicklet`
+
+---
+
+## `rayshader`
+
+---
+
+## `magick`
+
+---
+
+## `brickr`
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>

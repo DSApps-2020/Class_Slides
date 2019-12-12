@@ -187,7 +187,7 @@ in the data are
 
 ### Mass vs. Height + Gender
 
-```{r GGplot3, fig.asp=0.62, out.width="70%", warning=FALSE}
+```{r Ggplot3, fig.asp=0.62, out.width="70%", warning=FALSE}
 ggplot(data = characters,
        mapping = aes(x = height, y = mass, color = gender)) +
   geom_point()
@@ -296,4 +296,240 @@ ggplot(data = characters, mapping = aes(x = height, y = mass)) +
 ---
 class: section-slide
 
+# Take Control
+
+---
+
+```{r Control0, echo=FALSE}
+okcupid <- read_csv("../data/okcupid.csv.zip", col_types = cols())
+okcupid <- okcupid %>%
+  mutate(height_cm = height * 2.54,
+         income = ifelse(income == -1, NA, income),
+         religion2 = case_when(
+           str_detect(religion, "agnosticism") | str_detect(religion, "atheism") ~ "atheist",
+           str_detect(religion, "buddhism") ~ "buddhist",
+           str_detect(religion, "christianity") | str_detect(religion, "catholicism") ~ "christian",
+           str_detect(religion, "judaism") ~ "jewish",
+           str_detect(religion, "hinduism") ~ "hindu",
+           str_detect(religion, "islam") ~ "muslim",
+           TRUE ~ "NA"))
+```
+
+```{r Control1, out.width="60%"}
+okcupid_lgbt_relig <- okcupid %>%
+  group_by(religion2) %>%
+  summarise(pct_lgbt = mean(orientation %in% c("gay", "bisexual"))) %>%
+  mutate(religion = fct_reorder(religion2, desc(pct_lgbt)))
+
+okcupid_lgbt_relig
+```
+
+---
+
+```{r Control2, out.width="60%"}
+okcupid_lgbt_relig %>%
+  ggplot(aes(religion, pct_lgbt)) +
+  geom_bar(stat="identity")
+```
+
+.font80percent[Meh.]
+
+---
+
+## Pimp my plot
+
+```{r Control3, eval = FALSE}
+p <- ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  labs(x = "", y = "",
+       title = "OkCupid: %Reported LGBTQ+ by Religion") +
+  theme(text = element_text(size = 14, color = "#163f59", family = "mono"),
+        axis.text.y = element_text(size = 14)) +
+  scale_y_continuous(breaks = seq(0.05, 0.2, 0.05),
+                     labels=scales::percent_format(accuracy = 1)) +
+  coord_flip()
+p
+```
+
+---
+
+## Pimp my plot
+
+```{r Control4, out.width="100%", fig.asp = 0.5, echo=FALSE}
+p <- ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  labs(x = "", y = "",
+       title = "OkCupid: %Reported LGBTQ+ by Religion") +
+  theme(text = element_text(size = 14, color = "#163f59",
+                            family = "mono"),
+        axis.text.y = element_text(size = 14)) +
+  scale_y_continuous(breaks = seq(0.05, 0.2, 0.05),
+                     labels=scales::percent_format(accuracy = 1)) +
+  coord_flip()
+p
+```
+
+---
+
+## Annotate, Add lines
+
+```{r Control5, out.width="100%", fig.asp = 0.5}
+p + geom_hline(yintercept = 0.139, lty = 2, color = "#163f59") +
+  annotate("text", x = 4, y = 0.139 + 0.02, label = "Overall %",
+           color = "#163f59", family = "mono")
+```
+
+---
+class: section-slide
+
+# Themes
+
+---
+
+```{r Themes1, out.width="100%", fig.asp = 0.5}
+p + theme_classic()
+```
+---
+
+```{r Themes2, out.width="100%", fig.asp = 0.5}
+p + theme_light()
+```
+
+---
+
+```{r Themes3, out.width="100%", fig.asp = 0.5}
+p + theme_dark()
+```
+
+---
+
+```{r Themes4, out.width="100%", fig.asp = 0.5}
+p + theme_linedraw()
+```
+
+---
+
+```{r Themes5, out.width="100%", fig.asp = 0.5, message=FALSE}
+library(tvthemes)
+# import_simpsons()
+extrafont::loadfonts(device="win")
+
+p + theme_simpsons(title.font = "Akbar",
+                 text.font = "Akbar",
+                 axis.text.size = 12)
+```
+
+---
+
+```{r Themes6, out.width="100%", fig.asp = 0.5, message=FALSE}
+ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
+  geom_bar(aes(fill = pct_lgbt), stat="identity", alpha=.6, width=.4) +
+  labs(x = "", y = "", title = "This was supposed to be GoT") +
+  scale_y_continuous(breaks = seq(0.05, 0.2, 0.05), labels=scales::percent_format(accuracy = 1)) +
+  coord_flip() +
+  scale_fill_westeros(palette = "Tyrell", type = "continuous") + theme_minimal() +
+  theme(text = element_text(family = "Cinzel", size = 12),
+        title = element_text(family = "Cinzel", size = 14)) + guides(fill=FALSE)
+```
+
+---
+class: section-slide
+
 # Common Plots à la GG
+
+---
+
+## Line Plot
+
+---
+
+## Histogram
+
+---
+
+## Density Plot
+
+---
+
+## Box Plot
+
+---
+
+## Swarm Plot
+
+---
+
+## Bar Plot
+
+---
+
+## Segmented Bar Plots: Counts
+
+---
+
+## Segmented Bar Plots: Proportions
+
+---
+
+## Mosaic Plots
+
+---
+
+## Dumbbel Plot
+
+---
+
+## Radar Chart
+
+---
+
+## Sankey Diagram (Alluvial Plot)
+
+---
+
+## Heatmap
+
+---
+class: logo-slide
+
+# Amazing Extensions
+
+---
+
+## `ggraph`
+
+---
+
+## `gganimate`
+
+---
+
+## `ggrepel`
+
+---
+
+## `ggridges`
+
+---
+
+## `ggExtra`
+
+---
+
+## `sf`, `ggmap`
+
+---
+
+## `ggchicklet`
+
+---
+
+## `rayshader`
+
+---
+
+## `magick`
+
+---
+
+## `brickr`
