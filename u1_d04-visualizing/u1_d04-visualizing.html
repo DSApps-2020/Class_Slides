@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Visualizing in the Tidyverse</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2019-12-12" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Visualizing in the Tidyverse
+
+### Applications of Data Science - Class 4
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2019-12-12
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# Welcome to `ggplot2`
+
+#### Heavily inspired by datascienceinabox.org / @minebocek
+---
+
+## `ggplot()`
+
+- **ggplot2** is tidyverse's data visualization package
+- The `gg` in "ggplot2" stands for Grammar of Graphics
+- It is inspired by the book [Grammar of Graphics](https://www.springer.com/gp/book/9780387245447) by Leland Wilkinson
+- A grammar of graphics is a tool that enables us to concisely describe the components of a graphic
+
+&lt;center&gt;&lt;img src = "images/grammar-of-graphics.png" style="width: 50%"&gt;&lt;/center&gt;
+
+---
+
+### Remember the Force, Luke!
+
+
+```r
+sw_tables &lt;- read_rds("../data/sw_tables.rds")
+characters &lt;- sw_tables$characters
+planets &lt;- sw_tables$planets
+films &lt;- sw_tables$films
+
+glimpse(characters)
+```
+
+```
+## Observations: 173
+## Variables: 14
+## $ character_id &lt;int&gt; 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3...
+## $ name         &lt;chr&gt; "Luke Skywalker", "Luke Skywalker", "Luke Skywalk...
+## $ gender       &lt;chr&gt; "male", "male", "male", "male", "male", NA, NA, N...
+## $ homeworld_id &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 8, 8, 8, 8, 8...
+## $ height       &lt;dbl&gt; 172, 172, 172, 172, 172, 167, 167, 167, 167, 167,...
+## $ mass         &lt;dbl&gt; 77, 77, 77, 77, 77, 75, 75, 75, 75, 75, 75, 32, 3...
+## $ hair_color   &lt;chr&gt; "blond", "blond", "blond", "blond", "blond", NA, ...
+## $ skin_color   &lt;chr&gt; "fair", "fair", "fair", "fair", "fair", "gold", "...
+## $ eye_color    &lt;chr&gt; "blue", "blue", "blue", "blue", "blue", "yellow",...
+## $ birth_year   &lt;dbl&gt; 19.0, 19.0, 19.0, 19.0, 19.0, 112.0, 112.0, 112.0...
+## $ film_id      &lt;dbl&gt; 1, 2, 3, 6, 7, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6...
+## $ species      &lt;list&gt; ["http://swapi.co/api/species/1/", "http://swapi...
+## $ vehicles     &lt;list&gt; [&lt;"http://swapi.co/api/vehicles/14/", "http://sw...
+## $ starships    &lt;list&gt; [&lt;"http://swapi.co/api/starships/12/", "http://s...
+```
+
+---
+
+What are the functions doing the plotting? What is the dataset being plotted? 
+Which variable is on the x-axis and which variable is on the y-axis? What does the warning mean?
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Warning: Removed 36 rows containing missing values (geom_point).
+&lt;/code&gt;&lt;/pre&gt;&lt;img src="images/Mass-Height1-1.png" width="70%" /&gt;
+
+---
+
+What does `geom_smooth()` do? What else changed between the previous plot and this one?
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+* geom_smooth() +
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+&lt;img src="images/Mass-Height2-1.png" width="70%" /&gt;
+
+---
+
+## Who dis!
+
+- `ggplot()` is the main function in ggplot2 and plots are constructed in layers
+- The structure of the code for plots can often be summarized as
+
+```r
+ggplot + 
+  geom_xxx
+```
+
+or, more precisely
+
+```r
+ggplot(data = [dataset], mapping = aes(x = [x-variable], y = [y-variable])) +
+   geom_xxx() +
+   other options
+```
+
+- To use ggplot2 functions, first load tidyverse
+
+```r
+library(tidyverse)
+```
+- For help with the ggplot2, see [ggplot2.tidyverse.org](http://ggplot2.tidyverse.org/)
+
+---
+
+## Mass vs. Height
+
+
+```r
+ggplot(characters, aes(height, mass)) + geom_point()
+```
+
+&lt;img src="images/Ggplot2-1.png" width="70%" /&gt;
+
+How would you describe this relationship? What other variables would help us understand data points that don't follow the overall trend? Who is the not so tall but really chubby character?
+
+---
+
+## Jabba!
+
+
+```r
+library(magick)
+
+jabba &lt;- image_read("images/jabba.png")
+fig &lt;- image_graph(width = 2400, height = 1200, res = 300)
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point(size = 1.5) + 
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+fig %&gt;% image_composite(jabba, offset = "+1000+30")
+```
+
+&lt;img src="images/JabbaPlot-1.png" width="70%" /&gt;
+
+---
+
+### But seriously, Luke
+
+&lt;center&gt;&lt;img src = "images/luke-skywalker.png" style="width: 90%"&gt;&lt;/center&gt;
+
+---
+
+## Additional variables
+
+We can map additional variables to various features of the plot:
+
+- aesthetics
+    - shape
+    - colour
+    - size
+    - alpha (transparency)
+- faceting: small multiples displaying different subsets
+
+---
+class: section-slide
+
+# Aesthetics
+
+---
+
+## Aesthetics options
+
+Visual characteristics of plotting characters that can be **mapped to a specific variable**
+in the data are
+
+- `color`
+- `fill`
+- `size`
+- `shape`
+- `alpha` (transparency)
+
+---
+
+### Mass vs. Height + Gender
+
+
+```r
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender)) +
+  geom_point()
+```
+
+&lt;img src="images/GGplot3-1.png" width="70%" /&gt;
+
+---
+
+### Mass vs. Height + Gender + Birth Year
+
+Let's map the size to `birth_year`:
+
+
+```r
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender, 
+*                    size = birth_year)) +
+  geom_point()
+```
+
+&lt;img src="images/Aes1-1.png" width="70%" /&gt;
+
+---
+
+### Mass vs. Height + Gender
+
+Let's now increase the size of all points **not** based on the values of a 
+variable in the data:
+
+
+```r
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender)) +
+* geom_point(size = 2)
+```
+
+&lt;img src="images/Aes2-1.png" width="70%" /&gt;
+
+---
+
+## Aesthetics Summary
+
+- Continuous variable are measured on a continuous scale
+- Discrete variables are measured (or often counted) on a discrete scale
+
+aesthetics    | discrete                 | continuous
+------------- | ------------------------ | ------------
+color         | rainbow of colors        | gradient
+size          | discrete steps           | linear mapping between radius and value
+shape         | different shape for each | shouldn't (and doesn't) work
+
+- Use aesthetics for mapping features of a plot to a variable, define the 
+features in the geom for customization **not** mapped to a variable
+
+---
+class: section-slide
+
+# Faceting
+
+---
+
+### Faceting options
+
+- Smaller plots that display different subsets of the data
+- Useful for exploring conditional relationships and large data
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+* facet_grid(. ~ gender) +
+  geom_point() +
+  labs(title = "Mass vs. Height of Starwars characters",
+*      subtitle = "Faceted by Gender",
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+&lt;img src="images/Facet1-1.png" width="100%" /&gt;
+
+---
+
+### Many ways to facet
+
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_grid(gender ~ .)
+```
+
+&lt;img src="images/Facet2-1.png" width="50%" /&gt;
+
+---
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_wrap(. ~ gender, scales = "free")
+```
+
+&lt;img src="images/Facet3-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_wrap(~ eye_color)
+```
+
+&lt;img src="images/Facet4-1.png" width="60%" /&gt;
+
+---
+
+## Facet summary
+
+- `facet_grid()`: 
+    - 2d grid
+    - `rows ~ cols`
+    - use `.` for no split
+- `facet_wrap()`: 1d ribbon wrapped into 2d
+
+---
+
+&lt;!-- --- --&gt;
+&lt;!-- class: center, middle --&gt;
+
+&lt;!-- ## Histograms --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = height)) + --&gt;
+&lt;!--   geom_histogram(binwidth = 10) --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Density plots --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = height)) + --&gt;
+&lt;!--   geom_density() --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Side-by-side box plots --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(y = height, x = gender)) + --&gt;
+&lt;!--   geom_boxplot() --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- class: center, middle --&gt;
+
+&lt;!-- # Visualizing categorical data --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Bar plots --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = gender)) + --&gt;
+&lt;!--   geom_bar() --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Segmented bar plots, counts --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color)) + --&gt;
+&lt;!--   geom_bar() --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Segmented bar plots, proportions --&gt;
+
+&lt;!-- .small[ --&gt;
+&lt;!-- ```{r fig.width = 7, fig.height=4} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color)) + --&gt;
+&lt;!--   geom_bar(position = "fill") + --&gt;
+&lt;!--   labs(y = "proportion") --&gt;
+&lt;!-- ``` --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- --- --&gt;
+
+&lt;!-- ## Which bar plot is more appropriate? --&gt;
+
+&lt;!-- .question[ --&gt;
+&lt;!-- Which bar plot is a more useful representation for visualizing the relationship between gender and hair color? --&gt;
+&lt;!-- ] --&gt;
+
+&lt;!-- ```{r} --&gt;
+&lt;!-- characters &lt;- characters %&gt;% --&gt;
+&lt;!--   mutate(hair_color2 = fct_other(hair_color,  --&gt;
+&lt;!--                                  keep = c("black", "brown", "brown", "blond"))) --&gt;
+&lt;!-- ``` --&gt;
+
+
+&lt;!-- ```{r echo=FALSE, fig.height=1.4, fig.width=6} --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color2)) + --&gt;
+&lt;!--   geom_bar() --&gt;
+&lt;!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color2)) + --&gt;
+&lt;!--   geom_bar(position = "fill") + --&gt;
+&lt;!--   labs(y = "proportion") --&gt;
+&lt;!-- ``` --&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -7,7 +7,7 @@
 #   )
 # figure height, width, dpi
 # knitr::opts_chunk$set(fig.height = 2.5, fig.width = 5, dpi = 300)
-knitr::opts_chunk$set(fig.path = "images/")
+knitr::opts_chunk$set(fig.path = "images/", dpi = 300)
 # magick
 dev.off <- function(){
   invisible(grDevices::dev.off())

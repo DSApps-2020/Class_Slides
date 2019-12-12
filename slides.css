@@ -32,16 +32,28 @@ blockquote {
   padding-left: 1em;
 }
 
-td, th {
+h1, h2, h3, h4 {
+  color: #163f59;
+}
+/*td, th {
     border-bottom: 1px solid grey;
     border-right: 1px solid grey;
+}*/
+
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+  border-bottom: 1px solid #666;
 }
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee }
 
 .remark-slide-content {
   font-size: 24px;
 }
 
-.title-slide h1, .section-slide h1, .title-slide h2, .title-slide h3, .title-slide h4{
+.title-slide h1, .section-slide h1, .title-slide h2, .title-slide h3, .title-slide h4, .section-slide h4{
   text-align: center;
   color: #f5bd30;
 }
@@ -96,7 +108,7 @@ td, th {
 
 div.my-footer {
     background-color: #ffffff;
-    border-top: 1px solid #05263b;
+    border-top: 1px solid #163f59;
     position: absolute;
     bottom: 0px;
     left: 80px;

@@ -1,0 +1,393 @@
+---
+title: "Visualizing in the Tidyverse"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Visualizing in the Tidyverse
+
+### Applications of Data Science - Class 4
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# Welcome to `ggplot2`
+
+#### Heavily inspired by datascienceinabox.org / @minebocek
+---
+
+## `ggplot()`
+
+- **ggplot2** is tidyverse's data visualization package
+- The `gg` in "ggplot2" stands for Grammar of Graphics
+- It is inspired by the book [Grammar of Graphics](https://www.springer.com/gp/book/9780387245447) by Leland Wilkinson
+- A grammar of graphics is a tool that enables us to concisely describe the components of a graphic
+
+<center><img src = "images/grammar-of-graphics.png" style="width: 50%"></center>
+
+---
+
+### Remember the Force, Luke!
+
+```{r Characters}
+sw_tables <- read_rds("../data/sw_tables.rds")
+characters <- sw_tables$characters
+planets <- sw_tables$planets
+films <- sw_tables$films
+
+glimpse(characters)
+```
+
+---
+
+What are the functions doing the plotting? What is the dataset being plotted? 
+Which variable is on the x-axis and which variable is on the y-axis? What does the warning mean?
+
+```{r Mass-Height1, fig.asp=0.62, out.width="70%"}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+---
+
+What does `geom_smooth()` do? What else changed between the previous plot and this one?
+
+```{r Mass-Height2, fig.asp=0.62, out.width="70%", warning=FALSE, message=FALSE}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  geom_smooth() + #<<
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+---
+
+## Who dis!
+
+- `ggplot()` is the main function in ggplot2 and plots are constructed in layers
+- The structure of the code for plots can often be summarized as
+```{r Ggplot0, eval = FALSE}
+ggplot + 
+  geom_xxx
+```
+
+or, more precisely
+```{r Ggplot1, eval = FALSE}
+ggplot(data = [dataset], mapping = aes(x = [x-variable], y = [y-variable])) +
+   geom_xxx() +
+   other options
+```
+
+- To use ggplot2 functions, first load tidyverse
+```{r, eval=FALSE}
+library(tidyverse)
+```
+- For help with the ggplot2, see [ggplot2.tidyverse.org](http://ggplot2.tidyverse.org/)
+
+---
+
+## Mass vs. Height
+
+```{r Ggplot2, fig.asp=0.62, out.width="70%", warning=FALSE}
+ggplot(characters, aes(height, mass)) + geom_point()
+```
+
+How would you describe this relationship? What other variables would help us understand data points that don't follow the overall trend? Who is the not so tall but really chubby character?
+
+---
+
+## Jabba!
+
+```{r JabbaPlot, warning=FALSE, message=FALSE, fig.asp=0.62, out.width="70%"}
+library(magick)
+
+jabba <- image_read("images/jabba.png")
+fig <- image_graph(width = 2400, height = 1200, res = 300)
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point(size = 1.5) + 
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+fig %>% image_composite(jabba, offset = "+1000+30")
+```
+
+---
+
+### But seriously, Luke
+
+<center><img src = "images/luke-skywalker.png" style="width: 90%"></center>
+
+---
+
+## Additional variables
+
+We can map additional variables to various features of the plot:
+
+- aesthetics
+    - shape
+    - colour
+    - size
+    - alpha (transparency)
+- faceting: small multiples displaying different subsets
+
+---
+class: section-slide
+
+# Aesthetics
+
+---
+
+## Aesthetics options
+
+Visual characteristics of plotting characters that can be **mapped to a specific variable**
+in the data are
+
+- `color`
+- `fill`
+- `size`
+- `shape`
+- `alpha` (transparency)
+
+---
+
+### Mass vs. Height + Gender
+
+```{r GGplot3, fig.asp=0.62, out.width="70%", warning=FALSE}
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender)) +
+  geom_point()
+```
+
+---
+
+### Mass vs. Height + Gender + Birth Year
+
+Let's map the size to `birth_year`:
+
+```{r Aes1, fig.asp=0.62, out.width="70%", warning=FALSE}
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender, 
+                     size = birth_year)) + #<<
+  geom_point()
+```
+
+---
+
+### Mass vs. Height + Gender
+
+Let's now increase the size of all points **not** based on the values of a 
+variable in the data:
+
+```{r Aes2, fig.asp=0.62, out.width="70%", warning=FALSE}
+ggplot(data = characters,
+       mapping = aes(x = height, y = mass, color = gender)) +
+  geom_point(size = 2) #<<
+```
+
+---
+
+## Aesthetics Summary
+
+- Continuous variable are measured on a continuous scale
+- Discrete variables are measured (or often counted) on a discrete scale
+
+aesthetics    | discrete                 | continuous
+------------- | ------------------------ | ------------
+color         | rainbow of colors        | gradient
+size          | discrete steps           | linear mapping between radius and value
+shape         | different shape for each | shouldn't (and doesn't) work
+
+- Use aesthetics for mapping features of a plot to a variable, define the 
+features in the geom for customization **not** mapped to a variable
+
+---
+class: section-slide
+
+# Faceting
+
+---
+
+### Faceting options
+
+- Smaller plots that display different subsets of the data
+- Useful for exploring conditional relationships and large data
+
+```{r Facet1, warning=FALSE, fig.asp=0.35, out.width="100%"}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  facet_grid(. ~ gender) + #<<
+  geom_point() +
+  labs(title = "Mass vs. Height of Starwars characters",
+       subtitle = "Faceted by Gender",  #<<
+       x = "Height (cm)", y = "Weight (kg)")
+```
+
+---
+
+### Many ways to facet
+
+
+```{r Facet2, warning=FALSE, out.width="50%"}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_grid(gender ~ .)
+```
+
+---
+
+```{r Facet3, warning=FALSE, fig.asp=0.35, out.width="100%"}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_wrap(. ~ gender, scales = "free")
+```
+
+---
+
+```{r Facet4, warning=FALSE, out.width="60%"}
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point() +
+  facet_wrap(~ eye_color)
+```
+
+---
+
+## Facet summary
+
+- `facet_grid()`: 
+    - 2d grid
+    - `rows ~ cols`
+    - use `.` for no split
+- `facet_wrap()`: 1d ribbon wrapped into 2d
+
+---
+
+<!-- --- -->
+<!-- class: center, middle -->
+
+<!-- ## Histograms -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(x = height)) + -->
+<!--   geom_histogram(binwidth = 10) -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- ## Density plots -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(x = height)) + -->
+<!--   geom_density() -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- ## Side-by-side box plots -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(y = height, x = gender)) + -->
+<!--   geom_boxplot() -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- class: center, middle -->
+
+<!-- # Visualizing categorical data -->
+
+<!-- --- -->
+
+<!-- ## Bar plots -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(x = gender)) + -->
+<!--   geom_bar() -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- ## Segmented bar plots, counts -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color)) + -->
+<!--   geom_bar() -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- ## Segmented bar plots, proportions -->
+
+<!-- .small[ -->
+<!-- ```{r fig.width = 7, fig.height=4} -->
+<!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color)) + -->
+<!--   geom_bar(position = "fill") + -->
+<!--   labs(y = "proportion") -->
+<!-- ``` -->
+<!-- ] -->
+
+<!-- --- -->
+
+<!-- ## Which bar plot is more appropriate? -->
+
+<!-- .question[ -->
+<!-- Which bar plot is a more useful representation for visualizing the relationship between gender and hair color? -->
+<!-- ] -->
+
+<!-- ```{r} -->
+<!-- characters <- characters %>% -->
+<!--   mutate(hair_color2 = fct_other(hair_color,  -->
+<!--                                  keep = c("black", "brown", "brown", "blond"))) -->
+<!-- ``` -->
+
+
+<!-- ```{r echo=FALSE, fig.height=1.4, fig.width=6} -->
+<!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color2)) + -->
+<!--   geom_bar() -->
+<!-- ggplot(data = characters, mapping = aes(x = gender, fill = hair_color2)) + -->
+<!--   geom_bar(position = "fill") + -->
+<!--   labs(y = "proportion") -->
+<!-- ``` -->
