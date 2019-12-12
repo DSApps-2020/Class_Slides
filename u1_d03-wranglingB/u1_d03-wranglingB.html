@@ -4,7 +4,7 @@
     <title>Tidy Data Wrangling - Part B</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-11" />
+    <meta name="date" content="2019-12-12" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-11
+### 2019-12-12
 
 ---
 
@@ -94,7 +94,7 @@ glimpse(characters)
 ## $ hair_color   &lt;chr&gt; "blond", "blond", "blond", "blond", "blond", NA, ...
 ## $ skin_color   &lt;chr&gt; "fair", "fair", "fair", "fair", "fair", "gold", "...
 ## $ eye_color    &lt;chr&gt; "blue", "blue", "blue", "blue", "blue", "yellow",...
-## $ birth_year   &lt;chr&gt; "19BBY", "19BBY", "19BBY", "19BBY", "19BBY", "112...
+## $ birth_year   &lt;dbl&gt; 19.0, 19.0, 19.0, 19.0, 19.0, 112.0, 112.0, 112.0...
 ## $ film_id      &lt;dbl&gt; 1, 2, 3, 6, 7, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6...
 ## $ species      &lt;list&gt; ["http://swapi.co/api/species/1/", "http://swapi...
 ## $ vehicles     &lt;list&gt; [&lt;"http://swapi.co/api/vehicles/14/", "http://sw...
@@ -420,7 +420,7 @@ res &lt;- microbenchmark(baseR_no_join(), baseR_with_join(),
 autoplot(res)
 ```
 
-![](images/Join-Slow2-1.png)&lt;!-- --&gt;
+&lt;img src="images/Join-Slow2-1.png" width="50%" /&gt;
 
 ---
 
@@ -910,9 +910,9 @@ microbenchmark(nchar_loop(), nchar_vectorized())
 
 ```
 ## Unit: nanoseconds
-##                expr  min   lq     mean median     uq     max neval
-##        nchar_loop() 2201 2301 36694.06   2401 2900.5 3395601   100
-##  nchar_vectorized()  701  801 13411.03    802 1001.0 1233601   100
+##                expr  min     lq     mean median   uq     max neval
+##        nchar_loop() 2200 2300.5 37940.98   2302 2401 3558100   100
+##  nchar_vectorized()  700  751.0 10534.04    801  802  970701   100
 ```
 
 - So why should iterating through a `data.frame` columns or rows be any different?
@@ -1116,10 +1116,10 @@ okcupid %&gt;% select(sex, height_cm, is_tall) %&gt;% sample_n(4)
 ## # A tibble: 4 x 3
 ##   sex   height_cm is_tall
 ##   &lt;chr&gt;     &lt;dbl&gt; &lt;lgl&gt;  
-## 1 m          178. FALSE  
-## 2 m          188. TRUE   
-## 3 m          185. TRUE   
-## 4 m          188. TRUE
+## 1 f          160. FALSE  
+## 2 m          175. FALSE  
+## 3 m          198. TRUE   
+## 4 m          193. TRUE
 ```
 
 .font80percent[Girl, I dare you to do this in base R.]
@@ -1145,10 +1145,10 @@ okcupid %&gt;% select(sex, height_cm, is_tall) %&gt;% sample_n(4)
 ## # A tibble: 4 x 3
 ##   sex   height_cm is_tall
 ##   &lt;chr&gt;     &lt;dbl&gt; &lt;lgl&gt;  
-## 1 f          155. FALSE  
-## 2 m          175. FALSE  
-## 3 m          180. TRUE   
-## 4 m          190. TRUE
+## 1 m          183. TRUE   
+## 2 m          178. FALSE  
+## 3 m          183. TRUE   
+## 4 f          168. TRUE
 ```
 
 ---

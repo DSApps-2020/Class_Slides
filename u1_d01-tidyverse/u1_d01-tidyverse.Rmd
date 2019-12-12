@@ -103,7 +103,7 @@ sub("di", "thi", "Who dis?")
 
 ```{r String4}
 # length of a string: nchar(string); length of object: length(obj)
-nchar("Who dis?"); length("Who dis?")
+c(nchar("Who dis?"), length("Who dis?"))
 ```
 ]
 

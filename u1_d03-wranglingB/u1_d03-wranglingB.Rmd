@@ -296,7 +296,7 @@ dplyr_with_join <- function() {
 
 ---
 
-```{r Join-Slow2, message=FALSE}
+```{r Join-Slow2, message=FALSE, out.width="50%"}
 library(microbenchmark)
 res <- microbenchmark(baseR_no_join(), baseR_with_join(),
                       dplyr_no_join(), dplyr_with_join(), times = 20)
