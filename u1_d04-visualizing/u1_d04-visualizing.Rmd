@@ -373,10 +373,12 @@ p
 
 ## Annotate, Add lines
 
-```{r Control5, out.width="100%", fig.asp = 0.5}
+```{r Control5, out.width="90%", fig.asp = 0.5}
 p + geom_hline(yintercept = 0.139, lty = 2, color = "#163f59") +
-  annotate("text", x = 4, y = 0.139 + 0.02, label = "Overall %",
-           color = "#163f59", family = "mono")
+  annotate("text", x = 5, y = 0.139 + 0.03, label = "Overall %",
+           color = "#163f59", family = "mono") +
+  annotate(geom = "curve", x = 5, y = 0.15, xend = 4, yend = 0.139 + 0.001, 
+    curvature = .3, arrow = arrow(length = unit(2, "mm")), color = "#163f59")
 ```
 
 ---
@@ -424,7 +426,7 @@ p + theme_simpsons(title.font = "Akbar",
 ```{r Themes6, out.width="100%", fig.asp = 0.5, message=FALSE}
 ggplot(okcupid_lgbt_relig, aes(religion, pct_lgbt)) +
   geom_bar(aes(fill = pct_lgbt), stat="identity", alpha=.6, width=.4) +
-  labs(x = "", y = "", title = "This was supposed to be GoT") +
+  labs(x = "", y = "", title = "This was supposed to be GoT...") +
   scale_y_continuous(breaks = seq(0.05, 0.2, 0.05), labels=scales::percent_format(accuracy = 1)) +
   coord_flip() +
   scale_fill_westeros(palette = "Tyrell", type = "continuous") + theme_minimal() +
@@ -441,34 +443,187 @@ class: section-slide
 
 ## Line Plot
 
+```{r Line1, eval=FALSE}
+library(hrbrthemes)
+
+characters %>%
+  group_by(film_id) %>%
+  summarise(n_char = n_distinct(character_id)) %>%
+  ggplot(aes(film_id, n_char)) +
+  geom_line(lwd = 2) + #<<
+  labs(x = "", y = "No. of Characters",
+       title = "Star Wars Films No. of Unique Characters") +
+  scale_x_continuous(breaks = 1:7, labels = films$title) +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+---
+
+```{r Line2, out.width="100%", fig.asp=0.6, message=FALSE, echo=FALSE}
+library(hrbrthemes)
+
+characters %>%
+  group_by(film_id) %>%
+  summarise(n_char = n_distinct(character_id)) %>%
+  ggplot(aes(film_id, n_char)) +
+  geom_line(lwd = 2) +
+  labs(x = "", y = "No. of Characters",
+       title = "Star Wars Films No. of Unique Characters") +
+  scale_x_continuous(breaks = 1:7, labels = films$title) +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 ---
 
 ## Histogram
+
+```{r Hist, out.width="100%", fig.asp=0.6, eval=FALSE}
+library(scales)
+
+sex_names <- list(
+  "m" = "men",
+  "f" = "women"
+)
+
+sex_labeller <- function(variable, value){
+  return(sex_names[value])
+}
+
+p2 <- okcupid %>%
+  ggplot(aes(income)) +
+  facet_wrap(. ~ sex, labeller = sex_labeller) +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  labs(x = "", y = "", title = "OkCupid: Annual Income Dist. by Gender",
+       caption = "Income is presented as log10(Income)") +
+  theme_ipsum()
+
+p2 + geom_histogram()
+```
+---
+
+```{r Hist2, out.width="100%", fig.asp=0.5, echo=FALSE, warning=FALSE, message=FALSE}
+library(scales)
+
+sex_names <- list(
+  "m" = "men",
+  "f" = "women"
+)
+
+sex_labeller <- function(variable, value){
+  return(sex_names[value])
+}
+
+p2 <- okcupid %>%
+  ggplot(aes(income)) +
+  facet_wrap(. ~ sex, labeller = sex_labeller) +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  labs(x = "", y = "", title = "OkCupid: Annual Income Dist. by Gender",
+       caption = "Income is presented as log10(Income)") +
+  theme_ipsum()
+
+p2 + geom_histogram() #<<
+```
 
 ---
 
 ## Density Plot
 
+```{r Dens, out.width="100%", fig.asp=0.5, warning=FALSE, message=FALSE}
+p2 + geom_density()
+```
+
 ---
 
 ## Box Plot
+
+```{r Boxplot, eval=FALSE}
+p3 <- okcupid %>%
+  sample_n(5000) %>%
+  ggplot(aes(sex, income)) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  labs(x = "", y = "", title = "OkCupid: Annual Income Dist. by Gender",
+       caption = "Income is presented as log10(Income)") +
+  scale_x_discrete(labels = c("women", "men")) +
+  theme_ipsum()
+
+p3 + geom_boxplot()
+```
+
+---
+
+```{r Boxplot1, out.width="80%", fig.asp = 0.7, warning=FALSE, message=FALSE, echo=FALSE}
+p3 <- okcupid %>%
+  sample_n(5000) %>%
+  ggplot(aes(sex, income)) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  labs(x = "", y = "", title = "OkCupid: Annual Income Dist. by Gender",
+       caption = "Income is presented as log10(Income)") +
+  scale_x_discrete(labels = c("women", "men")) +
+  theme_ipsum()
+
+p3 + geom_boxplot()
+```
+
+---
+
+## Violin Plot
+
+```{r Violin, out.width="80%", fig.asp = 0.7, warning=FALSE, message=FALSE}
+p3 + geom_violin(fill = "darkgreen", alpha = 0.6)
+```
 
 ---
 
 ## Swarm Plot
 
+```{r Swarm, out.width="80%", fig.asp = 0.7, warning=FALSE, message=FALSE}
+p3 + ggbeeswarm::geom_quasirandom(aes(color = sex)) + guides(color=FALSE)
+```
 ---
 
 ## Bar Plot
 
+```{r Bar, out.width="100%", fig.asp = 0.5}
+p + theme_ipsum()
+```
 ---
 
 ## Segmented Bar Plots: Counts
+
+
+```{r Bar-Segmented1}
+p4 <- ggplot(
+  okcupid %>%
+    mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
+           religion = factor(religion2, count(okcupid, religion2, sort = TRUE)$religion2)),
+  aes(religion, fill = orientation)
+  ) +
+  labs(x = "", y = "",
+       title = "OkCupid: Orientation by Religion") +
+  scale_y_continuous(breaks = seq(0, 25000, 5000)) +
+  coord_flip() +
+  theme_ipsum() + theme(text = element_text(size = 14))
+```
+
+---
+
+```{r Bar-Segmented2, out.width="100%", fig.asp = 0.5}
+p4 + geom_bar(alpha=.6, width=.4)
+```
 
 ---
 
 ## Segmented Bar Plots: Proportions
 
+```{r Bar-Segmented3, out.width="100%", fig.asp = 0.5}
+p4 + geom_bar(position = "fill", alpha=.6, width=.4)
+```
 ---
 
 ## Mosaic Plots
@@ -490,7 +645,7 @@ class: section-slide
 ## Heatmap
 
 ---
-class: logo-slide
+class: section-slide
 
 # Amazing Extensions
 
