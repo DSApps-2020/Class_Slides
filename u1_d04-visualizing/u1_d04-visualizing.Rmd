@@ -624,6 +624,10 @@ p4 + geom_bar(alpha=.6, width=.4)
 ```{r Bar-Segmented3, out.width="100%", fig.asp = 0.5}
 p4 + geom_bar(position = "fill", alpha=.6, width=.4)
 ```
+
+.font80percent[
+Hoping you can see why this is worse than our original plot.
+]
 ---
 
 ## Mosaic Plots
