@@ -601,7 +601,8 @@ p + theme_ipsum()
 p4 <- ggplot(
   okcupid %>%
     mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
-           religion = factor(religion2, count(okcupid, religion2, sort = TRUE)$religion2)),
+           religion = fct_relevel(religion2,
+                                  count(okcupid, religion2, sort = TRUE)$religion2)),
   aes(religion, fill = orientation)
   ) +
   labs(x = "", y = "",
@@ -632,17 +633,123 @@ Hoping you can see why this is worse than our original plot.
 
 ## Mosaic Plots
 
+```{r Mosaic, eval=FALSE}
+library(ggmosaic)
+
+okcupid %>%
+  mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
+         religion = fct_relevel(religion2, count(okcupid, religion2, sort = TRUE)$religion2)) %>%
+ggplot() +
+  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
+  labs(x = "", y = "", title = "OkCupid: Orientation by Religion") +
+  guides(fill=FALSE) +
+  theme_ipsum() +
+  theme(axis.text.y = element_text(size = 14),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, size = 12))
+```
+
 ---
 
-## Dumbbel Plot
+```{r Mosaic2, echo=FALSE, out.width="100%", fig.asp = 0.7}
+library(ggmosaic)
+
+okcupid %>%
+  mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
+         religion = fct_relevel(religion2, count(okcupid, religion2, sort = TRUE)$religion2)) %>%
+ggplot() +
+  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
+  labs(x = "", y = "", title = "OkCupid: Orientation by Religion") +
+  guides(fill=FALSE) +
+  theme_ipsum() +
+  theme(axis.text.y = element_text(size = 14),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, size = 12))
+```
 
 ---
 
 ## Radar Chart
 
+```{r Radar}
+okcupid %>%
+  group_by(religion2) %>%
+  summarise(drugs = mean(drugs %in% c("sometimes", "often"), na.rm = TRUE),
+            smokes = mean(smokes == "yes", na.rm = TRUE),
+            overweight = mean(body_type == "overweight", na.rm = TRUE),
+            drinks = mean(drinks %in% c("often", "very often", "desperately"))
+            ) -> okcupid_radar
+okcupid_radar
+```
+
+---
+
+```{r Radar3, out.width="90%", fig.asp=0.7}
+library(ggradar)
+
+ggradar(okcupid_radar,  grid.max = 0.201, grid.mid = 0.10, values.radar = c("0%", "10%", "20%"),
+        plot.title = "OkCupid: Health Indicators by Religion") + theme(plot.title = element_text(size = 18))
+```
+
 ---
 
 ## Sankey Diagram (Alluvial Plot)
+
+```{r Sankey, eval=FALSE}
+library(ggalluvial)
+
+migration <- read_rds("../data/migration.rds")
+
+migration_long <- migration %>%
+  pivot_longer(cols = -c(1:4),
+               names_to = "country_orig",
+               values_to = "n_migrants")
+
+g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "united_states_of_america")
+
+migration_long %>%
+  filter(year == 2019) %>%
+  filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
+  group_by(country_orig, country_dest) %>%
+  summarise(n_migrants = sum(n_migrants)) %>%
+  ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
+  geom_alluvium(aes(fill = country_orig)) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", infer.label = TRUE) +
+  scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  guides(fill = FALSE) +
+  labs(y = "", title = "G7 Cross-Country Migration 2019") +
+  scale_y_comma() + theme_ipsum()
+```
+
+---
+
+```{r Sankey2, echo=FALSE, out.width="100%", fig.asp=0.8, warning=FALSE}
+library(ggalluvial)
+
+migration <- read_rds("../data/migration.rds")
+
+migration_long <- migration %>%
+  pivot_longer(cols = -c(1:4),
+               names_to = "country_orig",
+               values_to = "n_migrants")
+
+g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "united_states_of_america")
+
+migration_long %>%
+  filter(year == 2019) %>%
+  filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
+  group_by(country_orig, country_dest) %>%
+  summarise(n_migrants = sum(n_migrants)) %>%
+  ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
+  geom_alluvium(aes(fill = country_orig)) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", infer.label = TRUE) +
+  scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  guides(fill = FALSE) +
+  labs(y = "", title = "G7 Cross-Country Migration 2019") +
+  scale_y_comma() + theme_ipsum()
+```
 
 ---
 

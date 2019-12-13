@@ -647,7 +647,8 @@ p + theme_ipsum()
 p4 &lt;- ggplot(
   okcupid %&gt;%
     mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
-           religion = factor(religion2, count(okcupid, religion2, sort = TRUE)$religion2)),
+           religion = fct_relevel(religion2,
+                                  count(okcupid, religion2, sort = TRUE)$religion2)),
   aes(religion, fill = orientation)
   ) +
   labs(x = "", y = "",
@@ -684,17 +685,103 @@ Hoping you can see why this is worse than our original plot.
 
 ## Mosaic Plots
 
+
+```r
+library(ggmosaic)
+
+okcupid %&gt;%
+  mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
+         religion = fct_relevel(religion2, count(okcupid, religion2, sort = TRUE)$religion2)) %&gt;%
+ggplot() +
+  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
+  labs(x = "", y = "", title = "OkCupid: Orientation by Religion") +
+  guides(fill=FALSE) +
+  theme_ipsum() +
+  theme(axis.text.y = element_text(size = 14),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, size = 12))
+```
+
 ---
 
-## Dumbbel Plot
+&lt;img src="images/Mosaic2-1.png" width="100%" /&gt;
 
 ---
 
 ## Radar Chart
 
+
+```r
+okcupid %&gt;%
+  group_by(religion2) %&gt;%
+  summarise(drugs = mean(drugs %in% c("sometimes", "often"), na.rm = TRUE),
+            smokes = mean(smokes == "yes", na.rm = TRUE),
+            overweight = mean(body_type == "overweight", na.rm = TRUE),
+            drinks = mean(drinks %in% c("often", "very often", "desperately"))
+            ) -&gt; okcupid_radar
+okcupid_radar
+```
+
+```
+## # A tibble: 7 x 5
+##   religion2  drugs smokes overweight drinks
+##   &lt;chr&gt;      &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;
+## 1 atheist   0.201  0.0473    0.0110  0.141 
+## 2 buddhist  0.160  0.0302    0.00494 0.0775
+## 3 christian 0.0649 0.0352    0.00994 0.0759
+## 4 hindu     0.0733 0.0236    0.00725 0.0689
+## 5 jewish    0.128  0.0197    0.00467 0.0607
+## 6 muslim    0.180  0.136     0.0155  0.115 
+## 7 NA        0.126  0.0427    0.00634 0.0911
+```
+
+---
+
+
+```r
+library(ggradar)
+
+ggradar(okcupid_radar,  grid.max = 0.201, grid.mid = 0.10, values.radar = c("0%", "10%", "20%"),
+        plot.title = "OkCupid: Health Indicators by Religion") + theme(plot.title = element_text(size = 18))
+```
+
+&lt;img src="images/Radar3-1.png" width="90%" /&gt;
+
 ---
 
 ## Sankey Diagram (Alluvial Plot)
+
+
+```r
+library(ggalluvial)
+
+migration &lt;- read_rds("../data/migration.rds")
+
+migration_long &lt;- migration %&gt;%
+  pivot_longer(cols = -c(1:4),
+               names_to = "country_orig",
+               values_to = "n_migrants")
+
+g7 &lt;- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "united_states_of_america")
+
+migration_long %&gt;%
+  filter(year == 2019) %&gt;%
+  filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %&gt;%
+  group_by(country_orig, country_dest) %&gt;%
+  summarise(n_migrants = sum(n_migrants)) %&gt;%
+  ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
+  geom_alluvium(aes(fill = country_orig)) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_label(stat = "stratum", infer.label = TRUE) +
+  scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  guides(fill = FALSE) +
+  labs(y = "", title = "G7 Cross-Country Migration 2019") +
+  scale_y_comma() + theme_ipsum()
+```
+
+---
+
+&lt;img src="images/Sankey2-1.png" width="100%" /&gt;
 
 ---
 
