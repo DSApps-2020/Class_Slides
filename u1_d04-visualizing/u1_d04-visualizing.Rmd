@@ -500,7 +500,7 @@ p2 <- okcupid %>%
        caption = "Income is presented as log10(Income)") +
   theme_ipsum()
 
-p2 + geom_histogram()
+p2 + geom_histogram() #<<
 ```
 ---
 
@@ -525,7 +525,7 @@ p2 <- okcupid %>%
        caption = "Income is presented as log10(Income)") +
   theme_ipsum()
 
-p2 + geom_histogram() #<<
+p2 + geom_histogram()
 ```
 
 ---
@@ -551,7 +551,7 @@ p3 <- okcupid %>%
   scale_x_discrete(labels = c("women", "men")) +
   theme_ipsum()
 
-p3 + geom_boxplot()
+p3 + geom_boxplot() #<<
 ```
 
 ---
@@ -640,7 +640,7 @@ okcupid %>%
   mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
          religion = fct_relevel(religion2, count(okcupid, religion2, sort = TRUE)$religion2)) %>%
 ggplot() +
-  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
+  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +#<<
   labs(x = "", y = "", title = "OkCupid: Orientation by Religion") +
   guides(fill=FALSE) +
   theme_ipsum() +
@@ -711,7 +711,7 @@ migration_long %>%
   group_by(country_orig, country_dest) %>%
   summarise(n_migrants = sum(n_migrants)) %>%
   ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-  geom_alluvium(aes(fill = country_orig)) +
+  geom_alluvium(aes(fill = country_orig)) + #<<
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
@@ -738,6 +738,10 @@ g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "unit
 migration_long %>%
   filter(year == 2019) %>%
   filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
+  mutate_at(c("country_orig", "country_dest"),
+            ~case_when(.x == "united_kingdom" ~ "uk",
+                       .x == "united_states_of_america" ~ "usa",
+                       TRUE ~ .x)) %>%
   group_by(country_orig, country_dest) %>%
   summarise(n_migrants = sum(n_migrants)) %>%
   ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
@@ -748,12 +752,50 @@ migration_long %>%
   scale_fill_brewer(type = "qual", palette = "Set1") +
   guides(fill = FALSE) +
   labs(y = "", title = "G7 Cross-Country Migration 2019") +
-  scale_y_comma() + theme_ipsum()
+  scale_y_comma() +
+  theme_ipsum()
 ```
 
 ---
 
 ## Heatmap
+
+```{r Heatmap}
+gender_age_height_drink <- okcupid %>%
+  mutate(age_group = case_when(
+    age < 30 ~ "19-29",
+    age < 40 ~ "30-39",
+    age < 50 ~ "40-49",
+    age < 60 ~ "50-59",
+    TRUE ~ "60+"),
+    height_group = case_when(
+      height_cm < 150 ~ "149-",
+      height_cm < 160 ~ "150-159",
+      height_cm < 170 ~ "160-169",
+      height_cm < 180 ~ "170-179",
+      height_cm < 190 ~ "180-189",
+      TRUE ~ "190+")) %>%
+  group_by(sex, age_group, height_group) %>%
+  summarise(n = n(),
+            drinks = mean(drinks %in% c("often", "very often", "desperately")))
+```
+
+---
+
+```{r Heatmap-Data}
+gender_age_height_drink
+```
+
+---
+
+```{r Heatmap2, out.width="100%", fig.asp=0.5, warning=FALSE, message=FALSE}
+ggplot(gender_age_height_drink, aes(age_group, height_group, fill = drinks)) +
+  geom_tile() + #<<
+  facet_wrap(. ~ sex, labeller = sex_labeller) +
+  labs(x = "Age", y = "Height", title = "OkCupid: %Reported Drinking by Age and Height") +
+  scale_fill_gradient(labels = percent_format(accuracy = 1)) +
+  theme_ipsum()
+```
 
 ---
 class: section-slide

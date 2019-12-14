@@ -4,7 +4,7 @@
     <title>Visualizing in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-13" />
+    <meta name="date" content="2019-12-14" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-13
+### 2019-12-14
 
 ---
 
@@ -566,7 +566,7 @@ p2 &lt;- okcupid %&gt;%
        caption = "Income is presented as log10(Income)") +
   theme_ipsum()
 
-p2 + geom_histogram()
+*p2 + geom_histogram()
 ```
 ---
 
@@ -599,7 +599,7 @@ p3 &lt;- okcupid %&gt;%
   scale_x_discrete(labels = c("women", "men")) +
   theme_ipsum()
 
-p3 + geom_boxplot()
+*p3 + geom_boxplot()
 ```
 
 ---
@@ -693,7 +693,7 @@ okcupid %&gt;%
   mutate(orientation = recode(orientation, "gay" = "lgbt", "bisexual" = "lgbt"),
          religion = fct_relevel(religion2, count(okcupid, religion2, sort = TRUE)$religion2)) %&gt;%
 ggplot() +
-  geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
+* geom_mosaic(aes(x = product(orientation, religion), fill=orientation)) +
   labs(x = "", y = "", title = "OkCupid: Orientation by Religion") +
   guides(fill=FALSE) +
   theme_ipsum() +
@@ -769,7 +769,7 @@ migration_long %&gt;%
   group_by(country_orig, country_dest) %&gt;%
   summarise(n_migrants = sum(n_migrants)) %&gt;%
   ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-  geom_alluvium(aes(fill = country_orig)) +
+* geom_alluvium(aes(fill = country_orig)) +
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
@@ -786,6 +786,66 @@ migration_long %&gt;%
 ---
 
 ## Heatmap
+
+
+```r
+gender_age_height_drink &lt;- okcupid %&gt;%
+  mutate(age_group = case_when(
+    age &lt; 30 ~ "19-29",
+    age &lt; 40 ~ "30-39",
+    age &lt; 50 ~ "40-49",
+    age &lt; 60 ~ "50-59",
+    TRUE ~ "60+"),
+    height_group = case_when(
+      height_cm &lt; 150 ~ "149-",
+      height_cm &lt; 160 ~ "150-159",
+      height_cm &lt; 170 ~ "160-169",
+      height_cm &lt; 180 ~ "170-179",
+      height_cm &lt; 190 ~ "180-189",
+      TRUE ~ "190+")) %&gt;%
+  group_by(sex, age_group, height_group) %&gt;%
+  summarise(n = n(),
+            drinks = mean(drinks %in% c("often", "very often", "desperately")))
+```
+
+---
+
+
+```r
+gender_age_height_drink
+```
+
+```
+## # A tibble: 58 x 5
+## # Groups:   sex, age_group [10]
+##    sex   age_group height_group     n drinks
+##    &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt;        &lt;int&gt;  &lt;dbl&gt;
+##  1 f     19-29     149-           163 0.0920
+##  2 f     19-29     150-159       1963 0.102 
+##  3 f     19-29     160-169       5620 0.110 
+##  4 f     19-29     170-179       3113 0.130 
+##  5 f     19-29     180-189        310 0.145 
+##  6 f     19-29     190+            19 0.474 
+##  7 f     30-39     149-            80 0.0625
+##  8 f     30-39     150-159       1293 0.0673
+##  9 f     30-39     160-169       4109 0.0810
+## 10 f     30-39     170-179       2231 0.0852
+## # ... with 48 more rows
+```
+
+---
+
+
+```r
+ggplot(gender_age_height_drink, aes(age_group, height_group, fill = drinks)) +
+* geom_tile() +
+  facet_wrap(. ~ sex, labeller = sex_labeller) +
+  labs(x = "Age", y = "Height", title = "OkCupid: %Reported Drinking by Age and Height") +
+  scale_fill_gradient(labels = percent_format(accuracy = 1)) +
+  theme_ipsum()
+```
+
+&lt;img src="images/Heatmap2-1.png" width="100%" /&gt;
 
 ---
 class: section-slide
