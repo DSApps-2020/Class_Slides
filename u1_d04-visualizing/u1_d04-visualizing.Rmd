@@ -789,18 +789,78 @@ gender_age_height_drink
 ---
 
 ```{r Heatmap2, out.width="100%", fig.asp=0.5, warning=FALSE, message=FALSE}
-ggplot(gender_age_height_drink, aes(age_group, height_group, fill = drinks)) +
-  geom_tile() + #<<
+heat <- ggplot(gender_age_height_drink, aes(age_group, height_group, fill = drinks)) +
+  geom_tile(aes(text = str_c(percent(drinks, 1), " of ", n, "    "))) + #<<
   facet_wrap(. ~ sex, labeller = sex_labeller) +
   labs(x = "Age", y = "Height", title = "OkCupid: %Reported Drinking by Age and Height") +
   scale_fill_gradient(labels = percent_format(accuracy = 1)) +
   theme_ipsum()
+heat
 ```
 
 ---
 class: section-slide
 
 # Amazing Extensions
+
+---
+
+## `patchwork`
+
+```{r Patchwork, warning=FALSE, message=FALSE}
+library(patchwork)
+
+p1 <- ggplot(okcupid %>% filter(between(age, 18, 70))) +
+  geom_density(aes(age, fill = sex)) +
+  labs(y = "") +
+  guides(fill = FALSE) +
+  theme_ipsum()
+
+p2 <- ggplot(okcupid %>% filter(between(height_cm, 140, 200))) +
+  geom_density(aes(height_cm, fill = sex)) +
+  labs(y = "") +
+  guides(fill = FALSE) +
+  theme_ipsum()
+
+p3 <- ggplot(okcupid) +
+  geom_mosaic(aes(x = product(sex, religion2), fill = sex)) +
+  labs(x = "", y = "") +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+---
+
+Watch this:
+
+```{r Patchwork2, out.width="100%", fig.asp=0.7}
+(p1 | p2) / p3
+```
+
+---
+
+## `plotly`
+
+Remember those heatmaps? They're now interactive!
+
+```{r Plotly, message=FALSE, dpi=100, out.width="100%", fig.asp=0.6}
+library(plotly)
+ggplotly(heat, tooltip = "text")
+```
+
+---
+
+## `rayshader`
+
+Or rotatable 3D...
+
+```{r Rayshader, eval=FALSE}
+library(rayshader)
+
+plot_gg(heat)
+```
+
+<img src = "images/rayshader.png" style="width: 70%">
 
 ---
 
@@ -829,10 +889,6 @@ class: section-slide
 ---
 
 ## `ggchicklet`
-
----
-
-## `rayshader`
 
 ---
 
