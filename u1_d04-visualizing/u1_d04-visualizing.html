@@ -4,7 +4,7 @@
     <title>Visualizing in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-14" />
+    <meta name="date" content="2019-12-15" />
     <script src="u1_d04-visualizing_files/htmlwidgets-1.3/htmlwidgets.js"></script>
     <script src="u1_d04-visualizing_files/plotly-binding-4.9.0/plotly.js"></script>
     <script src="u1_d04-visualizing_files/typedarray-0.1/typedarray.min.js"></script>
@@ -38,7 +38,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-14
+### 2019-12-15
 
 ---
 
@@ -181,20 +181,7 @@ How would you describe this relationship? What other variables would help us und
 
 ## Jabba!
 
-
-```r
-library(magick)
-
-jabba &lt;- image_read("images/jabba.png")
-fig &lt;- image_graph(width = 2400, height = 1200, res = 300)
-ggplot(data = characters, mapping = aes(x = height, y = mass)) +
-  geom_point(size = 1.5) + 
-  labs(title = "Mass vs. Height of Starwars characters",
-       x = "Height (cm)", y = "Weight (kg)")
-fig %&gt;% image_composite(jabba, offset = "+1000+30")
-```
-
-&lt;img src="images/JabbaPlot-1.png" width="70%" /&gt;
+&lt;img src = "images/JabbaPlot-1.png" style="width: 90%"&gt;
 
 ---
 
@@ -774,10 +761,14 @@ g7 &lt;- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "u
 migration_long %&gt;%
   filter(year == 2019) %&gt;%
   filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %&gt;%
+  mutate_at(c("country_orig", "country_dest"),
+            ~case_when(.x == "united_kingdom" ~ "uk",
+                       .x == "united_states_of_america" ~ "usa",
+                       TRUE ~ .x)) %&gt;%
   group_by(country_orig, country_dest) %&gt;%
   summarise(n_migrants = sum(n_migrants)) %&gt;%
   ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-* geom_alluvium(aes(fill = country_orig)) +
+  geom_alluvium(aes(fill = country_orig)) +
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
@@ -857,6 +848,37 @@ heat
 &lt;img src="images/Heatmap2-1.png" width="100%" /&gt;
 
 ---
+
+## Heat Map
+
+
+
+
+```r
+clean_country_name &lt;- function(name) {
+  str_replace_all(str_replace_all(str_to_lower(name), " |-", "_"), "'|,|\\(|\\)", "")
+}
+
+
+world &lt;- as_tibble(map_data("world"))
+
+world &lt;- world %&gt;%
+  mutate(region = clean_country_name(region))
+
+ggplot(world %&gt;%
+         left_join(migration_total, "region"),
+       aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = n_migrants), colour = "white") +
+  scale_fill_gradient(labels = comma, name = "N Migrants", high = "#132B43", low = "#56B1F7") +
+  labs(x = "", y = "", title = "No. of Migrants by Country in 2019") +
+  theme_ipsum()
+```
+
+---
+
+&lt;img src="images/Heatmap5-1.png" width="100%" /&gt;
+
+---
 class: section-slide
 
 # Amazing Extensions
@@ -911,8 +933,8 @@ library(plotly)
 ggplotly(heat, tooltip = "text")
 ```
 
-<div id="htmlwidget-36566cc9d0b906b6e07a" style="width:100%;height:420px;" class="plotly html-widget"></div>
-<script type="application/json" data-for="htmlwidget-36566cc9d0b906b6e07a">{"x":{"data":[{"x":[1,2,3,4,5],"y":[1,2,3,4,5,6],"z":[[0.194274028629857,0.131944444444444,0,0.351851851851852,0],[0.215090281315447,0.1420469193091,0.058641975308642,0.085972850678733,0.0608974358974359],[0.232898378805852,0.171087855926016,0.102947550931946,0.0699043414275203,0.053072625698324],[0.2739765142592,0.179789830170825,0.112561963486882,0.0628306878306878,0.0422222222222222],[0.306451612903226,0.240994419076611,0.158333333333333,0.0811965811965812,0.263888888888889],[1,0.791666666666667,0,0,null]],"text":[["9% of 163    ","6% of 80    ","0% of 39    ","17% of 12    ","0% of 9    "],["10% of 1963    ","7% of 1293    ","3% of 432    ","4% of 221    ","3% of 104    "],["11% of 5620    ","8% of 4109    ","5% of 1538    ","3% of 755    ","3% of 358    "],["13% of 3113    ","9% of 2231    ","5% of 919    ","3% of 336    ","2% of 150    "],["15% of 310    ","11% of 219    ","8% of 80    ","4% of 26    ","12% of 8    "],["47% of 19    ","38% of 8    ","0% of 1    ","0% of 1    ",null]],"colorscale":[[0,"#132B43"],[0.0422222222222222,"#16304A"],[0.053072625698324,"#16314B"],[0.058641975308642,"#17324C"],[0.0608974358974359,"#17324D"],[0.0628306878306878,"#17324D"],[0.0699043414275203,"#17334E"],[0.0811965811965812,"#183550"],[0.085972850678733,"#183551"],[0.102947550931946,"#193753"],[0.112561963486882,"#1A3855"],[0.131944444444444,"#1B3B58"],[0.1420469193091,"#1C3C5A"],[0.158333333333333,"#1D3E5D"],[0.171087855926016,"#1D405F"],[0.179789830170825,"#1E4160"],[0.194274028629857,"#1F4263"],[0.215090281315447,"#204566"],[0.232898378805852,"#214769"],[0.240994419076611,"#22486A"],[0.263888888888889,"#234B6E"],[0.2739765142592,"#244C70"],[0.306451612903226,"#265176"],[0.351851851851852,"#29567E"],[0.791666666666667,"#4793CE"],[1,"#56B1F7"]],"type":"heatmap","showscale":false,"autocolorscale":false,"showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[1,2,3,4,5],"y":[1,2,3,4,5,6],"z":[[0.714285714285714,1,0,0,null],[0.288461538461538,0.171428571428571,0.428571428571429,0.375,0],[0.268896321070234,0.301354401805869,0.198606271777003,0.205882352941176,0.171428571428571],[0.332834806254249,0.283073367995378,0.257462686567164,0.184251968503937,0.169354838709677],[0.380520016508461,0.355424143556281,0.218091009988901,0.157185628742515,0.152073732718894],[0.390154298310066,0.428571428571429,0.293103448275862,0.290322580645161,0.206896551724138]],"text":[["24% of 21    ","33% of 6    ","0% of 2    ","0% of 3    ",null],["10% of 52    ","6% of 35    ","14% of 14    ","12% of 8    ","0% of 3    "],["9% of 1495    ","10% of 886    ","7% of 287    ","7% of 102    ","6% of 35    "],["11% of 7355    ","9% of 5193    ","9% of 1876    ","6% of 635    ","6% of 248    "],["13% of 7269    ","12% of 4904    ","7% of 1802    ","5% of 668    ","5% of 217    "],["13% of 1361    ","14% of 882    ","10% of 348    ","10% of 93    ","7% of 29    "]],"colorscale":[[0,"#132B43"],[0.152073732718894,"#193854"],[0.157185628742515,"#1A3855"],[0.169354838709677,"#1A3956"],[0.171428571428571,"#1A3956"],[0.184251968503937,"#1B3A58"],[0.198606271777003,"#1B3C59"],[0.205882352941176,"#1C3C5A"],[0.206896551724138,"#1C3C5A"],[0.218091009988901,"#1C3D5C"],[0.257462686567164,"#1E4160"],[0.268896321070234,"#1F4262"],[0.283073367995378,"#1F4363"],[0.288461538461538,"#1F4464"],[0.290322580645161,"#204464"],[0.293103448275862,"#204465"],[0.301354401805869,"#204566"],[0.332834806254249,"#214769"],[0.355424143556281,"#22496C"],[0.375,"#234B6E"],[0.380520016508461,"#244C6F"],[0.390154298310066,"#244D70"],[0.428571428571429,"#265075"],[0.714285714285714,"#336A98"],[1,"#4186BE"]],"type":"heatmap","showscale":false,"autocolorscale":false,"showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null},{"x":[1],"y":[1],"name":"99_6483cd1065baf6b9f5c14655830368b1","type":"scatter","mode":"markers","opacity":0,"hoverinfo":"skip","showlegend":false,"marker":{"color":[0,1],"colorscale":[[0,"#132B43"],[0.0526315789473684,"#16314B"],[0.105263157894737,"#193754"],[0.157894736842105,"#1D3E5C"],[0.210526315789474,"#204465"],[0.263157894736842,"#234B6E"],[0.315789473684211,"#275277"],[0.368421052631579,"#2A5980"],[0.421052631578947,"#2E608A"],[0.473684210526316,"#316793"],[0.526315789473684,"#356E9D"],[0.578947368421053,"#3875A6"],[0.631578947368421,"#3C7CB0"],[0.684210526315789,"#3F83BA"],[0.736842105263158,"#438BC4"],[0.789473684210526,"#4792CE"],[0.842105263157895,"#4B9AD8"],[0.894736842105263,"#4EA2E2"],[0.947368421052632,"#52A9ED"],[1,"#56B1F7"]],"colorbar":{"bgcolor":null,"bordercolor":null,"borderwidth":0,"thickness":23.04,"title":"drinks","titlefont":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":15.2760481527605},"tickmode":"array","ticktext":["0%","10%","20%","30%","40%"],"tickvals":[0,0.211111111111111,0.422222222222222,0.633333333333333,0.844444444444445],"tickfont":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":12.2208385222084},"ticklen":2,"len":0.5}},"xaxis":"x","yaxis":"y","frame":null}],"layout":{"margin":{"t":122.268161062682,"r":39.8505603985056,"b":97.4678289746783,"l":109.090909090909},"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":15.2760481527605},"title":{"text":"<b> OkCupid: %Reported Drinking by Age and Height <\/b>","font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":23.9103362391034},"x":0,"xref":"paper"},"xaxis":{"domain":[0,0.458857142857143],"automargin":true,"type":"linear","autorange":false,"range":[0.4,5.6],"tickmode":"array","ticktext":["19-29","30-39","40-49","50-59","60+"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["19-29","30-39","40-49","50-59","60+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"annotations":[{"text":"Age","x":0.5,"y":-0.0447725790191544,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":11.9551681195517},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"top","annotationType":"axis"},{"text":"Height","x":-0.0677815335349582,"y":0.5,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":11.9551681195517},"xref":"paper","yref":"paper","textangle":-90,"xanchor":"right","yanchor":"center","annotationType":"axis"},{"text":"list(f = \"women\")","x":0.229428571428571,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"Arial Narrow","size":15.9402241594022},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"list(m = \"men\")","x":0.770571428571429,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"Arial Narrow","size":15.9402241594022},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"}],"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[0.4,6.6],"tickmode":"array","ticktext":["149-","150-159","160-169","170-179","180-189","190+"],"tickvals":[1,2,3,4,5,6],"categoryorder":"array","categoryarray":["149-","150-159","160-169","170-179","180-189","190+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":0.458857142857143,"y0":0,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":0.458857142857143,"y0":0,"y1":28.1610626816106,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0.541142857142857,"x1":1,"y0":0,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0.541142857142857,"x1":1,"y0":0,"y1":28.1610626816106,"yanchor":1,"ysizemode":"pixel"}],"xaxis2":{"type":"linear","autorange":false,"range":[0.4,5.6],"tickmode":"array","ticktext":["19-29","30-39","40-49","50-59","60+"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["19-29","30-39","40-49","50-59","60+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.541142857142857,1],"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"showlegend":false,"legend":{"bgcolor":null,"bordercolor":null,"borderwidth":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":12.2208385222084}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"80a4214c3ec3":{"text":{},"x":{},"y":{},"fill":{},"type":"heatmap"}},"cur_data":"80a4214c3ec3","visdat":{"80a4214c3ec3":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-84151128c80cf3a63adf" style="width:100%;height:420px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-84151128c80cf3a63adf">{"x":{"data":[{"x":[1,2,3,4,5],"y":[1,2,3,4,5,6],"z":[[0.194274028629857,0.131944444444444,0,0.351851851851852,0],[0.215090281315447,0.1420469193091,0.058641975308642,0.085972850678733,0.0608974358974359],[0.232898378805852,0.171087855926016,0.102947550931946,0.0699043414275203,0.053072625698324],[0.2739765142592,0.179789830170825,0.112561963486882,0.0628306878306878,0.0422222222222222],[0.306451612903226,0.240994419076611,0.158333333333333,0.0811965811965812,0.263888888888889],[1,0.791666666666667,0,0,null]],"text":[["9% of 163    ","6% of 80    ","0% of 39    ","17% of 12    ","0% of 9    "],["10% of 1963    ","7% of 1293    ","3% of 432    ","4% of 221    ","3% of 104    "],["11% of 5620    ","8% of 4109    ","5% of 1538    ","3% of 755    ","3% of 358    "],["13% of 3113    ","9% of 2231    ","5% of 919    ","3% of 336    ","2% of 150    "],["15% of 310    ","11% of 219    ","8% of 80    ","4% of 26    ","12% of 8    "],["47% of 19    ","38% of 8    ","0% of 1    ","0% of 1    ",null]],"colorscale":[[0,"#132B43"],[0.0422222222222222,"#16304A"],[0.053072625698324,"#16314B"],[0.058641975308642,"#17324C"],[0.0608974358974359,"#17324D"],[0.0628306878306878,"#17324D"],[0.0699043414275203,"#17334E"],[0.0811965811965812,"#183550"],[0.085972850678733,"#183551"],[0.102947550931946,"#193753"],[0.112561963486882,"#1A3855"],[0.131944444444444,"#1B3B58"],[0.1420469193091,"#1C3C5A"],[0.158333333333333,"#1D3E5D"],[0.171087855926016,"#1D405F"],[0.179789830170825,"#1E4160"],[0.194274028629857,"#1F4263"],[0.215090281315447,"#204566"],[0.232898378805852,"#214769"],[0.240994419076611,"#22486A"],[0.263888888888889,"#234B6E"],[0.2739765142592,"#244C70"],[0.306451612903226,"#265176"],[0.351851851851852,"#29567E"],[0.791666666666667,"#4793CE"],[1,"#56B1F7"]],"type":"heatmap","showscale":false,"autocolorscale":false,"showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[1,2,3,4,5],"y":[1,2,3,4,5,6],"z":[[0.714285714285714,1,0,0,null],[0.288461538461538,0.171428571428571,0.428571428571429,0.375,0],[0.268896321070234,0.301354401805869,0.198606271777003,0.205882352941176,0.171428571428571],[0.332834806254249,0.283073367995378,0.257462686567164,0.184251968503937,0.169354838709677],[0.380520016508461,0.355424143556281,0.218091009988901,0.157185628742515,0.152073732718894],[0.390154298310066,0.428571428571429,0.293103448275862,0.290322580645161,0.206896551724138]],"text":[["24% of 21    ","33% of 6    ","0% of 2    ","0% of 3    ",null],["10% of 52    ","6% of 35    ","14% of 14    ","12% of 8    ","0% of 3    "],["9% of 1495    ","10% of 886    ","7% of 287    ","7% of 102    ","6% of 35    "],["11% of 7355    ","9% of 5193    ","9% of 1876    ","6% of 635    ","6% of 248    "],["13% of 7269    ","12% of 4904    ","7% of 1802    ","5% of 668    ","5% of 217    "],["13% of 1361    ","14% of 882    ","10% of 348    ","10% of 93    ","7% of 29    "]],"colorscale":[[0,"#132B43"],[0.152073732718894,"#193854"],[0.157185628742515,"#1A3855"],[0.169354838709677,"#1A3956"],[0.171428571428571,"#1A3956"],[0.184251968503937,"#1B3A58"],[0.198606271777003,"#1B3C59"],[0.205882352941176,"#1C3C5A"],[0.206896551724138,"#1C3C5A"],[0.218091009988901,"#1C3D5C"],[0.257462686567164,"#1E4160"],[0.268896321070234,"#1F4262"],[0.283073367995378,"#1F4363"],[0.288461538461538,"#1F4464"],[0.290322580645161,"#204464"],[0.293103448275862,"#204465"],[0.301354401805869,"#204566"],[0.332834806254249,"#214769"],[0.355424143556281,"#22496C"],[0.375,"#234B6E"],[0.380520016508461,"#244C6F"],[0.390154298310066,"#244D70"],[0.428571428571429,"#265075"],[0.714285714285714,"#336A98"],[1,"#4186BE"]],"type":"heatmap","showscale":false,"autocolorscale":false,"showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null},{"x":[1],"y":[1],"name":"99_6483cd1065baf6b9f5c14655830368b1","type":"scatter","mode":"markers","opacity":0,"hoverinfo":"skip","showlegend":false,"marker":{"color":[0,1],"colorscale":[[0,"#132B43"],[0.0526315789473684,"#16314B"],[0.105263157894737,"#193754"],[0.157894736842105,"#1D3E5C"],[0.210526315789474,"#204465"],[0.263157894736842,"#234B6E"],[0.315789473684211,"#275277"],[0.368421052631579,"#2A5980"],[0.421052631578947,"#2E608A"],[0.473684210526316,"#316793"],[0.526315789473684,"#356E9D"],[0.578947368421053,"#3875A6"],[0.631578947368421,"#3C7CB0"],[0.684210526315789,"#3F83BA"],[0.736842105263158,"#438BC4"],[0.789473684210526,"#4792CE"],[0.842105263157895,"#4B9AD8"],[0.894736842105263,"#4EA2E2"],[0.947368421052632,"#52A9ED"],[1,"#56B1F7"]],"colorbar":{"bgcolor":null,"bordercolor":null,"borderwidth":0,"thickness":23.04,"title":"drinks","titlefont":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":15.2760481527605},"tickmode":"array","ticktext":["0%","10%","20%","30%","40%"],"tickvals":[0,0.211111111111111,0.422222222222222,0.633333333333333,0.844444444444445],"tickfont":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":12.2208385222084},"ticklen":2,"len":0.5}},"xaxis":"x","yaxis":"y","frame":null}],"layout":{"margin":{"t":122.268161062682,"r":39.8505603985056,"b":97.4678289746783,"l":109.090909090909},"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":15.2760481527605},"title":{"text":"<b> OkCupid: %Reported Drinking by Age and Height <\/b>","font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":23.9103362391034},"x":0,"xref":"paper"},"xaxis":{"domain":[0,0.458857142857143],"automargin":true,"type":"linear","autorange":false,"range":[0.4,5.6],"tickmode":"array","ticktext":["19-29","30-39","40-49","50-59","60+"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["19-29","30-39","40-49","50-59","60+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"annotations":[{"text":"Age","x":0.5,"y":-0.0447725790191544,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":11.9551681195517},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"top","annotationType":"axis"},{"text":"Height","x":-0.0677815335349582,"y":0.5,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":11.9551681195517},"xref":"paper","yref":"paper","textangle":-90,"xanchor":"right","yanchor":"center","annotationType":"axis"},{"text":"list(f = \"women\")","x":0.229428571428571,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"Arial Narrow","size":15.9402241594022},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"list(m = \"men\")","x":0.770571428571429,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"Arial Narrow","size":15.9402241594022},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"}],"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[0.4,6.6],"tickmode":"array","ticktext":["149-","150-159","160-169","170-179","180-189","190+"],"tickvals":[1,2,3,4,5,6],"categoryorder":"array","categoryarray":["149-","150-159","160-169","170-179","180-189","190+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":0.458857142857143,"y0":0,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":0.458857142857143,"y0":0,"y1":28.1610626816106,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0.541142857142857,"x1":1,"y0":0,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0.541142857142857,"x1":1,"y0":0,"y1":28.1610626816106,"yanchor":1,"ysizemode":"pixel"}],"xaxis2":{"type":"linear","autorange":false,"range":[0.4,5.6],"tickmode":"array","ticktext":["19-29","30-39","40-49","50-59","60+"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["19-29","30-39","40-49","50-59","60+"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.81901203819012,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"Arial Narrow","size":15.2760481527605},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.541142857142857,1],"gridcolor":"rgba(204,204,204,1)","gridwidth":0.265670402656704,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"showlegend":false,"legend":{"bgcolor":null,"bordercolor":null,"borderwidth":0,"font":{"color":"rgba(0,0,0,1)","family":"Arial Narrow","size":12.2208385222084}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"58fc64b379ec":{"text":{},"x":{},"y":{},"fill":{},"type":"heatmap"}},"cur_data":"58fc64b379ec","visdat":{"58fc64b379ec":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
 
 ---
 
@@ -931,39 +953,147 @@ plot_gg(heat)
 
 ---
 
-## `ggraph`
-
----
-
 ## `gganimate`
 
+Take a plot and make it better:
+
+
+```r
+library(gganimate)
+
+characters %&gt;%
+  group_by(film_id) %&gt;%
+  summarise(n_char = n_distinct(character_id)) %&gt;%
+  ggplot(aes(film_id, n_char)) +
+  geom_line(lwd = 2) +
+  geom_point(aes(group = seq_along(film_id)), size = 5) +
+  labs(x = "", y = "No. of Characters",
+       title = "No. of Unique Characters: {films$title[frame %/% 15 + 1]}") +
+  scale_x_continuous(breaks = 1:7, labels = films$title) +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+* transition_reveal(along = film_id) +
+  ease_aes("cubic-in-out")
+```
+
 ---
 
-## `ggrepel`
-
----
-
-## `ggridges`
-
----
-
-## `ggExtra`
-
----
-
-## `sf`, `ggmap`
-
----
-
-## `ggchicklet`
+&lt;img src = "images/gganimate.gif" style="height: 50%"&gt;
 
 ---
 
 ## `magick`
 
+That Jabba Plot was NOT made by Photoshop...
+
+
+```r
+library(magick)
+
+jabba &lt;- image_read("images/jabba.png")
+fig &lt;- image_graph(width = 2400, height = 1200, res = 300)
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point(size = 1.5) + 
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+fig %&gt;% image_composite(jabba, offset = "+1000+30")
+```
+
+&lt;img src="images/JabbaPlot-1.png" width="50%" /&gt;
+
 ---
 
-## `brickr`
+
+## `tidygraph` + `ggraph`
+
+
+```r
+library(tidygraph)
+
+characters_2_plus &lt;- characters %&gt;%
+  add_count(name) %&gt;%
+  filter(n &gt; 1) %&gt;%
+  select(name, film_id) %&gt;%
+  mutate(id = group_indices(., name)) # for some reason 1:n ID
+
+nodes &lt;- characters_2_plus %&gt;%
+  count(id, name)
+
+edges &lt;- characters_2_plus %&gt;%
+  inner_join(characters_2_plus, "film_id") %&gt;%
+  rename(from = id.x,
+         to = id.y) %&gt;%
+  count(from, to) %&gt;%
+  rename(weight = n) %&gt;%
+  filter(from != to)
+  
+graph &lt;- tbl_graph(nodes = nodes, edges = edges, directed = FALSE)
+```
+
+---
+
+
+```r
+library(ggraph)
+ggraph(graph, layout = "fr") + 
+  geom_edge_fan(aes(alpha = weight), show.legend = FALSE) + 
+  geom_node_point(aes(size = n), color = "lightblue") +
+  geom_node_label(aes(label = name), color = "blue", repel = TRUE, fill = "white", size = 3) +
+  theme_graph(background = "white") +
+  labs(size = "N Films", title = "Star Wars: Characters Network", caption = "An Edge between two characters means they appeared in the same film \nEdge transparency means how many films")
+```
+
+&lt;img src="images/Ggraph-1.png" width="100%" /&gt;
+
+---
+
+## `ggwithimages`
+
+
+```r
+library(ggwithimages)
+  
+annapurna &lt;- png::readPNG(system.file("extdata", "annapurna.png", package = "ggwithimages"))
+sky &lt;- png::readPNG(system.file("extdata", "sky.png", package = "ggwithimages"))
+kathmandu_hourly_aqi &lt;- readr::read_csv(system.file("extdata", "kathmandu_hourly_aqi.csv", package = "ggwithimages"))
+
+ggplot(kathmandu_hourly_aqi, aes(hour, aqi)) +
+  geom_line_with_image(annapurna, sky) +
+  labs(title = "Air Quality Index in the Thamel, Kathmandu, Nepal",
+       subtitle = "Measured in PM2.5 by the US Embassy in Kathmandu",
+       y = "Hourly Mean AQI [PM2.5]",
+       x = "Hour") +
+  ylim(c(50, 200)) +
+  theme_ipsum()
+```
+
+---
+
+&lt;img src="images/Ggwithimages2-1.png" width="100%" /&gt;
+
+---
+
+## `brickr`...
+
+
+```r
+library(brickr)
+
+okcupid %&gt;%
+  count(religion2) %&gt;%
+  filter(religion2 != "NA") %&gt;%
+  mutate(religion =
+           fct_relevel(religion2, c("atheist", "christian", "jewish", "buddhist", "hindu", "muslim"))) %&gt;%
+  ggplot(aes(religion, n)) +
+  geom_brick_col(aes(fill = religion)) +
+  scale_fill_brick() +
+  coord_brick() +
+  theme_brick()
+```
+
+---
+
+&lt;img src="images/Brickr2-1.png" width="60%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>

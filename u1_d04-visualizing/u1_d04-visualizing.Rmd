@@ -134,17 +134,7 @@ How would you describe this relationship? What other variables would help us und
 
 ## Jabba!
 
-```{r JabbaPlot, warning=FALSE, message=FALSE, fig.asp=0.62, out.width="70%"}
-library(magick)
-
-jabba <- image_read("images/jabba.png")
-fig <- image_graph(width = 2400, height = 1200, res = 300)
-ggplot(data = characters, mapping = aes(x = height, y = mass)) +
-  geom_point(size = 1.5) + 
-  labs(title = "Mass vs. Height of Starwars characters",
-       x = "Height (cm)", y = "Weight (kg)")
-fig %>% image_composite(jabba, offset = "+1000+30")
-```
+<img src = "images/JabbaPlot-1.png" style="width: 90%">
 
 ---
 
@@ -708,10 +698,14 @@ g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "unit
 migration_long %>%
   filter(year == 2019) %>%
   filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
+  mutate_at(c("country_orig", "country_dest"),
+            ~case_when(.x == "united_kingdom" ~ "uk",
+                       .x == "united_states_of_america" ~ "usa",
+                       TRUE ~ .x)) %>%
   group_by(country_orig, country_dest) %>%
   summarise(n_migrants = sum(n_migrants)) %>%
   ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-  geom_alluvium(aes(fill = country_orig)) + #<<
+  geom_alluvium(aes(fill = country_orig)) +
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
@@ -799,6 +793,75 @@ heat
 ```
 
 ---
+
+## Heat Map
+
+```{r Heatmeap3, echo=FALSE}
+migration_total <- migration_long %>%
+  filter(year == 2019) %>%
+  group_by(country_orig) %>%
+  summarise(n_migrants = sum(n_migrants)) %>%
+  rename(region = country_orig) %>%
+  mutate(region = case_when(region == "united_kingdom" ~ "uk",
+                            region == "united_states_of_america" ~ "usa",
+                            region == "russian_federation" ~ "russia",
+                            region == "iran_islamic_republic_of" ~ "iran",
+                            region == "venezuela_bolivarian_republic_of" ~ "venezuela",
+                            region == "syrian_arab_republic" ~ "syria",
+                            region == "united_republic_of_tanzania" ~ "tanzania",
+                            region == "republic_of_korea" ~ "south_korea",
+                            region == "dem._peoples_republic_of_korea" ~ "north_korea",
+                            region == "bolivia_plurinational_state_of" ~ "bolivia",
+                            region == "czechia" ~ "czech_republic",
+                            region == "côte_divoire" ~ "ivory_coast",
+                            region == "viet_nam" ~ "vietnam",
+                            TRUE ~ region))
+
+```
+
+```{r Heatmap4, out.width="100%", fig.asp=0.7, eval=FALSE}
+clean_country_name <- function(name) {
+  str_replace_all(str_replace_all(str_to_lower(name), " |-", "_"), "'|,|\\(|\\)", "")
+}
+
+
+world <- as_tibble(map_data("world"))
+
+world <- world %>%
+  mutate(region = clean_country_name(region))
+
+ggplot(world %>%
+         left_join(migration_total, "region"),
+       aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = n_migrants), colour = "white") +
+  scale_fill_gradient(labels = comma, name = "N Migrants", high = "#132B43", low = "#56B1F7") +
+  labs(x = "", y = "", title = "No. of Migrants by Country in 2019") +
+  theme_ipsum()
+```
+
+---
+
+```{r Heatmap5, out.width="100%", fig.asp=0.7, echo=FALSE}
+clean_country_name <- function(name) {
+  str_replace_all(str_replace_all(str_to_lower(name), " |-", "_"), "'|,|\\(|\\)", "")
+}
+
+
+world <- as_tibble(map_data("world"))
+
+world <- world %>%
+  mutate(region = clean_country_name(region))
+
+ggplot(world %>%
+         left_join(migration_total, "region"),
+       aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = n_migrants), colour = "white") +
+  scale_fill_gradient(labels = comma, name = "N Migrants", high = "#132B43", low = "#56B1F7") +
+  labs(x = "", y = "", title = "No. of Migrants by Country in 2019") +
+  theme_ipsum()
+```
+
+---
 class: section-slide
 
 # Amazing Extensions
@@ -864,36 +927,162 @@ plot_gg(heat)
 
 ---
 
-## `ggraph`
-
----
-
 ## `gganimate`
 
+Take a plot and make it better:
+
+```{r Gganimate, eval=FALSE}
+library(gganimate)
+
+characters %>%
+  group_by(film_id) %>%
+  summarise(n_char = n_distinct(character_id)) %>%
+  ggplot(aes(film_id, n_char)) +
+  geom_line(lwd = 2) +
+  geom_point(aes(group = seq_along(film_id)), size = 5) +
+  labs(x = "", y = "No. of Characters",
+       title = "No. of Unique Characters: {films$title[frame %/% 15 + 1]}") +
+  scale_x_continuous(breaks = 1:7, labels = films$title) +
+  theme_ipsum() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  transition_reveal(along = film_id) + #<<
+  ease_aes("cubic-in-out")
+```
+
 ---
 
-## `ggrepel`
-
----
-
-## `ggridges`
-
----
-
-## `ggExtra`
-
----
-
-## `sf`, `ggmap`
-
----
-
-## `ggchicklet`
+<img src = "images/gganimate.gif" style="height: 50%">
 
 ---
 
 ## `magick`
 
+That Jabba Plot was NOT made by Photoshop...
+
+```{r JabbaPlot, warning=FALSE, message=FALSE, fig.asp=0.5, out.width="50%"}
+library(magick)
+
+jabba <- image_read("images/jabba.png")
+fig <- image_graph(width = 2400, height = 1200, res = 300)
+ggplot(data = characters, mapping = aes(x = height, y = mass)) +
+  geom_point(size = 1.5) + 
+  labs(title = "Mass vs. Height of Starwars characters",
+       x = "Height (cm)", y = "Weight (kg)")
+fig %>% image_composite(jabba, offset = "+1000+30")
+```
+
 ---
 
-## `brickr`
+
+## `tidygraph` + `ggraph`
+
+```{r Ggraph1, message=FALSE}
+library(tidygraph)
+
+characters_2_plus <- characters %>%
+  add_count(name) %>%
+  filter(n > 1) %>%
+  select(name, film_id) %>%
+  mutate(id = group_indices(., name)) # for some reason 1:n ID
+
+nodes <- characters_2_plus %>%
+  count(id, name)
+
+edges <- characters_2_plus %>%
+  inner_join(characters_2_plus, "film_id") %>%
+  rename(from = id.x,
+         to = id.y) %>%
+  count(from, to) %>%
+  rename(weight = n) %>%
+  filter(from != to)
+  
+graph <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE)
+```
+
+---
+
+```{r Ggraph, out.width="100%", fig.asp=0.6}
+library(ggraph)
+ggraph(graph, layout = "fr") + 
+  geom_edge_fan(aes(alpha = weight), show.legend = FALSE) + 
+  geom_node_point(aes(size = n), color = "lightblue") +
+  geom_node_label(aes(label = name), color = "blue", repel = TRUE, fill = "white", size = 3) +
+  theme_graph(background = "white") +
+  labs(size = "N Films", title = "Star Wars: Characters Network", caption = "An Edge between two characters means they appeared in the same film \nEdge transparency means how many films")
+```
+
+---
+
+## `ggwithimages`
+
+```{r Ggwithimages, eval=FALSE}
+library(ggwithimages)
+  
+annapurna <- png::readPNG(system.file("extdata", "annapurna.png", package = "ggwithimages"))
+sky <- png::readPNG(system.file("extdata", "sky.png", package = "ggwithimages"))
+kathmandu_hourly_aqi <- readr::read_csv(system.file("extdata", "kathmandu_hourly_aqi.csv", package = "ggwithimages"))
+
+ggplot(kathmandu_hourly_aqi, aes(hour, aqi)) +
+  geom_line_with_image(annapurna, sky) +
+  labs(title = "Air Quality Index in the Thamel, Kathmandu, Nepal",
+       subtitle = "Measured in PM2.5 by the US Embassy in Kathmandu",
+       y = "Hourly Mean AQI [PM2.5]",
+       x = "Hour") +
+  ylim(c(50, 200)) +
+  theme_ipsum()
+```
+
+---
+
+```{r Ggwithimages2, echo=FALSE, out.width="100%", fig.asp=0.7, warning=FALSE, message=FALSE}
+library(ggwithimages)
+  
+annapurna <- png::readPNG(system.file("extdata", "annapurna.png", package = "ggwithimages"))
+sky <- png::readPNG(system.file("extdata", "sky.png", package = "ggwithimages"))
+kathmandu_hourly_aqi <- readr::read_csv(system.file("extdata", "kathmandu_hourly_aqi.csv", package = "ggwithimages"))
+
+ggplot(kathmandu_hourly_aqi, aes(hour, aqi)) +
+  geom_line_with_image(annapurna, sky) +
+  labs(title = "Air Quality Index in the Thamel, Kathmandu, Nepal",
+       subtitle = "Measured in PM2.5 by the US Embassy in Kathmandu",
+       y = "Hourly Mean AQI [PM2.5]",
+       x = "Hour") +
+  ylim(c(50, 200)) +
+  theme_ipsum()
+```
+
+---
+
+## `brickr`...
+
+```{r Brickr, eval=FALSE}
+library(brickr)
+
+okcupid %>%
+  count(religion2) %>%
+  filter(religion2 != "NA") %>%
+  mutate(religion =
+           fct_relevel(religion2, c("atheist", "christian", "jewish", "buddhist", "hindu", "muslim"))) %>%
+  ggplot(aes(religion, n)) +
+  geom_brick_col(aes(fill = religion)) +
+  scale_fill_brick() +
+  coord_brick() +
+  theme_brick()
+```
+
+---
+
+```{r Brickr2, out.width="60%", echo=FALSE}
+library(brickr)
+
+okcupid %>%
+  count(religion2) %>%
+  filter(religion2 != "NA") %>%
+  mutate(religion =
+           fct_relevel(religion2, c("atheist", "christian", "jewish", "buddhist", "hindu", "muslim"))) %>%
+  ggplot(aes(religion, n)) +
+  geom_brick_col(aes(fill = religion)) +
+  scale_fill_brick() +
+  coord_brick() +
+  theme_brick()
+```
