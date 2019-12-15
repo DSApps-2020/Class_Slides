@@ -683,63 +683,44 @@ ggradar(okcupid_radar,  grid.max = 0.201, grid.mid = 0.10, values.radar = c("0%"
 
 ## Sankey Diagram (Alluvial Plot)
 
-```{r Sankey, eval=FALSE}
+```{r Sankey, warning=FALSE}
 library(ggalluvial)
-
-migration <- read_rds("../data/migration.rds")
-
-migration_long <- migration %>%
-  pivot_longer(cols = -c(1:4),
-               names_to = "country_orig",
-               values_to = "n_migrants")
 
 g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "united_states_of_america")
 
-migration_long %>%
+migration_2019 <- read_rds("../data/migration.rds") %>%
+  pivot_longer(cols = -c(1:4), names_to = "country_orig", values_to = "n_migrants") %>%
   filter(year == 2019) %>%
   filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
-  mutate_at(c("country_orig", "country_dest"),
-            ~case_when(.x == "united_kingdom" ~ "uk",
-                       .x == "united_states_of_america" ~ "usa",
-                       TRUE ~ .x)) %>%
+  mutate_at(c("country_orig", "country_dest"), ~case_when(.x == "united_kingdom" ~ "uk", .x == "united_states_of_america" ~ "usa", TRUE ~ .x)) %>%
   group_by(country_orig, country_dest) %>%
-  summarise(n_migrants = sum(n_migrants)) %>%
-  ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-  geom_alluvium(aes(fill = country_orig)) +
+  summarise(n_migrants = sum(n_migrants))
+
+migration_2019 %>% head(4)
+```
+
+---
+
+```{r Sankey2, eval=FALSE}
+ggplot(migration_2019,
+       aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
+  geom_alluvium(aes(fill = country_orig)) + #<<
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
   scale_fill_brewer(type = "qual", palette = "Set1") +
   guides(fill = FALSE) +
   labs(y = "", title = "G7 Cross-Country Migration 2019") +
-  scale_y_comma() + theme_ipsum()
+  scale_y_comma() +
+  theme_ipsum()
 ```
 
 ---
 
-```{r Sankey2, echo=FALSE, out.width="100%", fig.asp=0.8, warning=FALSE}
-library(ggalluvial)
-
-migration <- read_rds("../data/migration.rds")
-
-migration_long <- migration %>%
-  pivot_longer(cols = -c(1:4),
-               names_to = "country_orig",
-               values_to = "n_migrants")
-
-g7 <- c("canada", "france", "germany", "italy", "japan", "united_kingdom", "united_states_of_america")
-
-migration_long %>%
-  filter(year == 2019) %>%
-  filter_at(c("country_orig", "country_dest"), ~.x %in% g7) %>%
-  mutate_at(c("country_orig", "country_dest"),
-            ~case_when(.x == "united_kingdom" ~ "uk",
-                       .x == "united_states_of_america" ~ "usa",
-                       TRUE ~ .x)) %>%
-  group_by(country_orig, country_dest) %>%
-  summarise(n_migrants = sum(n_migrants)) %>%
-  ggplot(aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
-  geom_alluvium(aes(fill = country_orig)) +
+```{r Sankey3, echo=FALSE, out.width="100%", fig.asp=0.8, warning=FALSE}
+ggplot(migration_2019,
+       aes(y = n_migrants, axis1 = country_orig, axis2 = country_dest)) +
+  geom_alluvium(aes(fill = country_orig)) + #<<
   geom_stratum(width = 1/12, fill = "black", color = "grey") +
   geom_label(stat = "stratum", infer.label = TRUE) +
   scale_x_discrete(limits = c("Origin", "Destination"), expand = c(.05, .05)) +
@@ -794,10 +775,11 @@ heat
 
 ---
 
-## Heat Map
+## An Actual Heat Map
 
 ```{r Heatmeap3, echo=FALSE}
-migration_total <- migration_long %>%
+migration_total <- read_rds("../data/migration.rds") %>%
+  pivot_longer(cols = -c(1:4), names_to = "country_orig", values_to = "n_migrants") %>%
   filter(year == 2019) %>%
   group_by(country_orig) %>%
   summarise(n_migrants = sum(n_migrants)) %>%
@@ -1072,7 +1054,8 @@ okcupid %>%
 
 ---
 
-```{r Brickr2, out.width="60%", echo=FALSE}
+.pull-left[
+```{r Brickr2, out.width="100%", echo=FALSE}
 library(brickr)
 
 okcupid %>%
@@ -1086,3 +1069,12 @@ okcupid %>%
   coord_brick() +
   theme_brick()
 ```
+]
+
+.pull-right[
+And... it can get a lot more fun:
+
+<img src = "images/golden_girls.png" style = "width: 100%">
+
+Get the legos you need with `build_instructions()` `r emo::ji("surprised")`
+]
