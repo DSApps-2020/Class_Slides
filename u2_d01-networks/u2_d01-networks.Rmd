@@ -1,0 +1,165 @@
+---
+title: "Introduction to Networks"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Introduction to Networks
+
+### Applications of Data Science - Class 6
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# Why Networks?
+
+---
+
+## Because this
+
+<img src = "images/israeli_songs_excel.png" style = "width: 100%">
+
+Can only get you so far.
+---
+
+## Divided we sing
+
+<img src = "images/israeli_coops.png" style = "width: 100%">
+
+---
+
+class: section-slide
+
+# Networks Overview
+
+---
+
+## A Network
+
+A network, is comprised of:
+
+- Nodes (vertices, points), joined together in pairs by
+- Edges (links, connections)
+
+Many types of networks:
+
+- Physical networks: telephone lines, roads, airline routes, rivers
+- Information networks: WWW, citation networks
+- Social networks: Facebook, Twitter, but not just: this class, Marriage between Royal Houses
+- Biological networks: "food webs" (what eats what?), metabolical networks
+
+---
+
+## Physical Networks
+
+<img src = "images/gush_dan_train_system.jpg" style = "width: 60%">
+
+.font80percent[
+[מערכת להסעת המונים במטרופולין תל אביב](https://he.wikipedia.org/wiki/%D7%9E%D7%A2%D7%A8%D7%9B%D7%AA_%D7%9C%D7%94%D7%A1%D7%A2%D7%AA_%D7%94%D7%9E%D7%95%D7%A0%D7%99%D7%9D_%D7%91%D7%9E%D7%98%D7%A8%D7%95%D7%A4%D7%95%D7%9C%D7%99%D7%9F_%D7%AA%D7%9C_%D7%90%D7%91%D7%99%D7%91)
+]
+---
+
+## Information Networks
+
+<img src = "images/wikipedia_site_map.png" style = "width: 100%">
+
+.font80percent[
+[Wikipedia Main Page Site Map](https://en.wikipedia.org/wiki/Site_map)
+]
+---
+
+## Social Networks
+
+<img src = "images/the_marker_judges.png" style = "width: 80%">
+
+.font80percent[
+[חשיפה: הרשימה שכל עורך דין חייב להכיר](https://www.themarker.com/law/1.3065986)
+]
+---
+
+## Biological Networks
+
+<img src = "images/worm_neural_network.png" style = "width: 80%">
+
+.font80percent[
+[The structure of the nervous system of the nematode Caenorhabditis elegans](https://royalsocietypublishing.org/doi/abs/10.1098/rstb.1986.0056)
+]
+---
+
+## Hard to classify Networks
+
+<img src = "images/john_lennon_timeline.png" style = "width: 100%">
+
+---
+
+## Networks Properties
+
+- Connected/Not:
+- Directed/Not:
+- Acyclic/Not:
+- Self-loop-edges/Not:
+- Weighted edges/Not:
+- Time-varied/Not:
+
+---
+
+## Bipartite Networks
+
+<img src = "images/marvel_co_occurrence.png" style = "width: 80%">
+
+---
+
+## Bipartite Networks
+
+<img src = "images/marvel_bipartite_network.png" style = "width: 80%">
+
+.font80percent[
+[Adapted from: Which Marvel Characters and Movies are the Most Central? / Félix Luginbühl](https://felixluginbuhl.com/network/)
+]
+---
+
+## Multilayer Networks
+
+---
+
+## Trees and Hierarchies
+
+---
+
+class: section-slide
+
+# Intro. to Networks Math

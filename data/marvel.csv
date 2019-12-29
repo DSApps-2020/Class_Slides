@@ -1,0 +1,337 @@
+Film,Character,Value
+Iron Man 1,Iron Man,1
+The Incredible Hulk,Iron Man,1
+Iron Man 2,Iron Man,1
+Thor 1,Iron Man,0
+Captain America : First Avenger,Iron Man,0
+Avengers,Iron Man,1
+Iron Man 3,Iron Man,1
+Thor: The Dark World,Iron Man,0
+Captain America 2,Iron Man,0
+Guardians of the Galaxy,Iron Man,0
+Avengers: Age of Ultron,Iron Man,1
+Ant-Man 1,Iron Man,0
+Captain America: Civil War,Iron Man,1
+Doctor Strange 1,Iron Man,0
+Guardians of the Galaxy Vol. 2,Iron Man,0
+Spider-Man: Homecoming,Iron Man,1
+Thor: Ragnarok,Iron Man,0
+Black Panther 1,Iron Man,0
+Avengers: Infinity War,Iron Man,1
+Ant-Man and the Wasp,Iron Man,0
+Captain Marvel 1,Iron Man,0
+Iron Man 1,Captain America,0
+The Incredible Hulk,Captain America,0
+Iron Man 2,Captain America,0
+Thor 1,Captain America,0
+Captain America : First Avenger,Captain America,1
+Avengers,Captain America,1
+Iron Man 3,Captain America,0
+Thor: The Dark World,Captain America,1
+Captain America 2,Captain America,1
+Guardians of the Galaxy,Captain America,0
+Avengers: Age of Ultron,Captain America,1
+Ant-Man 1,Captain America,1
+Captain America: Civil War,Captain America,1
+Doctor Strange 1,Captain America,0
+Guardians of the Galaxy Vol. 2,Captain America,0
+Spider-Man: Homecoming,Captain America,1
+Thor: Ragnarok,Captain America,0
+Black Panther 1,Captain America,0
+Avengers: Infinity War,Captain America,1
+Ant-Man and the Wasp,Captain America,0
+Captain Marvel 1,Captain America,0
+Iron Man 1,Nick Fury,1
+The Incredible Hulk,Nick Fury,0
+Iron Man 2,Nick Fury,1
+Thor 1,Nick Fury,1
+Captain America : First Avenger,Nick Fury,1
+Avengers,Nick Fury,1
+Iron Man 3,Nick Fury,0
+Thor: The Dark World,Nick Fury,0
+Captain America 2,Nick Fury,1
+Guardians of the Galaxy,Nick Fury,0
+Avengers: Age of Ultron,Nick Fury,1
+Ant-Man 1,Nick Fury,0
+Captain America: Civil War,Nick Fury,0
+Doctor Strange 1,Nick Fury,0
+Guardians of the Galaxy Vol. 2,Nick Fury,0
+Spider-Man: Homecoming,Nick Fury,0
+Thor: Ragnarok,Nick Fury,0
+Black Panther 1,Nick Fury,0
+Avengers: Infinity War,Nick Fury,0
+Ant-Man and the Wasp,Nick Fury,0
+Captain Marvel 1,Nick Fury,1
+Iron Man 1,Thor,0
+The Incredible Hulk,Thor,0
+Iron Man 2,Thor,0
+Thor 1,Thor,1
+Captain America : First Avenger,Thor,0
+Avengers,Thor,1
+Iron Man 3,Thor,0
+Thor: The Dark World,Thor,1
+Captain America 2,Thor,0
+Guardians of the Galaxy,Thor,0
+Avengers: Age of Ultron,Thor,1
+Ant-Man 1,Thor,0
+Captain America: Civil War,Thor,0
+Doctor Strange 1,Thor,1
+Guardians of the Galaxy Vol. 2,Thor,0
+Spider-Man: Homecoming,Thor,0
+Thor: Ragnarok,Thor,1
+Black Panther 1,Thor,0
+Avengers: Infinity War,Thor,1
+Ant-Man and the Wasp,Thor,0
+Captain Marvel 1,Thor,0
+Iron Man 1,Hulk,0
+The Incredible Hulk,Hulk,1
+Iron Man 2,Hulk,0
+Thor 1,Hulk,0
+Captain America : First Avenger,Hulk,0
+Avengers,Hulk,1
+Iron Man 3,Hulk,1
+Thor: The Dark World,Hulk,0
+Captain America 2,Hulk,0
+Guardians of the Galaxy,Hulk,0
+Avengers: Age of Ultron,Hulk,1
+Ant-Man 1,Hulk,0
+Captain America: Civil War,Hulk,0
+Doctor Strange 1,Hulk,0
+Guardians of the Galaxy Vol. 2,Hulk,0
+Spider-Man: Homecoming,Hulk,0
+Thor: Ragnarok,Hulk,1
+Black Panther 1,Hulk,0
+Avengers: Infinity War,Hulk,1
+Ant-Man and the Wasp,Hulk,0
+Captain Marvel 1,Hulk,0
+Iron Man 1,Black Widow,0
+The Incredible Hulk,Black Widow,0
+Iron Man 2,Black Widow,1
+Thor 1,Black Widow,0
+Captain America : First Avenger,Black Widow,0
+Avengers,Black Widow,1
+Iron Man 3,Black Widow,0
+Thor: The Dark World,Black Widow,0
+Captain America 2,Black Widow,1
+Guardians of the Galaxy,Black Widow,0
+Avengers: Age of Ultron,Black Widow,1
+Ant-Man 1,Black Widow,0
+Captain America: Civil War,Black Widow,1
+Doctor Strange 1,Black Widow,0
+Guardians of the Galaxy Vol. 2,Black Widow,0
+Spider-Man: Homecoming,Black Widow,0
+Thor: Ragnarok,Black Widow,0
+Black Panther 1,Black Widow,0
+Avengers: Infinity War,Black Widow,1
+Ant-Man and the Wasp,Black Widow,0
+Captain Marvel 1,Black Widow,0
+Iron Man 1,Hawkeye,0
+The Incredible Hulk,Hawkeye,0
+Iron Man 2,Hawkeye,0
+Thor 1,Hawkeye,1
+Captain America : First Avenger,Hawkeye,0
+Avengers,Hawkeye,1
+Iron Man 3,Hawkeye,0
+Thor: The Dark World,Hawkeye,0
+Captain America 2,Hawkeye,0
+Guardians of the Galaxy,Hawkeye,0
+Avengers: Age of Ultron,Hawkeye,1
+Ant-Man 1,Hawkeye,0
+Captain America: Civil War,Hawkeye,1
+Doctor Strange 1,Hawkeye,0
+Guardians of the Galaxy Vol. 2,Hawkeye,0
+Spider-Man: Homecoming,Hawkeye,0
+Thor: Ragnarok,Hawkeye,0
+Black Panther 1,Hawkeye,0
+Avengers: Infinity War,Hawkeye,1
+Ant-Man and the Wasp,Hawkeye,0
+Captain Marvel 1,Hawkeye,0
+Iron Man 1,Bucky Barnes,0
+The Incredible Hulk,Bucky Barnes,0
+Iron Man 2,Bucky Barnes,0
+Thor 1,Bucky Barnes,0
+Captain America : First Avenger,Bucky Barnes,1
+Avengers,Bucky Barnes,0
+Iron Man 3,Bucky Barnes,0
+Thor: The Dark World,Bucky Barnes,0
+Captain America 2,Bucky Barnes,1
+Guardians of the Galaxy,Bucky Barnes,0
+Avengers: Age of Ultron,Bucky Barnes,0
+Ant-Man 1,Bucky Barnes,1
+Captain America: Civil War,Bucky Barnes,1
+Doctor Strange 1,Bucky Barnes,0
+Guardians of the Galaxy Vol. 2,Bucky Barnes,0
+Spider-Man: Homecoming,Bucky Barnes,0
+Thor: Ragnarok,Bucky Barnes,0
+Black Panther 1,Bucky Barnes,0
+Avengers: Infinity War,Bucky Barnes,1
+Ant-Man and the Wasp,Bucky Barnes,0
+Captain Marvel 1,Bucky Barnes,0
+Iron Man 1,Scarlet Witch,0
+The Incredible Hulk,Scarlet Witch,0
+Iron Man 2,Scarlet Witch,0
+Thor 1,Scarlet Witch,0
+Captain America : First Avenger,Scarlet Witch,0
+Avengers,Scarlet Witch,0
+Iron Man 3,Scarlet Witch,0
+Thor: The Dark World,Scarlet Witch,0
+Captain America 2,Scarlet Witch,1
+Guardians of the Galaxy,Scarlet Witch,0
+Avengers: Age of Ultron,Scarlet Witch,1
+Ant-Man 1,Scarlet Witch,0
+Captain America: Civil War,Scarlet Witch,1
+Doctor Strange 1,Scarlet Witch,0
+Guardians of the Galaxy Vol. 2,Scarlet Witch,0
+Spider-Man: Homecoming,Scarlet Witch,0
+Thor: Ragnarok,Scarlet Witch,0
+Black Panther 1,Scarlet Witch,0
+Avengers: Infinity War,Scarlet Witch,1
+Ant-Man and the Wasp,Scarlet Witch,0
+Captain Marvel 1,Scarlet Witch,0
+Iron Man 1,Star-Lord,0
+The Incredible Hulk,Star-Lord,0
+Iron Man 2,Star-Lord,0
+Thor 1,Star-Lord,0
+Captain America : First Avenger,Star-Lord,0
+Avengers,Star-Lord,0
+Iron Man 3,Star-Lord,0
+Thor: The Dark World,Star-Lord,0
+Captain America 2,Star-Lord,0
+Guardians of the Galaxy,Star-Lord,1
+Avengers: Age of Ultron,Star-Lord,0
+Ant-Man 1,Star-Lord,0
+Captain America: Civil War,Star-Lord,0
+Doctor Strange 1,Star-Lord,0
+Guardians of the Galaxy Vol. 2,Star-Lord,1
+Spider-Man: Homecoming,Star-Lord,0
+Thor: Ragnarok,Star-Lord,0
+Black Panther 1,Star-Lord,0
+Avengers: Infinity War,Star-Lord,1
+Ant-Man and the Wasp,Star-Lord,0
+Captain Marvel 1,Star-Lord,0
+Iron Man 1,Vision,0
+The Incredible Hulk,Vision,0
+Iron Man 2,Vision,0
+Thor 1,Vision,0
+Captain America : First Avenger,Vision,0
+Avengers,Vision,0
+Iron Man 3,Vision,0
+Thor: The Dark World,Vision,0
+Captain America 2,Vision,0
+Guardians of the Galaxy,Vision,0
+Avengers: Age of Ultron,Vision,1
+Ant-Man 1,Vision,0
+Captain America: Civil War,Vision,1
+Doctor Strange 1,Vision,0
+Guardians of the Galaxy Vol. 2,Vision,0
+Spider-Man: Homecoming,Vision,0
+Thor: Ragnarok,Vision,0
+Black Panther 1,Vision,0
+Avengers: Infinity War,Vision,1
+Ant-Man and the Wasp,Vision,0
+Captain Marvel 1,Vision,0
+Iron Man 1,Ant-Man,0
+The Incredible Hulk,Ant-Man,0
+Iron Man 2,Ant-Man,0
+Thor 1,Ant-Man,0
+Captain America : First Avenger,Ant-Man,0
+Avengers,Ant-Man,0
+Iron Man 3,Ant-Man,0
+Thor: The Dark World,Ant-Man,0
+Captain America 2,Ant-Man,0
+Guardians of the Galaxy,Ant-Man,0
+Avengers: Age of Ultron,Ant-Man,0
+Ant-Man 1,Ant-Man,1
+Captain America: Civil War,Ant-Man,1
+Doctor Strange 1,Ant-Man,0
+Guardians of the Galaxy Vol. 2,Ant-Man,0
+Spider-Man: Homecoming,Ant-Man,0
+Thor: Ragnarok,Ant-Man,0
+Black Panther 1,Ant-Man,0
+Avengers: Infinity War,Ant-Man,1
+Ant-Man and the Wasp,Ant-Man,1
+Captain Marvel 1,Ant-Man,0
+Iron Man 1,Spider-Man,0
+The Incredible Hulk,Spider-Man,0
+Iron Man 2,Spider-Man,0
+Thor 1,Spider-Man,0
+Captain America : First Avenger,Spider-Man,0
+Avengers,Spider-Man,0
+Iron Man 3,Spider-Man,0
+Thor: The Dark World,Spider-Man,0
+Captain America 2,Spider-Man,0
+Guardians of the Galaxy,Spider-Man,0
+Avengers: Age of Ultron,Spider-Man,0
+Ant-Man 1,Spider-Man,0
+Captain America: Civil War,Spider-Man,1
+Doctor Strange 1,Spider-Man,0
+Guardians of the Galaxy Vol. 2,Spider-Man,0
+Spider-Man: Homecoming,Spider-Man,1
+Thor: Ragnarok,Spider-Man,0
+Black Panther 1,Spider-Man,0
+Avengers: Infinity War,Spider-Man,1
+Ant-Man and the Wasp,Spider-Man,0
+Captain Marvel 1,Spider-Man,0
+Iron Man 1,Doctor Strange,0
+The Incredible Hulk,Doctor Strange,0
+Iron Man 2,Doctor Strange,0
+Thor 1,Doctor Strange,0
+Captain America : First Avenger,Doctor Strange,0
+Avengers,Doctor Strange,0
+Iron Man 3,Doctor Strange,0
+Thor: The Dark World,Doctor Strange,0
+Captain America 2,Doctor Strange,0
+Guardians of the Galaxy,Doctor Strange,0
+Avengers: Age of Ultron,Doctor Strange,0
+Ant-Man 1,Doctor Strange,0
+Captain America: Civil War,Doctor Strange,0
+Doctor Strange 1,Doctor Strange,1
+Guardians of the Galaxy Vol. 2,Doctor Strange,0
+Spider-Man: Homecoming,Doctor Strange,0
+Thor: Ragnarok,Doctor Strange,1
+Black Panther 1,Doctor Strange,0
+Avengers: Infinity War,Doctor Strange,1
+Ant-Man and the Wasp,Doctor Strange,0
+Captain Marvel 1,Doctor Strange,0
+Iron Man 1,Black Panther,0
+The Incredible Hulk,Black Panther,0
+Iron Man 2,Black Panther,0
+Thor 1,Black Panther,0
+Captain America : First Avenger,Black Panther,0
+Avengers,Black Panther,0
+Iron Man 3,Black Panther,0
+Thor: The Dark World,Black Panther,0
+Captain America 2,Black Panther,0
+Guardians of the Galaxy,Black Panther,0
+Avengers: Age of Ultron,Black Panther,0
+Ant-Man 1,Black Panther,0
+Captain America: Civil War,Black Panther,1
+Doctor Strange 1,Black Panther,0
+Guardians of the Galaxy Vol. 2,Black Panther,0
+Spider-Man: Homecoming,Black Panther,0
+Thor: Ragnarok,Black Panther,0
+Black Panther 1,Black Panther,1
+Avengers: Infinity War,Black Panther,1
+Ant-Man and the Wasp,Black Panther,0
+Captain Marvel 1,Black Panther,0
+Iron Man 1,Captain Marvel,0
+The Incredible Hulk,Captain Marvel,0
+Iron Man 2,Captain Marvel,0
+Thor 1,Captain Marvel,0
+Captain America : First Avenger,Captain Marvel,0
+Avengers,Captain Marvel,0
+Iron Man 3,Captain Marvel,0
+Thor: The Dark World,Captain Marvel,0
+Captain America 2,Captain Marvel,0
+Guardians of the Galaxy,Captain Marvel,0
+Avengers: Age of Ultron,Captain Marvel,0
+Ant-Man 1,Captain Marvel,0
+Captain America: Civil War,Captain Marvel,0
+Doctor Strange 1,Captain Marvel,0
+Guardians of the Galaxy Vol. 2,Captain Marvel,0
+Spider-Man: Homecoming,Captain Marvel,0
+Thor: Ragnarok,Captain Marvel,0
+Black Panther 1,Captain Marvel,0
+Avengers: Infinity War,Captain Marvel,0
+Ant-Man and the Wasp,Captain Marvel,0
+Captain Marvel 1,Captain Marvel,1
