@@ -72,8 +72,8 @@ class: section-slide
 
 A network, is comprised of:
 
-- Nodes (vertices, points), joined together in pairs by
-- Edges (links, connections)
+- Nodes (vertices, points, actors), joined together in pairs by
+- Edges (links, connections, ties)
 
 Many types of networks:
 
@@ -120,26 +120,17 @@ Many types of networks:
 ]
 ---
 
-## Hard to classify Networks
+## Harder to classify Networks
 
 <img src = "images/john_lennon_timeline.png" style = "width: 100%">
-
----
-
-## Networks Properties
-
-- Connected/Not:
-- Directed/Not:
-- Acyclic/Not:
-- Self-loop-edges/Not:
-- Weighted edges/Not:
-- Time-varied/Not:
 
 ---
 
 ## Bipartite Networks
 
 <img src = "images/marvel_co_occurrence.png" style = "width: 80%">
+
+`r emo::ji("arrow_right")`
 
 ---
 
@@ -150,13 +141,148 @@ Many types of networks:
 .font80percent[
 [Adapted from: Which Marvel Characters and Movies are the Most Central? / Félix Luginbühl](https://felixluginbuhl.com/network/)
 ]
+
+---
+
+## Similarity Networks
+
+<img src = "images/sci_fi_books_table.png" style = "width: 100%">
+
+`r emo::ji("arrow_right")`
+
+---
+
+## Similarity Networks
+
+<img src = "images/sci_fi_books_cor_mat.png" style = "width: 75%">
+
+`r emo::ji("arrow_right")`
+
+---
+
+## Similarity Networks
+
+<img src = "images/sci_fi_books_network.png" style = "width: 100%">
+
+.font80percent[
+[Sci-Fi Books data set / Kathleen M. Carley](http://www.casos.cs.cmu.edu/tools/datasets/internal/index.php#sci-fi)
+]
+
 ---
 
 ## Multilayer Networks
 
+<img src = "images/noordin_multiplex.png" style = "width: 60%">
+
+.font80percent[
+[Strategies for Combating Dark Networks (a.k.a Noordin Mohammad Top’s terrorist network of South East Asia](https://pdfs.semanticscholar.org/e680/6d8f86c5ddc3daf6f65572e39f65bd0d2990.pdf)
+]
+
 ---
 
-## Trees and Hierarchies
+## Trees 
+
+<img src = "images/math_expr_parsed.png" style = "width: 65%">
+
+.insight[
+`r emo::ji("bulb")` Does this remind you of anything?
+]
+
+---
+
+## Networks Properties
+
+- Directed/Not: Do the edges have orientation?
+- Weighted edges/Not: Do the edges have weight/strength/length?
+- Connected/Not: Can you "get to" any node from any node?
+- Self-edges/Not: Can a node be linked to itself?
+- Acyclic/Not: Are there cycles? Can you get from one node to itself not by a self-loop?
+- Time-varied/Not: Does the network change over time?
+
+---
+
+## The networks we've seen
+
+.font80percent[
+Network                    | Directed | Weighted | Connected | Self-edges | Acyclic | Time-Varied
+-------------------------- | -------- | -------- | --------- | ---------- | ------- | -----------
+Israeli Artists Coops      |          |          |           |            |         | 
+Gush Dan Trains            |          |          |           |            |         | 
+Wikipedia Site Map         |          |          |           |            |         | 
+Israeli Judges Connections |          |          |           |            |         | 
+Worm Nervous System        |          |          |           |            |         | 
+John Lennon Timeline       |          |          |           |            |         | 
+Marvel Cinematic Universe  |          |          |           |            |         | 
+Sci-Fi Books               |          |          |           |            |         | 
+Noordin Terrorist Net      |          |          |           |            |         | 
+Math Expression            |          |          |           |            |         | 
+
+]
+
+---
+
+## The networks we've seen
+
+```{r Emojis, echo=FALSE}
+v <- emo::ji("check")
+```
+
+.font80percent[
+Network                    | Directed | Weighted | Connected | Self-edges | Acyclic | Time-Varied
+-------------------------- | -------- | -------- | --------- | ---------- | ------- | -----------
+Israeli Artists Coops      |          |          |    `r v`  |            |         | `r v`
+Gush Dan Trains            |          |          |    `r v`  |            |         | 
+Wikipedia Site Map         |  `r v`   |          |    weakly |            |  `r v`  | 
+Israeli Judges Connections |          |          |           |            |         | `r v`
+Worm Nervous System        |  `r v`   | `r v`    |    weakly |  `r v`     |         | 
+John Lennon Timeline       |  `r v`   |          |    weakly |            |  `r v`  | `r emo::ji("sad")`
+Marvel Cinematic Universe  |          |          |    `r v`  |            |         | `r v`
+Sci-Fi Books               |          |  `r v`   |           |            |         | 
+Noordin Terrorist Net      |          |          |           |            |         | 
+Math Expression            |   `r v`  |          |    weakly |            | `r v`   | 
+
+]
+
+---
+
+## Typical Questions About Networks
+
+### Macro:
+
+- Is the network connected?
+- Is the network dense or sparse?
+- What is the maximum/average shortest path? .font80percent[small world effect]
+- Is the network homophilic for attribute X?
+- Are there interesting communities in the network?
+- Will a "message" percolate through the whole network? How fast?
+- Can we model the network to give insight on how it deveoped? Predict how it *will* develop?
+
+---
+
+## Typical Questions About Networks
+
+### Micro:
+
+- Which is the "best connected" node?
+- Which is the "most important" node? .font80percent[Not necessarily the same thing]
+- Is there a node or edge which "break" the network?
+- Is there a path between node A and node B?
+- What is the shortest path between node A and node B?
+- Are nodes A and B likely to connect?
+- What node should we recommend connect with node A?
+
+---
+
+## Obtaining Networks
+
+- Surveys, Interviews, Questionnaires, Observations .font80percent[(Moreno's schoolchildren)]
+- Archives, sometimes historical .font80percent[(Padget's families of Florence)]
+- Snowball Sampling .font80percent[(Drug users' ego networks)]
+- Web Scraping .font80percent[(Adamic's political blogs)]
+- Web APIs .font80percent[(Twitter)]
+- Co-occurrence matrices .font80percent[(Marvel's cinematic universe)]
+- Any tabular dataset? .font80percent[(Sci-Fi books)]
+- Just really hard work .font80percent[(Milgram's Small world experiment)]
 
 ---
 
