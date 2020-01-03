@@ -41,6 +41,14 @@ class: title-slide
 
 ```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
+
+printmrow <- function(x) cat(cat(x,sep=" & "),"\\\\")
+
+matrix2latex <- function(matr) {
+  cat("$\\begin{bmatrix}")
+  body <- apply(matr,1,printmrow)
+  cat("\\end{bmatrix}$")
+}
 ```
 
 class: section-slide
@@ -56,7 +64,7 @@ class: section-slide
 Can only get you so far.
 ---
 
-## Divided we sing
+## Divided they sing
 
 <img src = "images/israeli_coops.png" style = "width: 100%">
 
@@ -255,7 +263,7 @@ Math Expression            |   `r v`  |          |    weakly |            | `r v
 - Is the network homophilic for attribute X?
 - Are there interesting communities in the network?
 - Will a "message" percolate through the whole network? How fast?
-- Can we model the network to give insight on how it deveoped? Predict how it *will* develop?
+- Can we model the network to give insight on how it developed? Predict how it *will* develop?
 
 ---
 
@@ -288,4 +296,317 @@ Math Expression            |   `r v`  |          |    weakly |            | `r v
 
 class: section-slide
 
-# Intro. to Networks Math
+# The Adjacency Matrix
+
+---
+
+## Undirected Networks
+
+The Adjacency matrix $A$ of an unweighted network is defined as a $n\times n$ matrix with elements $A_{ij}$ such that:
+
+$$A_{i,j} =
+ \begin{cases}
+   1 & \mbox{if there is an edge between nodes}\ i \mbox{ and}\ j \\
+   0 & \mbox{otherwise}
+ \end{cases}$$
+
+- The adjacency of a simple undirected network would be symmetric and contain only zeros on its diagonal
+- If the network has multiedges - if there are $q$ edges between elements $i$ and $j$ - then $A_{ij} = q$
+- If the network has self-edges - if there is an edge between element $i$ and itself - then $A_{ii} = 2$ (useful convention)
+---
+
+So this unweighted, undirected network:
+
+```{r Simple-Graph, echo=FALSE, warning=FALSE, message=FALSE, out.width="30%"}
+library(tidygraph)
+library(ggraph)
+g <- tbl_graph(nodes = tibble(id = 1:5),
+               edges = tibble(from = c(1:3, 1, 2),
+                              to = c(2, 3, 5, 3, 5),
+                              weight = c(0.2, 1, 2, 0.4, 0.1)))
+ggraph(g, layout = "fr") +
+  geom_node_point(size = 5) +
+  geom_edge_link() +
+  geom_node_text(aes(label = id), size = 15, vjust = 0.3, hjust = -0.2) +
+  theme_graph()
+```
+
+Would be represented as $A_{5\times 5}$:
+
+```{r Adj-Matrix-Test, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(0, 1, 1, 0, 0),
+                     c(1, 0, 1, 0, 1),
+                     c(1, 1, 0, 0, 1),
+                     c(0, 0, 0, 0, 0),
+                     c(0, 1, 1, 0, 0)))
+
+matrix2latex(x)
+```
+
+---
+
+For an undirected *weighted* network, $A_{ij}$ would contain the weight.
+- The higher the weight - the stronger the connection
+- (In absolute value - because a weight needs not be positive)
+
+```{r Weighted-Graph, echo=FALSE, warning=FALSE, out.width="30%"}
+ggraph(g, layout = "fr") +
+  geom_node_point(size = 5) +
+  geom_edge_link(aes(label = weight, width = weight),
+                 label_size = 10, alpha = 0.5, show.legend = FALSE) +
+  geom_node_text(aes(label = id), size = 15, vjust = 0.3, hjust = -0.2) +
+  theme_graph()
+```
+
+```{r Adj-Matrix-Weighted, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(0, 0.2, 0.4, 0, 0),
+                     c(0.2, 0, 1, 0, 0.1),
+                     c(0.4, 1, 0, 0, 2),
+                     c(0, 0, 0, 0, 0),
+                     c(0, 0.1, 2, 0, 0)))
+
+matrix2latex(x)
+```
+
+---
+
+## Directed Networks (a.k.a DiGraph)
+
+The Adjacency matrix $A$ of an unweighted network is defined as a $n\times n$ matrix with elements $A_{ij}$ such that:
+
+$$A_{i,j} =
+ \begin{cases}
+   1 & \mbox{if there is an edge from node}\ j \mbox{ to node}\ i \\
+   0 & \mbox{otherwise}
+ \end{cases}$$
+
+Note the convention from *column* index to *row* index can be confusing.
+
+---
+
+So this unweighted, directed network:
+
+```{r Directed-Graph, echo=FALSE, warning=FALSE, out.width="30%"}
+g <- tbl_graph(nodes = tibble(id = 1:5),
+               edges = tibble(from = c(1, 2, 5, 3, 2),
+                              to = c(2, 3, 3, 1, 5),
+                              weight = c(0.2, 1, 2, 0.4, 0.1)), directed = TRUE)
+ggraph(g, layout = "fr") +
+  geom_edge_link(arrow = arrow(length = unit(6, 'mm'), type = "closed")) +
+  geom_node_text(aes(label = id), size = 15, vjust = 0.2, hjust = -0.2) +
+  theme_graph()
+```
+
+Would be represented as $A_{5\times 5}$:
+
+```{r Adj-Matrix-Directed, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(0, 0, 1, 0, 0),
+                     c(1, 0, 0, 0, 0),
+                     c(0, 1, 0, 0, 1),
+                     c(0, 0, 0, 0, 0),
+                     c(0, 1, 0, 0, 0)))
+
+matrix2latex(x)
+```
+
+---
+
+## Directed Acyclic Graphs (DAG)
+
+- If the network is directed and has no cycles, it is possible to draw the network such that all edges point downward, from a higher-numbered node into a lower-numbered node.
+- If the network can be drawn where any edge from $j$ to $i$ implies that $j > i$, its adjacency matrix is *upper triangular*
+- Since the diagonal contains only zeros (why) it is *strictly traingular*
+- The other direction also holds (iff)
+
+Is the netwok from previous page acyclic? Try both directions.
+
+---
+
+For example, this acyclic network can be numbered so that its adjacency matrix is strictly triangular:
+
+```{r DAG, echo=FALSE, warning=FALSE, out.width="30%"}
+g <- tbl_graph(nodes = tibble(id = 5:1),
+               edges = tibble(from = c(1, 2, 3, 1, 2),
+                              to = c(2, 3, 5, 4, 5),
+                              weight = c(0.2, 1, 2, 0.4, 0.1)), directed = TRUE)
+ggraph(g, layout = "sugiyama") +
+  geom_edge_link(arrow = arrow(length = unit(6, 'mm'), type = "closed")) +
+  geom_node_text(aes(label = id), size = 15, vjust = 0.5, hjust = 0) +
+  theme_graph()
+```
+
+Would be represented as $A_{5\times 5}$:
+
+```{r Adj-Matrix-DAG, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(0, 0, 1, 1, 0),
+                     c(0, 0, 0, 0, 1),
+                     c(0, 0, 0, 1, 0),
+                     c(0, 0, 0, 0, 1),
+                     c(0, 0, 0, 0, 0)))
+
+matrix2latex(x)
+```
+
+---
+
+### Example: the Math Expression Parse Tree
+
+```{r Math-Expr-Network1, echo=FALSE, warning=FALSE, out.width="30%"}
+nodes <- tribble(
+  ~id, ~label,
+  11, "-",
+  2, "2",
+  6, "+",
+  1, "3",
+  8, "6",
+  10, "*",
+  4, "-1",
+  7, "+",
+  3, "5",
+  5, "2",
+  9, "^"
+)
+
+edges <- tribble(
+  ~from, ~to,
+  1, 11,
+  11, 3,
+  11, 10,
+  3, 4,
+  3, 2,
+  1, 6,
+  6, 5,
+  6, 8,
+  8, 7,
+  8, 9
+)
+
+math_expr <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+
+ggraph(math_expr, layout = "tree") +
+  geom_node_point(size = 20, color = "red", alpha = 0.1) +
+  coord_flip() +
+  geom_node_text(aes(label = label), repel = FALSE, size = 10, color = "blue", vjust = 1) +
+  geom_edge_link(arrow = arrow(length = unit(3, 'mm'), type = "closed"), alpha = 0.7) +
+  theme_graph() +
+  theme(plot.title = element_text(hjust = 1, color = "blue")) +
+  labs(title = "(2 + 3)^2 - 6 * (-1 + 5)")
+```
+
+```{r Math-Expr-Network2, echo=FALSE, warning=FALSE, out.width="30%"}
+nodes <- tribble(
+  ~id, ~label,
+  11, "-",
+  2, "2",
+  6, "+",
+  1, "3",
+  8, "6",
+  10, "*",
+  4, "-1",
+  7, "+",
+  3, "5",
+  5, "2",
+  9, "^"
+)
+
+edges <- tribble(
+  ~from, ~to,
+  1, 11,
+  11, 3,
+  11, 10,
+  3, 4,
+  3, 2,
+  1, 6,
+  6, 5,
+  6, 8,
+  8, 7,
+  8, 9
+)
+
+math_expr <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+
+ggraph(math_expr, layout = "tree") +
+  geom_node_point(size = 20, color = "red", alpha = 0.1) +
+  geom_node_text(aes(label = id), repel = FALSE, size = 10, color = "blue", vjust = 1) +
+  geom_edge_link(arrow = arrow(length = unit(3, 'mm'), type = "closed"), alpha = 0.7) +
+  theme_graph() +
+  theme(plot.title = element_text(hjust = 1, color = "blue"))
+```
+
+---
+
+```{r Adj-Matrix-Math-Expr, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+                     c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+                     c(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0),
+                     c(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1),
+                     c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                     ))
+
+matrix2latex(x)
+```
+
+---
+
+## Bipartite Networks
+
+We can write an Adjacency Matrix for a Bipartite Network (a.k.a *Two-Mode Network*) but a more compact representation exists: the Incidence Matrix.
+
+If $n$ items belong to $g$ groups, the incidence matrix representing this bipartite network is $B_{g\times n}$ with elements $B_{ij}$ such that:
+
+$$B_{i,j} =
+ \begin{cases}
+   1 & \mbox{if item}\ j \mbox{ belongs to group}\ i \\
+   0 & \mbox{otherwise}
+ \end{cases}$$
+ 
+---
+
+So this unweighted, undirected bipartite network of 5 items belonging to 4 groups:
+
+```{r Bipartite-Network, echo=FALSE, out.width="30%"}
+g <- tbl_graph(nodes = tibble(id = 1:9, name = c(1:4, letters[1:5]),
+                              type = c(rep(TRUE, 4), rep(FALSE, 5))),
+               edges = tibble(from = c(5, 5, 8, 8, 7, 7, 7, 6, 6, 6, 9, 9),
+                              to = c(1, 2, 2, 4, 2, 4, 3, 1, 2, 3, 4, 3)))
+ggraph(g, layout = "bipartite") +
+  geom_node_point(aes(color = type), size = 5, show.legend = FALSE) +
+  geom_edge_link() +
+  geom_node_text(aes(label = name), size = 15, vjust = 0.3, hjust = -0.2) +
+  theme_graph()
+```
+
+Would be represented as $B_{4\times 5}$:
+
+```{r Incidence-Matrix, echo = FALSE, results='asis'}
+x <- as.matrix(rbind(c(1, 1, 0, 0, 0),
+                     c(1, 1, 1, 1, 0),
+                     c(0, 1, 1, 0, 1),
+                     c(0, 0, 1, 1, 1)))
+
+matrix2latex(x)
+```
+
+---
+
+## Bipartite Networks Projections
+
+We can manually "project" a two-mode $g$ groups x $n$ items network into a one-mode undirected unweighted network of only $g$ groups or only $n$ items:
+
+- If two items share a group - draw an edge between them.
+- If two groups share an item - draw an edge between them.
+
+<img src = "images/bipartite_projections.png" style = "width: 100%">
+
+---
+
+However, this representation results in a loss of information.
+
+For example, we could add for each pair of items (groups) how many groups (items) they share, with a weighted edge:
+

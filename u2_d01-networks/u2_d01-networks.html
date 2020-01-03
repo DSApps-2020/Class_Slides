@@ -4,7 +4,7 @@
     <title>Introduction to Networks</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-31" />
+    <meta name="date" content="2020-01-03" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-31
+### 2020-01-03
 
 ---
 
@@ -62,7 +62,7 @@ class: section-slide
 Can only get you so far.
 ---
 
-## Divided we sing
+## Divided they sing
 
 &lt;img src = "images/israeli_coops.png" style = "width: 100%"&gt;
 
@@ -239,7 +239,7 @@ Gush Dan Trains            |          |          |    ✅  |            |       
 Wikipedia Site Map         |  ✅   |          |    weakly |            |  ✅  | 
 Israeli Judges Connections |          |          |           |            |         | ✅
 Worm Nervous System        |  ✅   | ✅    |    weakly |  ✅     |         | 
-John Lennon Timeline       |  ✅   |          |    weakly |            |  ✅  | 😞
+John Lennon Timeline       |  ✅   |          |    weakly |            |  ✅  | 😭
 Marvel Cinematic Universe  |          |          |    ✅  |            |         | ✅
 Sci-Fi Books               |          |  ✅   |           |            |         | 
 Noordin Terrorist Net      |          |          |           |            |         | 
@@ -259,7 +259,7 @@ Math Expression            |   ✅  |          |    weakly |            | ✅   
 - Is the network homophilic for attribute X?
 - Are there interesting communities in the network?
 - Will a "message" percolate through the whole network? How fast?
-- Can we model the network to give insight on how it deveoped? Predict how it *will* develop?
+- Can we model the network to give insight on how it developed? Predict how it *will* develop?
 
 ---
 
@@ -292,7 +292,140 @@ Math Expression            |   ✅  |          |    weakly |            | ✅   
 
 class: section-slide
 
-# Intro. to Networks Math
+# The Adjacency Matrix
+
+---
+
+## Undirected Networks
+
+The Adjacency matrix `\(A\)` of an unweighted network is defined as a `\(n\times n\)` matrix with elements `\(A_{ij}\)` such that:
+
+`$$A_{i,j} =
+ \begin{cases}
+   1 &amp; \mbox{if there is an edge between nodes}\ i \mbox{ and}\ j \\
+   0 &amp; \mbox{otherwise}
+ \end{cases}$$`
+
+- The adjacency of a simple undirected network would be symmetric and contain only zeros on its diagonal
+- If the network has multiedges - if there are `\(q\)` edges between elements `\(i\)` and `\(j\)` - then `\(A_{ij} = q\)`
+- If the network has self-edges - if there is an edge between element `\(i\)` and itself - then `\(A_{ii} = 2\)` (useful convention)
+---
+
+So this unweighted, undirected network:
+
+&lt;img src="images/Simple-Graph-1.png" width="30%" /&gt;
+
+Would be represented as `\(A_{5\times 5}\)`:
+
+`\(\begin{bmatrix}0 &amp; 1 &amp; 1 &amp; 0 &amp; 0 \\1 &amp; 0 &amp; 1 &amp; 0 &amp; 1 \\1 &amp; 1 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 1 &amp; 1 &amp; 0 &amp; 0 \\\end{bmatrix}\)`
+
+---
+
+For an undirected *weighted* network, `\(A_{ij}\)` would contain the weight.
+- The higher the weight - the stronger the connection
+- (In absolute value - because a weight needs not be positive)
+
+&lt;img src="images/Weighted-Graph-1.png" width="30%" /&gt;
+
+`\(\begin{bmatrix}0 &amp; 0.2 &amp; 0.4 &amp; 0 &amp; 0 \\0.2 &amp; 0 &amp; 1 &amp; 0 &amp; 0.1 \\0.4 &amp; 1 &amp; 0 &amp; 0 &amp; 2 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 0.1 &amp; 2 &amp; 0 &amp; 0 \\\end{bmatrix}\)`
+
+---
+
+## Directed Networks (a.k.a DiGraph)
+
+The Adjacency matrix `\(A\)` of an unweighted network is defined as a `\(n\times n\)` matrix with elements `\(A_{ij}\)` such that:
+
+`$$A_{i,j} =
+ \begin{cases}
+   1 &amp; \mbox{if there is an edge from node}\ j \mbox{ to node}\ i \\
+   0 &amp; \mbox{otherwise}
+ \end{cases}$$`
+
+Note the convention from *column* index to *row* index can be confusing.
+
+---
+
+So this unweighted, directed network:
+
+&lt;img src="images/Directed-Graph-1.png" width="30%" /&gt;
+
+Would be represented as `\(A_{5\times 5}\)`:
+
+`\(\begin{bmatrix}0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 1 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 \\\end{bmatrix}\)`
+
+---
+
+## Directed Acyclic Graphs (DAG)
+
+- If the network is directed and has no cycles, it is possible to draw the network such that all edges point downward, from a higher-numbered node into a lower-numbered node.
+- If the network can be drawn where any edge from `\(j\)` to `\(i\)` implies that `\(j &gt; i\)`, its adjacency matrix is *upper triangular*
+- Since the diagonal contains only zeros (why) it is *strictly traingular*
+- The other direction also holds (iff)
+
+Is the netwok from previous page acyclic? Try both directions.
+
+---
+
+For example, this acyclic network can be numbered so that its adjacency matrix is strictly triangular:
+
+&lt;img src="images/DAG-1.png" width="30%" /&gt;
+
+Would be represented as `\(A_{5\times 5}\)`:
+
+`\(\begin{bmatrix}0 &amp; 0 &amp; 1 &amp; 1 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\\end{bmatrix}\)`
+
+---
+
+### Example: the Math Expression Parse Tree
+
+&lt;img src="images/Math-Expr-Network1-1.png" width="30%" /&gt;
+
+&lt;img src="images/Math-Expr-Network2-1.png" width="30%" /&gt;
+
+---
+
+`\(\begin{bmatrix}0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\\end{bmatrix}\)`
+
+---
+
+## Bipartite Networks
+
+We can write an Adjacency Matrix for a Bipartite Network (a.k.a *Two-Mode Network*) but a more compact representation exists: the Incidence Matrix.
+
+If `\(n\)` items belong to `\(g\)` groups, the incidence matrix representing this bipartite network is `\(B_{g\times n}\)` with elements `\(B_{ij}\)` such that:
+
+`$$B_{i,j} =
+ \begin{cases}
+   1 &amp; \mbox{if item}\ j \mbox{ belongs to group}\ i \\
+   0 &amp; \mbox{otherwise}
+ \end{cases}$$`
+ 
+---
+
+So this unweighted, undirected bipartite network of 5 items belonging to 4 groups:
+
+&lt;img src="images/Bipartite-Network-1.png" width="30%" /&gt;
+
+Would be represented as `\(B_{4\times 5}\)`:
+
+`\(\begin{bmatrix}1 &amp; 1 &amp; 0 &amp; 0 &amp; 0 \\1 &amp; 1 &amp; 1 &amp; 1 &amp; 0 \\0 &amp; 1 &amp; 1 &amp; 0 &amp; 1 \\0 &amp; 0 &amp; 1 &amp; 1 &amp; 1 \\\end{bmatrix}\)`
+
+---
+
+## Bipartite Networks Projections
+
+We can manually "project" a two-mode `\(g\)` groups x `\(n\)` items network into a one-mode undirected unweighted network of only `\(g\)` groups or only `\(n\)` items:
+
+- If two items share a group - draw an edge between them.
+- If two groups share an item - draw an edge between them.
+
+&lt;img src = "images/bipartite_projections.png" style = "width: 100%"&gt;
+
+---
+
+However, this representation results in a loss of information.
+
+For example, we could add for each pair of items (groups) how many groups (items) they share, with a weighted edge:
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
