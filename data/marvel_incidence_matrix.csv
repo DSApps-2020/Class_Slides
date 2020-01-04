@@ -1,0 +1,22 @@
+Film,Iron Man,Captain America,Nick Fury,Thor,Hulk,Black Widow,Hawkeye,Bucky Barnes,Scarlet Witch,Star-Lord,Vision,Ant-Man,Spider-Man,Doctor Strange,Black Panther,Captain Marvel
+Iron Man 1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
+The Incredible Hulk,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
+Iron Man 2,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0
+Thor 1,0,0,1,1,0,0,1,0,0,0,0,0,0,0,0,0
+Captain America : First Avenger,0,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0
+Avengers,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0
+Iron Man 3,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
+Thor: The Dark World,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0
+Captain America 2,0,1,1,0,0,1,0,1,1,0,0,0,0,0,0,0
+Guardians of the Galaxy,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0
+Avengers: Age of Ultron,1,1,1,1,1,1,1,0,1,0,1,0,0,0,0,0
+Ant-Man 1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0
+Captain America: Civil War,1,1,0,0,0,1,1,1,1,0,1,1,1,0,1,0
+Doctor Strange 1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0
+Guardians of the Galaxy Vol. 2,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0
+Spider-Man: Homecoming,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0
+Thor: Ragnarok,0,0,0,1,1,0,0,0,0,0,0,0,0,1,0,0
+Black Panther 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+Avengers: Infinity War,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0
+Ant-Man and the Wasp,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0
+Captain Marvel 1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1

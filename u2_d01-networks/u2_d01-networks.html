@@ -4,7 +4,7 @@
     <title>Introduction to Networks</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-03" />
+    <meta name="date" content="2020-01-04" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-03
+### 2020-01-04
 
 ---
 
@@ -388,7 +388,13 @@ Would be represented as `\(A_{5\times 5}\)`:
 
 ---
 
-## Bipartite Networks
+class: section-slide
+
+# Bipartite Networks
+
+---
+
+## Incidence Matrix
 
 We can write an Adjacency Matrix for a Bipartite Network (a.k.a *Two-Mode Network*) but a more compact representation exists: the Incidence Matrix.
 
@@ -426,6 +432,445 @@ We can manually "project" a two-mode `\(g\)` groups x `\(n\)` items network into
 However, this representation results in a loss of information.
 
 For example, we could add for each pair of items (groups) how many groups (items) they share, with a weighted edge:
+
+&lt;img src = "images/bipartite_projections_weighted.png" style = "width: 100%"&gt;
+
+What does it mean in terms of incidence matrix `\(B\)`?
+
+---
+
+Exploiting the fact that `\(B\)` contains only zeros and ones, the number of groups shared by two items `\(i\)` and `\(j\)`, i.e. their *weight*:
+
+`\(w(i, j) = \sum_{k=1}^{g} B_{ki}B_{kj} = \sum_{k=1}^{g} B^\intercal_{ik}B_{kj}\)`
+
+And if we treat `\(w(i, j)\)` as elements of matrix `\(P_{n\times n}\)` we could write:
+
+`\(P = B^\intercal B\)`
+
+And `\(P\)` is *almost* the adjacency matrix of the items graph we've manually built. On its diagonal for each item `\(i\)` there is the total number of groups it belongs to:
+
+`\(P_{ii} = w(i, i) = \sum_{k=1}^{g} B_{ki}B_{ki} = \sum_{k=1}^{g} B^2_{ki} = \sum_{k=1}^{g} B_{ki}\)`
+
+And so, if we wanted a proper weighted adjacency matrix, we would need to put zeros on `\(P\)`'s diagonal.
+
+How would we reach the `\(P'_{g\times g}\)` adjacency matrix of the groups network?
+
+---
+
+### Example: The Marvel Cinematic Universe Bipartite Network
+
+
+```python
+import pandas as pd
+import numpy as np
+
+marvel = pd.read_csv("../data/marvel_incidence_matrix.csv")
+
+marvel.shape
+```
+
+```
+## (21, 17)
+```
+
+```python
+marvel.iloc[:4, :5]
+```
+
+```
+##                   Film  Iron Man  Captain America  Nick Fury  Thor
+## 0           Iron Man 1         1                0          1     0
+## 1  The Incredible Hulk         1                0          0     0
+## 2           Iron Man 2         1                0          1     0
+## 3               Thor 1         0                0          1     1
+```
+
+---
+
+Get `\(B\)` of Marvel Films x Characters:
+
+
+```python
+B = marvel.iloc[:, 1:].values
+B.shape
+```
+
+```
+## (21, 16)
+```
+
+Get `\(P\)` of Marvel characters:
+
+
+```python
+P = B.transpose() @ B
+P.shape
+```
+
+```
+## (16, 16)
+```
+
+```python
+P[:5, :5]
+```
+
+```
+## array([[9, 5, 4, 3, 5],
+##        [5, 9, 4, 4, 3],
+##        [4, 4, 8, 3, 2],
+##        [3, 4, 3, 7, 4],
+##        [5, 3, 2, 4, 6]], dtype=int64)
+```
+
+---
+
+Why `P[1, 1] = 9`? Because Iron Man appears in 9 films.
+
+
+```python
+marvel['Iron Man'].sum()
+```
+
+```
+## 9
+```
+
+Why `P[1, 2] = 5`? Because Iron Man and Captain America appear together in 5 films.
+
+
+```python
+marvel['Film'][(marvel['Iron Man'] == 1) &amp; (marvel['Captain America'] == 1)]
+```
+
+```
+## 5                       Avengers
+## 10       Avengers: Age of Ultron
+## 12    Captain America: Civil War
+## 15        Spider-Man: Homecoming
+## 18        Avengers: Infinity War
+## Name: Film, dtype: object
+```
+
+Putting zero in the diagonal to make `\(P\)` an actual adjacency matrix:
+
+
+```python
+np.fill_diagonal(P, 0)
+```
+
+---
+
+class: section-slide
+
+# Degree and Density
+
+---
+
+## Undirected Networks
+
+The degree of a node in an undirected unweighted network is the number of edges connected to it (NOT number of its neighbors!).
+
+The weighted degree of a node in an undirected weighted network is the sum of edges weights connected to it.
+
+In terms of adjacency matrix `\(A\)`:
+
+`\(deg(i) = k_i = \sum_{i=1}^n A_{ij}\)`
+
+.insight[
+💡 Does this definition work for networks with multiedges or self-edges?
+]
+
+---
+
+For an unweighted network: if `\(m\)` is the number of edges, there are `\(2m\)` ends of edges. This is also the sum of the nodes degrees:
+
+`\(2m = \sum_{i=1}^n k_i = \sum_{ij}A_{ij}\)`
+
+.insight[
+💡 How would you define `\(m\)` to make this definition "work" for a weighted network?
+]
+
+This means that the average degree `\(c\)` of an unweighted undirected network is:
+
+`\(c = \frac{2m}{n}\)`
+
+---
+
+The *density* of a network is defined as the fraction of existing edges from potential edges:
+
+`\(\rho = \frac{m}{n\choose 2} = \frac{2m}{n(n-1)}\)`
+
+Which means the density for large networks is roughly the ratio of average degree to network size:
+
+`\(\rho = \frac{c}{n-1} \propto \frac{c}{n}\)`
+
+- If we could prove somehow that as `\(n\to\infty\)` `\(\rho\to 0\)`, we'd call such network *sparse*. Alternatively, if `\(\rho\)` remains non-zero, we'd call such a network *dense*
+- We can write `\(c=\rho n\)`. For some networks the average degree does not change. This means that as `\(n\)` grows `\(\rho\)` shrinks at rate `\(1/n\)`, and the network is called *extremely sparse*
+
+.insight[
+💡 Think of an example of a network for which the average degree should remain constant as `\(n\)` grows.
+]
+
+---
+
+## Directed Networks
+
+When adding directions to edges, we talk about the *in-degree* and *out-degree* of a node, as the number of ingoing or outgoing edges connected to it:
+
+`\(k^{\text{in}}_i = \sum^{n}_{j=1}A_{ij}\quad k^{\text{out}}_j = \sum^{n}_{i=1}A_{ij}\)`
+
+The number of edges `\(m\)` equals the sum of in- or out-degrees:
+
+`\(m = \sum^{n}_{i=1}k^{\text{in}}_i = \sum^{n}_{j=1}k^{\text{out}}_j = \sum^{n}_{ij}A_{ij}\)`
+
+The average in-degree is the average out-degree:
+
+`\(c_{\text{in}} = \frac{1}{n}\sum^{n}_{i=1}k^{\text{in}}_i = \frac{1}{n}\sum^{n}_{j=1}k^{\text{out}}_j = c_{\text{out}}\)`
+
+---
+
+This means that the average degree `\(c\)` of an unweighted directed network is:
+
+`\(c = \frac{m}{n}\)`
+
+Which means the definition of density `\(\rho\)` remains the same for directed networks **in terms of average degree**:
+
+`\(\rho = \frac{m}{n(n-1)} = \frac{c}{n-1}\)`
+
+---
+
+### Example: The Marvel Cinematic Universe Characters Network
+
+Let's convert the weighted undirected adjacency matrix `\(P\)` into unweighted:
+
+
+```python
+P[P &gt; 0] = 1
+P[:4, :4]
+```
+
+```
+## array([[0, 1, 1, 1],
+##        [1, 0, 1, 1],
+##        [1, 1, 0, 1],
+##        [1, 1, 1, 0]], dtype=int64)
+```
+
+Get the list of degrees:
+
+
+```python
+k = P.sum(axis=0)
+k
+```
+
+```
+## array([14, 14, 10, 14, 14, 14, 14, 14, 14, 13, 14, 13, 13, 13, 13,  1],
+##       dtype=int64)
+```
+
+---
+
+No. of nodes `\(n\)`:
+
+
+```python
+n = P.shape[0]
+m = np.triu(P).sum()
+print('n nodes: %d; m edges: %d' % (n, m))
+```
+
+```
+## n nodes: 16; m edges: 101
+```
+
+Average degree:
+
+
+```python
+k.mean()
+```
+
+```
+## 12.625
+```
+
+See that the simple definition is equivalent:
+
+
+```python
+2 * m / n
+```
+
+```
+## 12.625
+```
+
+---
+
+Density `\(\rho\)`:
+
+
+```python
+k.mean() / (n - 1)
+```
+
+```
+## 0.8416666666666667
+```
+
+We can see that most characters are connected to most characters (16 overall). One character, however, is connected to only 1 character:
+
+
+```python
+characters = marvel.columns[1:]
+characters[np.argmin(k)]
+```
+
+```
+## 'Captain Marvel'
+```
+
+is connected with:
+
+
+```python
+characters[np.argmax(P[np.argmin(k), :])]
+```
+
+```
+## 'Nick Fury'
+```
+
+---
+
+class: section-slide
+
+# Walks and Paths
+
+---
+
+### Unweighted, Directed and Undirected Networks
+
+A *walk* in a network is a route from node A to node B along the edges.
+
+A *path* is a walk which does not intersect itself.
+
+Walks and paths are extremely important in algorithms answering questions regarding a network's structure and the flow of information it. Of particular importance is the *shortest path* between two nodes.
+
+Shortest?
+
+---
+
+The *length* of a walk/path of an unweighted network is the number of edges traversed along the walk (NOT number of nodes!)
+
+For example, exploiting the fact that `\(A\)` contains only zeros and ones, we can easily compute the number of all walks of length 2 between two nodes:
+
+`\(N^{(2)}_{ij} = \sum^n_{k=1}A_{ik}A_{kj}={[A^2]_{ij}}\)`
+
+(the `\(ij\)`-th element of the "squared" matrix `\(A^2\)`)
+
+Similarly the number of walks of length 3 between two nodes:
+
+`\(N^{(3)}_{ij} = \sum^n_{k,l=1}A_{ik}A_{kl}A_{kj}={[A^3]_{ij}}\)`
+
+And in general, the number of walks of length `\(r\)` between two nodes:
+
+`\(N^{(r)}_{ij} = {[A^r]_{ij}}\)`
+
+---
+
+## Shortest Paths
+
+The shortest path (a.k.a *geodesic path*) between two nodes is the path of minimum length between the two nodes.
+
+The *shortest distance* (a.k.a *geodesic distance*) is the length of the shortest path, in other words the smallest value of `\(r\)` such that `\({[A^r]_{ij}} &gt; 0\)`.
+
+.insight[
+Why is it not called "the shortest walk"? Must it be unique?
+
+What is the shortest distance between nodes which are not connected?
+]
+
+The *diameter* of a network is the maximal shortest distance between any pair of nodes.
+
+.insight[
+What is the meaning of the diameter in networks we've seen?
+]
+
+---
+
+class: section-slide
+
+# Components
+
+---
+
+## Undirected Networks
+
+- Some parts of a network are disconnected from each other
+- A *component* is a subset of nodes such that there exists at least one path between each pair of nodes in the subset
+- No other node in the network can be added and preserve this property
+- A singleton node is a single component
+- A network in which every pair of nodes are connected, has a single component and is said to be *connected*
+- The adjacency matrix of a disconnected network *can be* written in block diagonal form
+
+.insight[
+How many components are there in the Sci-Fi books network? Is it connected?
+
+What is an easy way of making the network "more" or "less" connected?
+]
+
+---
+
+## Directed Networks
+
+Type I Definition:
+- *weakly connected* components: a subset of nodes such there exists at least one directed path between each pair of nodes in the subset, direction can be either way
+- *strongly connected* components: a subset of nodes such that there exists at least one directed path between each pair of nodes, in both direction
+
+&lt;img src = "images/Strongly-CC.png" style = "width: 30%"&gt;
+
+---
+
+Type II Definition:
+- *out-component* of node `\(i\)`: subset of all nodes reacheable by a directed path from node `\(i\)` including `\(i\)` itself
+- *in-component* of node `\(i\)`: subset of all nodes from which node `\(i\)` can be reached by a directed path, including `\(i\)` itself
+
+&lt;img src = "images/In_Out_Components.png" style = "width: 30%"&gt;
+
+.font80percent[
+The out-component of node 2 (or 1, or 3) is {1, 2, 3, 5}.
+
+The in-component of node 2 (or 1, or 3) is {1, 2, 3}
+]
+---
+
+class: section-slide
+
+# The Graph Laplacian
+
+---
+
+### Udirected, Weighted and Unweighted Networks
+
+A different matrix representation of a network which proves useful in many situations is the Laplacian `\(L_{n\times n}\)`:
+
+`$$L_{i,j} =
+ \begin{cases}
+    k_i &amp; \mbox{if } i = j \\
+   -1 &amp; \mbox{if } i \neq j \mbox{ and there is an edge between nodes}\ i \mbox{ and}\ j \\
+   0 &amp; \mbox{otherwise}
+ \end{cases}$$`
+
+Where `\(k_i\)` is node `\(i\)`'s degree as defined before.
+
+In other words:
+
+`\(L = D - A\)`
+
+Where `\(A\)` is defined as before, and `\(D\)` the diagonal matrix with a nodes degrees along the diagonal.
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
