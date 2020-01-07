@@ -278,6 +278,7 @@ Math Expression            |   `r v`  |          |    weakly |            | `r v
 - What is the shortest path between node A and node B?
 - Are nodes A and B likely to connect?
 - What node should we recommend connect with node A?
+- Can we predict missing attribute "X" for node A?
 
 ---
 

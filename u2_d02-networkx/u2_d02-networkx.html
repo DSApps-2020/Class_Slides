@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Networkx</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2020-01-07" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Networkx
+
+### Applications of Data Science - Class 7
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2020-01-07
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# Why Networkx?
+
+---
+
+## Pros and Cons of `networkx`
+
+Pros:
+- Maintained!
+- Friendly: Community, Docs, Installation (as opposed to `igraph`)
+- Relatively easy interface (as opposed to `igraph`)
+- Speaks pandas, numpy and other important python tools
+- Nodes can be anything, including python objects
+
+Cons:
+- Slow, probably not for large networks (as opposed to `igraph`, `graph-tool`)
+- Unimpressive viz (as opposed to Gephi, ggraph, others)
+- Not the most comprehensive algorithms selection
+
+---
+
+class: section-slide
+
+# Creating a Graph()
+
+---
+
+## Four types of Graph objects
+
+Undirected:
+
+
+```python
+import networkx as nx
+
+G = nx.Graph()
+```
+
+Directed:
+
+
+```python
+G = nx.DiGraph()
+```
+
+Multiedge undirected:
+
+
+```python
+G = nx.MultiGraph()
+```
+
+Multiedge directed:
+
+
+```python
+G = nx.MultiDiGraph()
+```
+
+---
+
+## Add Nodes
+
+One or more nodes:
+
+
+```python
+G = nx.Graph()
+G.add_node('John')
+G.add_nodes_from(['Paul', 'George', 'Ringo'])
+```
+
+Watch a Graph's nodes:
+
+```python
+G.nodes
+```
+
+```
+## NodeView(('John', 'Paul', 'George', 'Ringo'))
+```
+
+Print nicer as a list:
+
+
+```python
+list(G.nodes)
+```
+
+```
+## ['John', 'Paul', 'George', 'Ringo']
+```
+
+---
+
+# Add Edges
+
+One or more edges:
+
+
+```python
+G.add_edge('John', 'Paul')
+G.add_edges_from([('Paul', 'George'), ('John', 'Ringo')])
+```
+
+Surprisingly, this would also work:
+
+
+```python
+G.add_edge('John', 'Brian')
+```
+
+Watch a Graph's edges:
+
+```python
+print(list(G.edges))
+```
+
+```
+## [('John', 'Paul'), ('John', 'Ringo'), ('John', 'Brian'), ('Paul', 'George')]
+```
+
+---
+
+## Remove nodes or edges
+
+
+```python
+G.remove_node('Brian')
+```
+
+Did `networkx` bother to remove the edge as well?
+
+
+```python
+print(list(G.edges))
+```
+
+```
+## [('John', 'Paul'), ('John', 'Ringo'), ('Paul', 'George')]
+```
+
+Remove an edge, remove from a list:
+
+
+```python
+G.remove_edge('Paul', 'John') # why did it work?
+G.remove_nodes_from(['John', 'George'])
+```
+
+Break the Beatles altogether:
+
+
+```python
+G.clear()
+```
+
+---
+
+## Good to know
+
+- Adding an edge also adds its nodes if they didn't exist before
+- Adding a duplicate node/edge is ignored unless `MultiGraph()`
+- Removing an edge does not remove its nodes
+- Removing a node removes all edges to/from it
+- Removing a non-existent node/edge raises an error unless it is part of a list in which case - ignored
+
+---
+
+## Nodes and Edges Attributes
+
+While adding to Graph:
+
+
+```python
+G.add_node('Ringo', alive=True)
+G.add_nodes_from([('George', {'alive': False}), ('John', {'alive': False})])
+# can also do: G.add_nodes_from(['George', 'John'], alive=False)
+G.add_edge('John', 'Paul', year=1957)
+G.add_edges_from([('Ringo', 'John'), ('Ringo', 'Paul'), ('Ringo', 'George')], year=1960)
+```
+
+Watch attributes with the `nodes()` and `edges()` methods:
+
+
+```python
+print(G.nodes(data=True))
+```
+
+```
+## [('Ringo', {'alive': True}), ('George', {'alive': False}), ('John', {'alive': False}), ('Paul', {})]
+```
+
+```python
+print(G.nodes(data='alive'))
+```
+
+```
+## [('Ringo', True), ('George', False), ('John', False), ('Paul', None)]
+```
+
+---
+
+## Nodes and Edges Attributes
+
+Setting an attribute of an existing node/edge through the `nodes` and `edges` dictionary attributes:
+
+
+```python
+print(G.nodes['Paul'])
+```
+
+```
+## {}
+```
+
+```python
+G.nodes['Paul']['alive'] = True #?
+```
+
+
+```python
+G.add_edge('John', 'George')
+G.edges[('John', 'George')]['year'] = 1958
+```
+
+As a dictionary you can also delete an attribute this way:
+
+
+```python
+del G.nodes['Paul']['alive']
+del G.edges[('John', 'George')]['year']
+```
+
+---
+
+## Nodes and Edges Attributes
+
+Finally you can set an attribute from a simple dictionary:
+
+
+```python
+year_met = {
+  ('John', 'Paul'): 1957,
+  ('Paul', 'Ringo'): 1960,
+  ('Paul', 'George'): 1958,
+  ('John', 'George'): 1958
+}
+nx.set_edge_attributes(G, year_met, 'year')
+```
+
+Or multiple attributes with a nested dictionary:
+
+
+```python
+node_attrs = {
+  'John': {'alive': False, 'born': 1940},
+  'Paul': {'alive': True, 'born': 1942},
+  'George': {'alive': False, 'born': 1943},
+  'Ringo': {'alive': True, 'born': 1940}
+}
+nx.set_node_attributes(G, node_attrs)
+```
+
+---
+
+### Good to have
+
+The edge attribute `weight` is so important it got its own method:
+
+
+```python
+G = nx.Graph()
+G.add_weighted_edges_from([(0, 1, 3.0), (1, 2, 7.5)])
+```
+
+Quick methods to know:
+
+
+```python
+print(G.number_of_nodes())
+```
+
+```
+## 3
+```
+
+```python
+print(G.number_of_edges())
+```
+
+```
+## 2
+```
+
+```python
+print(G.is_directed())
+```
+
+```
+## False
+```
+
+---
+
+### Good to have
+
+
+```python
+print(G.has_node(3))
+```
+
+```
+## False
+```
+
+```python
+print(G.has_edge(0, 1))
+```
+
+```
+## True
+```
+
+```python
+print(G.subgraph([0, 1]).number_of_edges())
+```
+
+```
+## 1
+```
+
+```python
+print(list(G.neighbors(1)))
+```
+
+```
+## [0, 2]
+```
+
+---
+
+## What about `DiGraph()`?
+
+Convert an undirected graph to a directed graph:
+
+
+```python
+D = nx.DiGraph(G)
+```
+
+Edges direction matters:
+
+
+```python
+D.add_edge(2, 3, weight=10.0)
+print(D.has_edge(2, 3))
+```
+
+```
+## True
+```
+
+```python
+print(D.has_edge(3, 2))
+```
+
+```
+## False
+```
+
+Other than that...
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

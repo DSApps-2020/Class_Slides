@@ -1,0 +1,368 @@
+---
+title: 'Networkx'
+subtitle: 'Applications of Data Science'
+author: 'Giora Simchoni'
+institute: 'Stat. and OR Department, TAU'
+date: '`r Sys.Date()`'
+output_dir: 'images'
+output:
+  xaringan::moon_reader:
+    css: '../slides.css'
+    seal: false
+    chakra: '../libs/remark-latest.min.js'
+    includes:
+      in_header: '../header.html'
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Networkx
+
+### Applications of Data Science - Class 7
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = '../setup.Rmd'}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+
+printmrow <- function(x) cat(cat(x,sep=' & '),'\\\\')
+
+matrix2latex <- function(matr) {
+  cat('$\\begin{bmatrix}')
+  body <- apply(matr,1,printmrow)
+  cat('\\end{bmatrix}$')
+}
+```
+
+class: section-slide
+
+# Why Networkx?
+
+---
+
+## Pros and Cons of `networkx`
+
+Pros:
+- Maintained!
+- Friendly: Community, Docs, Installation (as opposed to `igraph`)
+- Relatively easy interface (as opposed to `igraph`)
+- Speaks pandas, numpy and other important python tools
+- Nodes can be anything, including python objects
+
+Cons:
+- Slow, probably not for large networks (as opposed to `igraph`, `graph-tool`)
+- Unimpressive viz (as opposed to Gephi, ggraph, others)
+- Not the most comprehensive algorithms selection
+
+---
+
+class: section-slide
+
+# Creating a Graph(): Manually
+
+---
+
+## Four types of Graph objects
+
+Undirected:
+
+```{python}
+import networkx as nx
+
+G = nx.Graph()
+```
+
+Directed:
+
+```{python}
+G = nx.DiGraph()
+```
+
+Multiedge undirected:
+
+```{python}
+G = nx.MultiGraph()
+```
+
+Multiedge directed:
+
+```{python}
+G = nx.MultiDiGraph()
+```
+
+---
+
+## Add Nodes
+
+One or more nodes:
+
+```{python}
+G = nx.Graph()
+G.add_node('John')
+G.add_nodes_from(['Paul', 'George', 'Ringo'])
+```
+
+Watch a Graph's nodes:
+```{python}
+G.nodes
+```
+
+Print nicer as a list:
+
+```{python}
+list(G.nodes)
+```
+
+---
+
+# Add Edges
+
+One or more edges:
+
+```{python}
+G.add_edge('John', 'Paul')
+G.add_edges_from([('Paul', 'George'), ('John', 'Ringo')])
+```
+
+Surprisingly, this would also work:
+
+```{python}
+G.add_edge('John', 'Brian')
+```
+
+Watch a Graph's edges:
+```{python}
+print(list(G.edges))
+```
+
+---
+
+## Remove nodes or edges
+
+```{python}
+G.remove_node('Brian')
+```
+
+Did `networkx` bother to remove the edge as well?
+
+```{python}
+print(list(G.edges))
+```
+
+Remove an edge, remove from a list:
+
+```{python}
+G.remove_edge('Paul', 'John') # why did it work?
+G.remove_nodes_from(['John', 'George'])
+```
+
+Break the Beatles altogether:
+
+```{python}
+G.clear()
+```
+
+---
+
+## Good to know
+
+- Adding an edge also adds its nodes if they didn't exist before
+- Adding a duplicate node/edge is ignored unless `MultiGraph()`
+- Removing an edge does not remove its nodes
+- Removing a node removes all edges to/from it
+- Removing a non-existent node/edge raises an error unless it is part of a list in which case - ignored
+
+---
+
+## Nodes and Edges Attributes
+
+While adding to Graph:
+
+```{python}
+G.add_node('Ringo', alive=True)
+G.add_nodes_from([('George', {'alive': False}), ('John', {'alive': False})])
+# can also do: G.add_nodes_from(['George', 'John'], alive=False)
+G.add_edge('John', 'Paul', year=1957)
+G.add_edges_from([('Ringo', 'John'), ('Ringo', 'Paul'), ('Ringo', 'George')], year=1960)
+```
+
+Watch attributes with the `nodes()` and `edges()` methods:
+
+```{python}
+print(G.nodes(data=True))
+print(G.nodes(data='alive'))
+```
+
+---
+
+## Nodes and Edges Attributes
+
+Setting an attribute of an existing node/edge through the `nodes` and `edges` dictionary attributes:
+
+```{python}
+print(G.nodes['Paul'])
+G.nodes['Paul']['alive'] = True #?
+```
+
+```{python}
+G.add_edge('John', 'George')
+G.edges[('John', 'George')]['year'] = 1958
+```
+
+As a dictionary you can also delete an attribute this way:
+
+```{python}
+del G.nodes['Paul']['alive']
+del G.edges[('John', 'George')]['year']
+```
+
+---
+
+## Nodes and Edges Attributes
+
+Finally you can set an attribute from a simple dictionary:
+
+```{python}
+year_met = {
+  ('John', 'Paul'): 1957,
+  ('Paul', 'Ringo'): 1960,
+  ('Paul', 'George'): 1958,
+  ('John', 'George'): 1958
+}
+nx.set_edge_attributes(G, year_met, 'year')
+```
+
+Or multiple attributes with a nested dictionary:
+
+```{python}
+node_attrs = {
+  'John': {'alive': False, 'born': 1940},
+  'Paul': {'alive': True, 'born': 1942},
+  'George': {'alive': False, 'born': 1943},
+  'Ringo': {'alive': True, 'born': 1940}
+}
+nx.set_node_attributes(G, node_attrs)
+```
+
+---
+
+### Good to have
+
+The edge attribute `weight` is so important it got its own method:
+
+```{python}
+G = nx.Graph()
+G.add_weighted_edges_from([(0, 1, 3.0), (1, 2, 7.5)])
+```
+
+Quick methods to know:
+
+```{python}
+print(G.number_of_nodes())
+print(G.number_of_edges())
+print(G.is_directed())
+```
+
+---
+
+### Good to have
+
+```{python}
+print(G.has_node(3))
+print(G.has_edge(0, 1))
+print(G.subgraph([0, 1]).number_of_edges())
+print(list(G.neighbors(1)))
+```
+
+---
+
+## What about `DiGraph()`?
+
+Convert an undirected graph to a directed graph:
+
+```{python}
+D = nx.DiGraph(G)
+```
+
+Edges direction matters:
+
+```{python}
+D.add_edge(2, 3, weight=10.0)
+print(D.has_edge(2, 3))
+print(D.has_edge(3, 2))
+```
+
+Other than that...
+
+---
+
+class: section-slide
+
+# Create a Graph(): In Real Life
+
+---
+
+## Numpy
+
+---
+
+## Edgelist
+
+---
+
+## CSV
+
+---
+
+## Pandas
+
+---
+
+## BiPartite
+
+---
+
+## Similarity
+
+---
+
+class: section-slide
+
+# Let Networkx work
+
+---
+
+## Adjacency Matrix
+
+---
+
+## Degree and Density
+
+---
+
+## Walks, Paths, Diameter
+
+---
+
+## Components
+
+---
+
+## Laplacian
