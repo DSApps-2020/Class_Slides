@@ -57,7 +57,7 @@ class: section-slide
 
 ---
 
-## Pros and Cons of `networkx`
+## Pros and Cons of `NetworkX`
 
 Pros:
 - Maintained!
@@ -132,7 +132,7 @@ list(G.nodes)
 
 ---
 
-# Add Edges
+## Add Edges
 
 One or more edges:
 
@@ -160,7 +160,7 @@ print(list(G.edges))
 G.remove_node('Brian')
 ```
 
-Did `networkx` bother to remove the edge as well?
+Did `NetworkX` bother to remove the edge as well?
 
 ```{python}
 print(list(G.edges))
@@ -315,54 +315,521 @@ Other than that...
 
 class: section-slide
 
+# Visualize a Graph(): matplotlib
+
+---
+
+### `draw()`: The very basic
+
+```{python, Basic, out.width="45%"}
+import matplotlib.pyplot as plt
+
+G = nx.erdos_renyi_graph(n=5, p=0.6) # a.k.a binomial_graph()
+
+nx.draw(G)
+plt.show()
+```
+
+---
+
+### `draw_networkx()`: Some more options
+
+```{python, Basic2, out.width="45%"}
+nx.draw_networkx(G, node_size=800, node_color='red', edge_color='pink',
+  width=5, font_size=16)
+plt.show()
+```
+
+---
+
+You may like the unpacking a dictionary option better:
+
+```{python, Basic3, out.width="45%"}
+options = {
+    'node_color': 'black',
+    'node_size': 100,
+    'width': 3,
+}
+
+nx.draw_networkx(G, **options)
+plt.show()
+```
+
+---
+
+### Layouts Galore
+
+```{python, Basic4, out.width="45%"}
+plt.subplot(121)
+limits = plt.axis('off')
+nx.draw_networkx(G, pos=nx.kamada_kawai_layout(G))
+plt.subplot(122)
+limits = plt.axis('off')
+nx.draw_networkx(G, pos=nx.fruchterman_reingold_layout(G))
+plt.show()
+```
+
+---
+
+### Use a Layout directly
+
+```{python, Basic5, out.width="45%"}
+nx.draw_kamada_kawai(G)
+plt.show()
+```
+
+---
+
+### For nicer graphs go to...
+
+- [Grave](https://networkx.github.io/grave/)?
+- [nxviz](https://nxviz.readthedocs.io/en/latest/index.html)?
+- [Plotly](https://plot.ly/python/) (interactive graphs for Python or R)
+- [Gephi](https://gephi.org/) (a Desktop app, neither R nor Python but both export to Gephi format)
+- [d3](https://d3js.org/) (JS delight)
+- [ggraph](https://ggraph.data-imaginist.com/) (R)?
+---
+
+class: section-slide
+
 # Create a Graph(): In Real Life
 
 ---
 
-## Numpy
+### Numpy
+
+```{python Numpy, out.width="30%"}
+import numpy as np
+
+A = np.array([
+[0, 1, 1, 0, 0],
+[1, 0, 1, 0, 1],
+[1, 1, 0, 0, 1],
+[0, 0, 0, 0, 0],
+[0, 1, 1, 0, 0]])
+
+G = nx.from_numpy_matrix(A)
+nx.draw_networkx(G, node_size=0, font_size=40)
+plt.show()
+```
 
 ---
 
-## Edgelist
+### Edgelist - a list of edges
+
+```{python Beatles1, out.width="40%"}
+beatles_edgelist = [('John', 'Paul', {'weight': 1.0}), ('John', 'George', {'weight': 0.5}),
+  ('John', 'Ringo', {'weight': 0.5})]
+
+G = nx.from_edgelist(beatles_edgelist)
+
+weights = [10 * attrs['weight'] for u, v, attrs in G.edges(data=True)]
+nx.draw_networkx(G, width=weights)
+plt.show()
+```
 
 ---
 
-## CSV
+### Edgelist - a file
+
+This is how the `beatles.edgelist` file looks like:
+
+```{python, eval=FALSE}
+John Paul 1
+John George 0.5
+John Ringo 0.5
+```
+
+Read it with `read_edgelist()` or `read_weighted_edgelist()`:
+
+```{python}
+with open('../data/beatles.edgelist', 'rb') as edgelist_file:
+  G = nx.read_edgelist(edgelist_file, data=(('weight', float),))
+print(G.edges(data=True))
+```
+
+```{python}
+with open('../data/beatles.edgelist', 'rb') as edgelist_file:
+  G = nx.read_weighted_edgelist(edgelist_file)
+print(G.edges(data=True))
+```
 
 ---
 
-## Pandas
+### CSV
+
+This is how the `beatles.csv` file looks like:
+
+```{python, eval=FALSE}
+John,Paul,1957,1.0
+John,George,1958,0.5
+John,Ringo,1960,0.5
+```
+
+You can still use `read_edgelist()` to read it:
+
+```{python}
+with open('../data/beatles.csv', 'rb') as edgelist_file:
+  G = nx.read_edgelist(edgelist_file, delimiter=',', data=(('year', int),('weight', float),))
+print(G.edges(data=True))
+```
+
+Or, you can just use Pandas `read_csv()` and...
 
 ---
 
-## BiPartite
+### Pandas
+
+```{python Beatles2, out.width="40%"}
+import pandas as pd
+
+beatles_df = pd.read_csv('../data/beatles.csv', header=None)
+beatles_df.columns = ['source', 'target', 'year', 'weight']
+
+G = nx.from_pandas_edgelist(beatles_df, 'source', 'target', ['year', 'weight'])
+
+nx.draw_networkx(G)
+plt.show()
+```
 
 ---
 
-## Similarity
+### What about writing?
+
+All methods we've seen have a `write_` or `to_` complementary function:
+
+```{python}
+print(nx.to_edgelist(G))
+```
+
+### What about `DiGraph()`?
+
+All methods we've seen have a `create_using` parameter:
+
+```{python}
+D = nx.from_pandas_edgelist(beatles_df, 'source', 'target',
+  ['year', 'weight'],
+  create_using=nx.DiGraph)
+```
+
+---
+
+### Bipartite
+
+For creating a bipartite network, use the `bipartite` node attribute:
+
+```{python Bipartite1, out.width="40%"}
+G = nx.Graph()
+G.add_nodes_from([1, 2, 3, 4], bipartite=0)
+G.add_nodes_from(['a', 'b', 'c'], bipartite=1)
+G.add_edges_from([(1, 'a'), (1, 'b'), (2, 'b'), (2, 'c'), (3, 'c'), (4, 'a')])
+
+nx.draw_networkx(G, pos=nx.bipartite_layout(G, [1, 2, 3, 4]), node_size=0, font_size=20)
+plt.show()
+```
+
+It is your responsibility though to check that indeed the two sets of nodes are not connected.
+
+---
+
+"In real life" you would probably have something like the Marvel incidence matrix in a CSV, what `NetworkX` calls a *biadjacency_matrix*, or a list of edges you could make a Scipy *sparse matrix* with, from which you can create a bipartite graph:
+
+```{python Bipartite2}
+from scipy import sparse
+
+marvel = pd.read_csv("../data/marvel_incidence_matrix.csv")
+B = marvel.iloc[:, 1:].values
+
+sB = sparse.csr_matrix(B)
+
+G = nx.bipartite.from_biadjacency_matrix(sB)
+print(G.nodes(data=True))
+```
+
+---
+
+```{python Bipartite3, out.width = "50%"}
+films = marvel['Film'].to_list()
+characters = marvel.columns[1:].to_list()
+
+id_to_label = {id: char for id, char in enumerate(films + characters)}
+G = nx.relabel_nodes(G, id_to_label)
+
+nx.draw_networkx(G, pos=nx.bipartite_layout(G, films), node_size=0, font_size=10)
+plt.show()
+```
+
+---
+
+You've seen how to project an incidence matrix with numpy:
+
+```{python Bipartite4, out.width = "50%"}
+P = B.transpose() @ B
+np.fill_diagonal(P, 0)
+Gc = nx.from_numpy_matrix(P)
+
+id_to_char = {id: char for id, char in enumerate(characters)}
+Gc = nx.relabel_nodes(Gc, id_to_char)
+nx.draw_networkx(Gc, node_size=0, font_size=10)
+plt.show()
+```
+
+---
+
+But NetworkX can do all that for you:
+
+```{python Bipartite5, out.width = "50%"}
+Gc = nx.bipartite.projected_graph(G, characters)
+
+nx.draw_networkx(Gc, node_size=0, font_size=10)
+plt.show()
+```
+
+---
+
+### Similarity
+
+Let's recreate the sci-fi similarity network. We'll do some filtering:
+- The original CSV includes 156 books, we'll take only those marked as "popular"
+- Take only books with at least 2 features marked > 0
+- Won't be looking at the author's name, gender, or date of release
+
+```{python}
+scifi = pd.read_csv('../data/sci_fi_books.csv', index_col='book')
+scifi['n_features'] = (scifi.iloc[:, 6:17] > 0).sum(axis=1)
+scifi = scifi[scifi['popular'] == 1]
+
+scifi_fil = scifi[scifi['n_features'] >= 2]
+cols_to_drop = ['date', 'author', 'frequency', 'author_gender',
+  'quarter_century', 'century', 'popular', 'n_features']
+scifi_fil = scifi_fil.drop(cols_to_drop, axis=1)
+
+# to use Pandas corr function need to transpose data frame
+scifi_corr = scifi_fil.T.corr(method='spearman')
+```
+
+---
+
+We reached a 25x25 symmetric correlation matrix for 25 books:
+
+```{python}
+scifi_corr.values[:5, :5]
+```
+
+Turn all upper traingle to `Nan`, so we'll get only 25 * 24 / 2 correlations:
+
+```{python}
+scifi_corr.values[np.triu_indices_from(scifi_corr.values)] = np.nan
+
+scifi_corr.values[:5, :5]
+```
+
+---
+
+Convert this to a long edgelist, filter out the `Nan`:
+
+```{python}
+scifi_edgelist = scifi_corr.reset_index().melt(id_vars='book',
+  value_vars=scifi_fil.index, var_name='book2', value_name='corr')
+
+scifi_edgelist = scifi_edgelist[~pd.isna(scifi_edgelist['corr'])]
+print(scifi_edgelist.shape)
+
+scifi_edgelist.head(5)
+```
+
+---
+
+Filter all correlations above 0.5 and convert to a `Graph()`:
+
+```{python Sci-Fi, out.width="45%"}
+G = nx.from_pandas_edgelist(scifi_edgelist[scifi_edgelist['corr'] > 0.5],
+  'book', 'book2', ['corr'])
+
+nx.draw_networkx(G)
+limits = plt.axis('off')
+plt.show()
+```
 
 ---
 
 class: section-slide
 
-# Let Networkx work
+# Let NetworkX work
 
 ---
 
-## Adjacency Matrix
+### Adjacency Matrix
+
+You can get a Numpy matrix with `to_numpy_matrix()`:
+
+```{python}
+A = nx.to_numpy_matrix(G)
+
+print(A.shape)
+
+A[:4, :4]
+```
+
+.insight[
+`r emo::ji("bulb")` Say, didn't we have 25 books?
+]
 
 ---
 
-## Degree and Density
+But a realistic network would be large and sparse so the `adjacency_matrix()` method returns a SciPy sparse matrix:
+
+```{python}
+A = nx.adjacency_matrix(G)
+
+print(A.shape)
+
+print(A[:4, :4])
+```
+
+.insight[
+`r emo::ji("bulb")` Do you know what a sparse matrix is?
+]
 
 ---
 
-## Walks, Paths, Diameter
+### Easy to check if...
+
+```{python}
+print(nx.is_directed(G))
+print(nx.is_directed_acyclic_graph(G))
+print(nx.is_bipartite(G))
+print(nx.is_connected(G))
+```
 
 ---
 
-## Components
+### Degree and Density
+
+Degree is a big deal, there's an attribute *and* a method for that:
+
+```{python}
+G.degree
+```
+
+```{python}
+list(G.degree)
+```
+
+Average degree:
+
+```{python}
+np.mean(list(dict(G.degree).values()))
+```
 
 ---
 
-## Laplacian
+Get the degree of a specific node:
+
+```{python}
+G.degree['Contact']
+```
+
+Get the density of a network:
+
+```{python}
+nx.density(G)
+```
+
+For directed graphs, use `in_degree` and `out_degree`:
+
+```{python, eval=FALSE}
+D = nx.DiGraph(G)
+
+D.in_degree()
+D.out_degree()
+```
+
+---
+
+### Paths and Diameter
+
+Is there a path between two nodes?
+
+```{python}
+nx.has_path(G, 'Frankenstein', 'Contact')
+```
+
+What is the shortest path distance between two nodes:
+
+```{python}
+nx.shortest_path_length(G, 'Frankenstein', 'Contact')
+```
+
+Give me (one, there could be more) shortest path:
+
+```{python}
+nx.shortest_path(G, 'Frankenstein', 'Contact')
+```
+
+---
+
+Give me all shortest paths between two nodes:
+
+```{python}
+all_sps = nx.all_shortest_paths(G, 'Frankenstein', 'Contact') # generator!
+list(all_sps)
+```
+
+Get the diameter of a network:
+
+```{python}
+nx.diameter(G)
+```
+
+---
+
+### Components
+
+How many connected components?
+
+```{python}
+nx.number_connected_components(G)
+```
+
+All connected components, each is a set of nodes:
+
+```{python}
+cc = nx.connected_components(G) # generator!
+list(cc)
+```
+
+Get component of a specific node:
+
+```{python}
+nx.node_connected_component(G, 'Contact')
+```
+
+---
+
+Get largest component (a.k.a Giant Connected Component)
+
+```{python}
+gcc = max(nx.connected_components(G), key=len)
+len(gcc)
+```
+
+For directed graphs use `strongly_`/`weakly_` prefixes with previous functions:
+
+```{python, eval=FALSE}
+D = nx.DiGraph(G)
+
+nx.number_strongly_connected_components(D)
+nx.strongly_connected_components(D)
+```
+
+---
+
+### Laplacian
+
+```{python}
+L = nx.laplacian_matrix(G)
+
+L.todense()[:5, :5]
+```
+
