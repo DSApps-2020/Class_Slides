@@ -1,5 +1,5 @@
 ---
-title: 'Networkx'
+title: 'NetworkX'
 subtitle: 'Applications of Data Science'
 author: 'Giora Simchoni'
 institute: 'Stat. and OR Department, TAU'
@@ -24,7 +24,7 @@ class: logo-slide
 
 class: title-slide
 
-## Networkx
+## NetworkX
 
 ### Applications of Data Science - Class 7
 
@@ -53,7 +53,7 @@ matrix2latex <- function(matr) {
 
 class: section-slide
 
-# Why Networkx?
+# Why NetworkX?
 
 ---
 
@@ -508,10 +508,12 @@ All methods we've seen have a `create_using` parameter:
 
 ```{python}
 D = nx.from_pandas_edgelist(beatles_df, 'source', 'target',
-  ['year', 'weight'],
-  create_using=nx.DiGraph)
+  ['year', 'weight'], create_using=nx.DiGraph)
 ```
 
+.warning[
+`r emo::ji("warning")` When creating `DiGraph()` NetworkX assumes $A_{ij}$ corresponds to the edge from i to j, contrary to our convention. Therefore, you should use `A.transpose()`
+]
 ---
 
 ### Bipartite

@@ -1,0 +1,52 @@
+book,book2,corr
+Twenty Thousand Leagues Under the Sea,Frankenstein,0.6276952790379394
+Brave New World,Frankenstein,0.6931057054849323
+"I, Robot",Frankenstein,0.7006172839506173
+Solaris,Frankenstein,0.5343481367480973
+The Hunger Games,Frankenstein,0.620682619041525
+Journey to the Center of the Earth,Twenty Thousand Leagues Under the Sea,0.6876057271371583
+Flowers for Algernon,Twenty Thousand Leagues Under the Sea,0.7793343077204956
+The Dune Chronicles,Twenty Thousand Leagues Under the Sea,0.7180836802066602
+The Princess Bride,Journey to the Center of the Earth,0.5222222222222223
+A Song of Ice and Fire,Journey to the Center of the Earth,0.8175431773259118
+Harry Potter Series,Journey to the Center of the Earth,0.6584880844609484
+The Hunger Games,Journey to the Center of the Earth,0.6627104836843802
+"I, Robot",Brave New World,0.5646275747121157
+2001: A Space Odyssey,Brave New World,0.5628929236858109
+Ender's Game,Brave New World,0.5949449422814053
+American Gods,Brave New World,0.5837652721806216
+The Lord of the Rings,"The Lion, the Witch and the Wardrobe",0.543492976389406
+A Song of Ice and Fire,"The Lion, the Witch and the Wardrobe",0.689598758762972
+Harry Potter Series,"The Lion, the Witch and the Wardrobe",0.7246631024288859
+Solaris,"I, Robot",0.8759805520460612
+2001: A Space Odyssey,"I, Robot",0.7753882858703958
+The Hitchhiker's Guide to the Galaxy,"I, Robot",0.5710724764388454
+Contact,"I, Robot",0.5040394554899582
+Watership Down,The Lord of the Rings,0.630181089154701
+The Princess Bride,The Lord of the Rings,0.5547001962252291
+A Song of Ice and Fire,The Lord of the Rings,0.701411735221397
+Harry Potter Series,The Lord of the Rings,0.7199395923781886
+The Dune Chronicles,Flowers for Algernon,0.5356143351791313
+2001: A Space Odyssey,Solaris,0.7335630634033422
+The Hitchhiker's Guide to the Galaxy,Solaris,0.7611661112970733
+Contact,Solaris,0.6849794250875336
+Babel 17,The Dune Chronicles,0.7451552134983731
+The Hitchhiker's Guide to the Galaxy,Babel 17,0.5642210335488795
+Ender's Game,Babel 17,0.8425414364640884
+Contact,Babel 17,0.7798227300996536
+The Hitchhiker's Guide to the Galaxy,2001: A Space Odyssey,0.7460029297826501
+Ender's Game,2001: A Space Odyssey,0.6171244819107482
+Contact,2001: A Space Odyssey,0.7023768437028858
+Ender's Game,Watership Down,0.6392329657725629
+World War Z,Watership Down,0.5892556509887896
+The Handmaid's Tale,The Princess Bride,0.5222222222222223
+A Song of Ice and Fire,The Princess Bride,0.677574695604744
+Harry Potter Series,The Princess Bride,0.6012282510295616
+The Hunger Games,The Princess Bride,0.8520563361656317
+Ender's Game,The Hitchhiker's Guide to the Galaxy,0.5003469542791951
+Contact,The Hitchhiker's Guide to the Galaxy,0.7665369659985335
+World War Z,The Handmaid's Tale,0.5646275747121157
+The Hunger Games,The Handmaid's Tale,0.6627104836843802
+Contact,Ender's Game,0.7534773675962869
+Harry Potter Series,A Song of Ice and Fire,0.9590163934426229
+The Hunger Games,A Song of Ice and Fire,0.5544159532159296

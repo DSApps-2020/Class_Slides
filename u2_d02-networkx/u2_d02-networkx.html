@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
   <head>
-    <title>Networkx</title>
+    <title>NetworkX</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-09" />
+    <meta name="date" content="2020-01-12" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -21,7 +21,7 @@ class: logo-slide
 
 class: title-slide
 
-## Networkx
+## NetworkX
 
 ### Applications of Data Science - Class 7
 
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-09
+### 2020-01-12
 
 ---
 
@@ -51,7 +51,7 @@ layout: true
 
 class: section-slide
 
-# Why Networkx?
+# Why NetworkX?
 
 ---
 
@@ -667,10 +667,12 @@ All methods we've seen have a `create_using` parameter:
 
 ```python
 D = nx.from_pandas_edgelist(beatles_df, 'source', 'target',
-  ['year', 'weight'],
-  create_using=nx.DiGraph)
+  ['year', 'weight'], create_using=nx.DiGraph)
 ```
 
+.warning[
+⚠️ When creating `DiGraph()` NetworkX assumes `\(A_{ij}\)` corresponds to the edge from i to j, contrary to our convention. Therefore, you should use `A.transpose()`
+]
 ---
 
 ### Bipartite
@@ -1129,7 +1131,7 @@ list(cc)
 ```
 
 ```
-## [{'Brave New World', 'The Lord of the Rings', 'The Princess Bride', "The Handmaid's Tale", "The Hitchhiker's Guide to the Galaxy", 'World War Z', 'Frankenstein', 'The Hunger Games', 'I, Robot', 'Twenty Thousand Leagues Under the Sea', 'The Lion, the Witch and the Wardrobe', 'The Dune Chronicles', 'Babel 17', 'Journey to the Center of the Earth', '2001: A Space Odyssey', 'Harry Potter Series', 'American Gods', 'Flowers for Algernon', 'Contact', 'A Song of Ice and Fire', 'Watership Down', "Ender's Game", 'Solaris'}]
+## [{'The Lion, the Witch and the Wardrobe', "The Handmaid's Tale", 'Harry Potter Series', "The Hitchhiker's Guide to the Galaxy", 'The Hunger Games', '2001: A Space Odyssey', 'Solaris', 'The Dune Chronicles', "Ender's Game", 'Watership Down', 'The Lord of the Rings', 'American Gods', 'World War Z', 'The Princess Bride', 'Twenty Thousand Leagues Under the Sea', 'Flowers for Algernon', 'Contact', 'Brave New World', 'Journey to the Center of the Earth', 'I, Robot', 'Frankenstein', 'A Song of Ice and Fire', 'Babel 17'}]
 ```
 
 Get component of a specific node:
@@ -1140,7 +1142,7 @@ nx.node_connected_component(G, 'Contact')
 ```
 
 ```
-## {'Brave New World', 'The Lord of the Rings', 'The Princess Bride', "The Handmaid's Tale", "The Hitchhiker's Guide to the Galaxy", 'World War Z', 'Frankenstein', 'The Hunger Games', 'I, Robot', 'Twenty Thousand Leagues Under the Sea', 'The Lion, the Witch and the Wardrobe', 'Babel 17', 'The Dune Chronicles', 'Journey to the Center of the Earth', '2001: A Space Odyssey', 'Harry Potter Series', 'American Gods', 'Flowers for Algernon', 'Contact', 'A Song of Ice and Fire', 'Watership Down', "Ender's Game", 'Solaris'}
+## {'The Lion, the Witch and the Wardrobe', "The Handmaid's Tale", 'Harry Potter Series', "The Hitchhiker's Guide to the Galaxy", 'The Hunger Games', '2001: A Space Odyssey', 'Solaris', 'The Dune Chronicles', "Ender's Game", 'Watership Down', 'The Lord of the Rings', 'American Gods', 'World War Z', 'The Princess Bride', 'Twenty Thousand Leagues Under the Sea', 'Flowers for Algernon', 'Contact', 'Brave New World', 'Journey to the Center of the Earth', 'I, Robot', 'Frankenstein', 'A Song of Ice and Fire', 'Babel 17'}
 ```
 
 ---

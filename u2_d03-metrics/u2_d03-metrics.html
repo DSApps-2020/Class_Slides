@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Network Metrics</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2020-01-14" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Network Metrics
+
+### Applications of Data Science - Class 8
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2020-01-14
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# Centrality
+
+---
+
+## What makes a node central to a network?
+
+A central node is...               | Centrality
+---------------------------------- | -------- 
+Connected to many nodes            | Degree
+Connected to other important nodes | Eigenvector, Katz, PageRank
+Close to many nodes                | Closeness
+"Mediator", without it the network might "break" | Betweenness
+
+---
+
+
+```python
+import pandas as pd
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+
+scifi_edgelist = pd.read_csv('../data/sci_fi_final_edgelist.csv')
+G = nx.from_pandas_edgelist(scifi_edgelist, 'book', 'book2', ['corr'])
+
+nx.draw_networkx(G)
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-1.png" width="50%" /&gt;
+
+---
+
+## Degree Centrality
+
+- `\(x_i = k_i = \sum_{i=1}^n A_{ij}\)`
+- NetworkX also normalizes by dividing by `\(n - 1\)`
+- Or in directed netwroks: in-degree and out-degree centralities
+- Makes sense in social networks, co-citation networks
+
+
+```python
+cent_deg = nx.degree_centrality(G)
+
+pretty_print(get_top_n_dict(cent_deg))
+```
+
+```
+## I, Robot: 0.27
+## The Princess Bride: 0.27
+## A Song of Ice and Fire: 0.27
+## 2001: A Space Odyssey: 0.27
+## Ender's Game: 0.27
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_deg.keys(),
+  node_size = [c * 500 for c in cent_deg.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-Degree-1.png" width="70%" /&gt;
+
+---
+
+## Eigenvector Centrality
+
+It's not *how many* you're connected to, it's *who* you're connected to...
+
+Let's make your centrality proportional to the sum of centralities of your neighbors:
+
+`\(x_i = \delta \sum_{j\in neigh(i)}x_j=\delta\sum^n_{j=1} A_{ij}x_j\)`
+
+The vector of centralities can be written as:
+
+`\(\mathbf{x}=\delta\mathbf{Ax}\)`
+
+Marking `\(\lambda=1/\delta\)` we get:
+
+`\(\mathbf{Ax}=\lambda\mathbf{x}\)`
+
+Which means our vector of centralities is an eigenvector of the adjacency matrix.
+
+---
+
+Now there are `\(n\)` eigenvetors to this `\(n\text{x}n\)` matrix
+
+But according to the *Perron-Frobenius* theorem, since `\(A\)`'s elements are all non-negative, there exists only one eigenvector with all elements non-negative, the leading eigenvector, corresponding to the largest eigenvalue `\(\lambda\)`
+
+
+```python
+cent_eig = nx.eigenvector_centrality(G)
+pretty_print(get_top_n_dict(cent_eig))
+
+# Compare this to:
+# A = nx.to_numpy_matrix(G)
+# eigenvalues, eigenvectors = np.linalg.eigh(A)
+# eigenvectors[:, -1]
+```
+
+```
+## 2001: A Space Odyssey: 0.39
+## The Hitchhiker's Guide to the Galaxy: 0.38
+## Contact: 0.38
+## I, Robot: 0.37
+## Solaris: 0.33
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_eig.keys(),
+  node_size = [c * 500 for c in cent_eig.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-Eigen-1.png" width="70%" /&gt;
+
+---
+
+### Issues with Eigenvector Centrality
+
+- What to do with directed networks?
+
+Common solution: you are more "central" if many central nodes point *to* you --&gt; definition remains the same only we stress that the eigenvector taken is the *right* leading eigenvector.
+
+- What about DAGs?
+
+
+```python
+A = np.array([
+[0, 0, 1, 1, 0],
+[0, 0, 0, 0, 1],
+[0, 0, 0, 1, 0],
+[0, 0, 0, 0, 1],
+[0, 0, 0, 0, 0]
+])
+Dag = nx.from_numpy_matrix(A.transpose(), create_using=nx.DiGraph)
+```
+
+---
+
+
+```python
+nx.draw_networkx(Dag)
+plt.show()
+```
+
+&lt;img src="images/unnamed-chunk-5-1.png" width="50%" /&gt;
+
+
+```python
+nx.eigenvector_centrality(Dag)
+```
+
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Error in py_call_impl(callable, dots$args, dots$keywords):
+PowerIterationFailedConvergence: (PowerIterationFailedConvergence(...), 'power
+iteration failed to converge within 100 iterations')
+##
+## Detailed traceback:
+## File "&lt;string&gt;", line 1, in &lt;module&gt;
+## File
+"&lt;C:\Users\gsimc\AppData\Local\Programs\Python\Python38\lib\site-packages\decorator.py:decorator-gen-160&gt;",
+line 2, in eigenvector_centrality
+## File
+"C:\Users\gsimc\AppData\Local\Programs\Python\Python38\lib\site-packages\networkx\utils\decorators.py",
+line 82, in _not_implemented_for
+## return not_implement_for_func(*args, **kwargs)
+## File
+"C:\Users\gsimc\AppData\Local\Programs\Python\Python38\lib\site-packages\networkx\algorithms\centrality\eigenvector.py",
+line 149, in eigenvector_centrality
+## raise nx.PowerIterationFailedConvergence(max_iter)
+&lt;/code&gt;&lt;/pre&gt;
+
+---
+
+## Katz Centrality
+
+Let us give each node a "baseline" centrality `\(\beta\)`:
+
+`\(x_i = \alpha\sum^n_{j=1} A_{ij}x_j + \beta\)`
+
+It can be shown that:
+
+`\(\mathbf{x}=\beta(\mathbf{I} - \alpha\mathbf{A})\cdot\mathbf{1}\)`
+
+And therefore `\(\beta\)` itself isn't really important.
+
+It is custom to have `\(\beta=1\)` and `\(\alpha\)` vary between 0 (constant `\(\beta\)` centrality) and `\(1/\lambda\)` where `\(\lambda\)` is the maximum eigenvalue of `\(A\)`, in which case you get centrality very similiar to the eigenvector centrality, plus a little addition to avoid degeneration.
+
+---
+
+So this now works:
+
+
+```python
+nx.katz_centrality(Dag)
+```
+
+```
+## {0: 0.4926375274857429, 1: 0.44381759232949813, 2: 0.44785229771431173, 3: 0.44381759232949813, 4: 0.4034705384813619}
+```
+
+And in the Sci-Fi books case:
+
+
+```python
+cent_katz = nx.katz_centrality(G)
+pretty_print(get_top_n_dict(cent_katz))
+```
+
+```
+## 2001: A Space Odyssey: 0.25
+## The Hitchhiker's Guide to the Galaxy: 0.25
+## Contact: 0.25
+## I, Robot: 0.25
+## Ender's Game: 0.24
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_katz.keys(),
+  node_size = [c * 500 for c in cent_katz.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-Katz-1.png" width="70%" /&gt;
+
+---
+
+## PageRank
+
+One issue with Katz centrality is that it gives equal weights to all of a node's edges. This becomes a problem in large networks like the WWW, in which a directory website could have links to potentially millions and billions of sites. PageRank improves on Katz centrality by dividing the contribution of each node by its (out) degree:
+
+`\(x_i = \alpha\sum^n_{j=1} A_{ij}\frac{x_j}{\max(k^{\text{out}}_j, 1)} + \beta\)`
+
+It can be shown that:
+
+`\(\mathbf{x}=\beta(\mathbf{I} - \alpha\mathbf{AD^{-1}})\cdot\mathbf{1}\)`
+
+Where `\(\mathbf{D}\)` is a diagonal matrix with `\(D_{ii}=\max(k^{\text{out}}_i, 1)\)`
+
+---
+
+Again `\(\beta\)` itself isn't really important and is usually set to 1.
+
+For undirected networks it can be shown that `\(\alpha\)` should vary between 0 and 1. For directed networks there is no such limit, often a value close to 1 is used, Google and NetworkX use 0.85 by default.
+
+
+```python
+cent_pagerank = nx.pagerank(G)
+pretty_print(get_top_n_dict(cent_pagerank))
+```
+
+```
+## The Princess Bride: 0.06
+## A Song of Ice and Fire: 0.06
+## Ender's Game: 0.06
+## I, Robot: 0.05
+## 2001: A Space Odyssey: 0.05
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_pagerank.keys(),
+  node_size = [c * 500 for c in cent_pagerank.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-PageRank-1.png" width="70%" /&gt;
+
+---
+
+## Closeness
+
+Closeness is the *inverse mean shortest distance* from node `\(i\)` to every other node:
+
+`\(x_i = \frac{n}{\sum_jd(i, j)}\)`
+
+.insight[
+💡 What might be an issue with Closeness centrality?
+]
+
+
+```python
+cent_closeness = nx.closeness_centrality(G)
+pretty_print(get_top_n_dict(cent_closeness))
+```
+
+```
+## Frankenstein: 0.49
+## Ender's Game: 0.46
+## The Hunger Games: 0.45
+## Brave New World: 0.43
+## Twenty Thousand Leagues Under the Sea: 0.42
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_closeness.keys(),
+  node_size = [c * 500 for c in cent_closeness.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-Closeness-1.png" width="70%" /&gt;
+
+---
+
+## Betweenness
+
+How "in between" is a node? If we keep pushing messages from one random node to another, how many messages will go through node `\(i\)`?
+
+`\(x_i = \sum_{u,v}\frac{\tau(u,v|i)}{\tau(u,v)}\)`
+
+Where `\(\tau(u,v)\)` is the number of shortest paths from node `\(u\)` to node `\(v\)` and `\(\tau(u,v|i)\)` is the number of those shortest paths which pass through node `\(i\)`.
+
+When `\(\tau(u,v)\)` the contribution is "0/0" and is defined as zero.
+
+.insight[
+💡 What is assumed regarding the motivation for Betweenness centrality above?
+
+How would you "normalize" Betweeness to range from 0 to 1?
+
+How would you imagine a node with high Betweenness (a *broker*) "looks like"?
+]
+
+---
+
+
+```python
+cent_betweenness = nx.betweenness_centrality(G)
+pretty_print(get_top_n_dict(cent_betweenness))
+```
+
+```
+## Frankenstein: 0.25
+## Ender's Game: 0.20
+## The Hunger Games: 0.18
+## Watership Down: 0.17
+## Twenty Thousand Leagues Under the Sea: 0.14
+```
+
+---
+
+
+```python
+nx.draw_networkx(G, node_list = cent_betweenness.keys(),
+  node_size = [c * 500 for c in cent_betweenness.values()])
+plt.show()
+```
+
+&lt;img src="images/Sci-Fi-Betweenness-1.png" width="70%" /&gt;
+
+---
+
+## Group Centrality
+
+In recent years there is also interest in measuring the centrality of a *group* of nodes. We can naturally extend some of the definitions we have seen:
+
+- Group degree centrality: the fraction of non-group members connected to group members
+- Group closeness centrality: inverse mean of the *minimum* shortest distance (minimum across all nodes in the group) to all nodes in the non-group
+- Group betweenness centrality: sum of the fraction of number of shortest paths between two nodes in the non-group, passing through any node in the group, from the number of all shortest paths between the two nodes
+
+See NetworkX [docs](https://networkx.github.io/documentation/stable/reference/algorithms/centrality.html#group-centrality) for further details
+
+---
+
+class: section-slide
+
+# Detour: Cliques
+
+---
+
+### You know what a clique is...
+
+A clique is a group of nodes in an undirected network so that each node is connected to each other node.
+
+
+```python
+Clique = nx.Graph()
+Clique.add_edges_from([(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3), (1, 4)])
+nx.draw_networkx(Clique)
+plt.show()
+```
+
+&lt;img src="images/Clique-1.png" width="40%" /&gt;
+
+---
+class: section-slide
+
+# End of Detour
+
+---
+
+## Cores
+
+*k*-Cores are a type of relaxation of Cliques which is also useful in describing centrality of a group of nodes.
+
+*k*-Core is a group of nodes where each node is connected to at least *k* of the other nodes.
+
+&lt;img src="images/k-Cores-1.png" style="width: 50%" /&gt;
+
+
+
+---
+
+For a given connected component the *k*-Cores are nested within each other: the 2-cores are a subset of the 1-cores (since if a node is connected to at least 2 nodes it must be connected to at least 1 node), the 3-cores are subsets of the 2-cores, etc.
+
+We get an onion or mountain-like structure which might be useful in describing centrality.
+
+
+```python
+k_cores = nx.core_number(G)
+pretty_print(get_top_n_dict(k_cores))
+```
+
+```
+## I, Robot: 4.00
+## Solaris: 4.00
+## 2001: A Space Odyssey: 4.00
+## The Hitchhiker's Guide to the Galaxy: 4.00
+## Contact: 4.00
+```
+
+.insight[
+💡 How would you find all k-Cores?
+]
+
+---
+
+class: section-slide
+
+# Cohesion
+
+---
+
+## Density
+
+We've seen density before: the fraction of existing edges from potential edges:
+
+`\(\rho = \frac{m}{n\choose 2} = \frac{2m}{n(n-1)}\)`
+
+Which means the density for large networks is roughly the ratio of average degree to network size:
+
+`\(\rho = \frac{c}{n-1} \propto \frac{c}{n}\)`
+
+
+```python
+nx.density(G)
+```
+
+```
+## 0.2015810276679842
+```
+
+---
+
+## Transitivity
+
+&lt;img src="images/transitivity.png" style="width: 50%" /&gt;
+
+If Virginia is friends with Ursula, and Ursula is friends with Winona, is Ursula friends with Winona? Is the `\(vuw\)` *connected triple* or *triad* a *closed triad*?
+
+---
+
+The graph *transitvity* is the proportion of closed triads or triangles out of all triads:
+
+`\(Transitivity(G)=\frac{\text{#closed triads}}{\text{#triads}}=\frac{3 \text{x #triangles}}{\text{#triads}}=\frac{6 \text{x #triangles}}{\text{#paths of length 2}}\)`
+
+.insight[
+💡 Where did the 3 and 6 factors come from?
+]
+
+
+```python
+nx.transitivity(G)
+```
+
+```
+## 0.5223880597014925
+```
+
+Is this high? One way is to compare a graph transitivity to its density. If nodes connected to other nodes by random we would expect transitivity of about 20%. This is much higher, implying that the network is far from "random" and there is some logic to its edges.
+
+.insight[
+💡 How would a network with transitivity 0 or 1 look like?
+]
+
+---
+
+## Local Clustering Coefficient
+
+The local equivalent of transitivity to a single node is the proportion of closed triads the node is part of, out of all pairs of neighbors:
+
+`\(LCC(i)=\frac{\text{#closed triads involving node i}}{\text{#pairs of neighbors of i}}=\frac{2\text{x#closed triads involving node i}}{k_i(k_i-1)}\)`
+
+.insight[
+💡 How would a node with clustering coefficient 0 or 1 look like?
+]
+
+
+```python
+clust_coefs = nx.clustering(G)
+pretty_print(get_top_n_dict(clust_coefs))
+```
+
+```
+## Flowers for Algernon: 1.00
+## The Lion, the Witch and the Wardrobe: 1.00
+## Solaris: 0.70
+## Harry Potter Series: 0.70
+## 2001: A Space Odyssey: 0.67
+```
+
+---
+
+### LCC vs. Betweenness Centrality
+
+&lt;img src="images/lCC-Betweenness-1.png" width="30%" /&gt;
+
+In many realistic networks we see a negative correlation between LCC and betweenness centrality. Since for a given node the LCC is much easier to compute it is often a good enough approximation of (inverse) betweenness.
+
+.insight[
+💡 Can you explain this pattern?
+]
+
+---
+
+class: section-slide
+
+# Similarity
+
+---
+
+## Sructural Equivalence
+
+- Which nodes in a given network are most similar to one another?
+- Which node is most similar to a given node `\(i\)`?
+
+*Structural Equivalence* is only one type of similarity and it is concerned with `\(n_{ij}\)`: how many neighbors two nodes `\(i\)` and `\(j\)` share.
+
+.insight[
+💡 Why not just use *that* as a measure of similarity?
+]
+
+.warning[
+⚠️ The Sci-Fi books is already a network based on pairwise similarities. Structural Equivalence does not deal with this type of similarity, calculated over a vector of features.
+]
+
+---
+
+### Working with the Adjacency Matrix
+
+Cosine Distance and Pearson Correlation are two obvious choices:
+
+`\(S(i, j) =\cos(\theta)=\frac{\sum_kA_{ik}A_{kj}}{\sqrt{\sum_kA^2_{ik}}\sqrt{\sum_kA^2_{jk}}}=\frac{n_{ij}}{\sqrt{k_ik_j}}\)`
+
+`\(S(i, j) =r(i,j)=\frac{\sum_k(A_{ik}-\overline{A_i})(A_{jk}-\overline{A_j})}{\sqrt{\sum_k(A_{ik}-\overline{A_i})^2}\sqrt{\sum_k(A_{jk}-\overline{A_j})^2}}\)`
+
+.warning[
+⚠️ Not implemented in NetworkX, you could extract the adjacency matrix yourself and use Scikit-Learn for cosine distance and SciPy for pearson correlation.
+]
+
+---
+
+### Jaccard Coefficient
+
+`\(S(i, j)=J(i,j)=\frac{neigh(i) \cap neigh(j)}{neigh(i) \cup neigh(j)}=\frac{n_{ij}}{k_i+k_j-n_{ij}}\)`
+
+
+```python
+sim_jaccard = nx.jaccard_coefficient(G)
+
+sim_jaccard_top5 = {(u, v): j for u, v, j in sorted(sim_jaccard, key = lambda x: x[2], reverse=True)[:5]}
+
+pretty_print(sim_jaccard_top5)
+```
+
+```
+## ('The Lion, the Witch and the Wardrobe', 'The Princess Bride'): 0.50
+## ("Ender's Game", 'I, Robot'): 0.50
+## ('Babel 17', '2001: A Space Odyssey'): 0.43
+## ('Brave New World', 'Solaris'): 0.43
+## ('Journey to the Center of the Earth', 'The Lord of the Rings'): 0.43
+```
+
+---
+
+class: section-slide
+
+# Homophily
+
+---
+
+## Assortative Mixing
+
+This has just arrived: people tend to connect with other people similar to them! a.k.a *assortative mixing* .font80percent[(Sorry to burst your bubble)] 
+
+&lt;img src="images/divided_they_blog.png" style="width: 50%" /&gt;
+
+.font80percent[
+[The Political Blogosphere and the 2004 U.S. Election:
+Divided They Blog / Lada Adamic](http://www.ramb.ethz.ch/CDstore/www2005-ws/workshop/wf10/AdamicGlanceBlogWWW.pdf)
+]
+
+.insight[
+💡 What would be an easy example of a network displaying *dis*assortative mixing?
+]
+
+---
+
+### Categorical Assortative Mixing
+
+Examples:
+- Is the network of Israeli musical cooperations assortative for musical style?
+- Is the Sci-Fi books network assortative for author gender?
+- Is the choice of spouse assortative for race?
+
+&lt;img src="images/assortativity_by_race.png" style="width: 50%" /&gt;
+
+---
+
+#### You'd think they would just use Cramer's V...
+
+---
+
+### Ordered/Numeric Assortative Mixing
+
+Examples:
+- Is the network of Israeli musical cooperations assortative for artists popularity?
+- Is the Sci-Fi books network assortative for year of release?
+- Is the choice of spouse assortative for age?
+
+&lt;img src="images/assortativity_by_age.png" style="width: 50%"/&gt;
+
+---
+
+#### You'd think they would just use the Pearson correlation...
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

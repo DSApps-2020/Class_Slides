@@ -171,3 +171,12 @@ div.my-footer a {
   margin-top: 12px;
   margin-bottom: 12px;
 }
+
+.warning {
+  border-left: solid 5px #ff4e48;
+  background-color: #faccca;
+  font-size: 80%;
+  padding: 1px 16px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
