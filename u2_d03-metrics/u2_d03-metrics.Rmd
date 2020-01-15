@@ -542,24 +542,57 @@ Divided They Blog / Lada Adamic](http://www.ramb.ethz.ch/CDstore/www2005-ws/work
 
 ---
 
-### Categorical Assortative Mixing
+### Categorical Attribute Assortative Mixing
 
-Examples:
 - Is the network of Israeli musical cooperations assortative for musical style?
 - Is the Sci-Fi books network assortative for author gender?
 - Is the choice of spouse assortative for race?
 
+Behold the joint probability distribution of attribute race for a real-life network:
+
 <img src="images/assortativity_by_race.png" style="width: 50%" />
 
----
-
-#### You'd think they would just use Cramer's V...
+The percentages in the cells refer to the proportion of *edges* for which the 1st node (a man) is of race $i$ (e.g. black) and the 2nd node (a woman) is of race $j$ (e.g. white)
 
 ---
 
-### Ordered/Numeric Assortative Mixing
+We wish to measure to what extent all edges are found on the diagonal of the above matrix (perfect assortativity).
 
-Examples:
+Let $M$ be the joint probability distribution matrix of the specified categorical attribute, so that $\sum_{ij}M_{ij}=1$. And let $a_i$ and $b_j$ be the marginal probabilities of 1st and 2nd nodes (row and column) being of type $i$ and $j$ respectively, such that:
+
+$\sum_j M_{ij}=a_i; \space \sum_i M_{ij}=b_j$
+
+If the nodes formed edges randomly, the expected probability of 1st and 2nd nodes (row and column) being both of type $i$ would be: $a_ib_i$. So the "distance" between the observed and expected over $M$ is: $\sum_i(M_{ii}-a_ib_i)$ and we divide this by the maximum value this distance can reach under perfect assortativity and get:
+
+$Assortativity_1(attribute)=\frac{\sum_iM_{ii}-\sum_ia_ib_i}{1-\sum_ia_ib_i}=\frac{\text{Tr}(M)-||M^2||}{1-||M^2||}$
+
+Where $||B||$ means the sum of all elements in matrix $B$.
+
+---
+
+This *assortative coefficient* is positive for attributes which demonstrate assortativity (up to a maximum of 1), 0 for attributes with no apparent assortativity and negative for attributes which demonstrate disassortativity.
+
+.insight[
+`r emo::ji("bulb")` Why not use a $\chi^2$ test for independence?
+
+How would you perform hypothesis testing on such a statistic?
+]
+
+```{python}
+scifi_books = pd.read_csv('../data/sci_fi_books.csv')
+scifi_author_gender = scifi_books[scifi_books['book'].isin(G.nodes)].set_index('book')['author_gender'].to_dict()
+nx.set_node_attributes(G, scifi_author_gender, 'author_gender')
+print(nx.attribute_mixing_matrix(G, 'author_gender'))
+```
+
+```{python}
+nx.attribute_assortativity_coefficient(G, 'author_gender')
+```
+
+---
+
+### Ordered/Numeric Attribute Assortative Mixing
+
 - Is the network of Israeli musical cooperations assortative for artists popularity?
 - Is the Sci-Fi books network assortative for year of release?
 - Is the choice of spouse assortative for age?
@@ -568,4 +601,30 @@ Examples:
 
 ---
 
-#### You'd think they would just use the Pearson correlation...
+For this specific case we *could* use a simple Pearson correlation coefficient.
+
+In general though we might be dealing with a discrete numeric attribute with not many levels (e.g. year, grade) and the *weighted* correlation coefficient is used.
+
+Let $M$ be the same joint probability distribution matrix for a discrete numeric attribute (if not discrete we can discretize it or use integration). And let $a_{x_i}$ and $b_{y_j}$ be the marginal probabilities of 1st and 2nd nodes (row and column) being of type $x_i$ and $y_j$ respectively.
+
+As before: $\sum_{ij}M_{ij}=1; \sum_j M_{ij}=a_{x_i}; \space \sum_i M_{ij}=b_{y_j}$
+
+The weighted mean of attribute (variable) $x$: $\hat{E}(x;a)=\frac{\sum_ix_ia_{x_i}}{\sum_ia_{x_i}}=\sum_ix_ia_{x_i}=\sum_{ij}x_iM_{ij}$
+
+---
+
+$Assortativity_2(attribute)=r(x,y;M)=\frac{\hat{cov}(x,y;M)}{\hat{\sigma}(x)\hat{\sigma}(y)}=$
+
+$=\frac{\hat{E}(xy;E)-\hat{E}(x;a)\hat{E}(y;b)}{\hat{\sigma}(x)\hat{\sigma}(y)}=\frac{\sum_{ij}M_{ij}x_iy_j - \sum_ix_ia_{x_i}\cdot \sum_jy_jb_{y_j}}{\sqrt{\hat{cov}(x,x;M)\hat{cov}(y,y;M)}}$
+
+$= \frac{\sum_{ij}M_{ij}x_iy_j - \sum_{ij}a_{x_i}b_{y_j}x_iy_j}{\sqrt{\hat{cov}(x,x;M)\hat{cov}(y,y;M)}} = \frac{\sum_{ij}x_iy_j(M_{ij} - a_{x_i}b_{y_j})}{\sqrt{\hat{cov}(x,x;M)\hat{cov}(y,y;M)}}$
+
+This is a proper correlation coefficient, which ranges from -1 (perfect disassortativity) to 1 (perfect assortativity).
+
+```{python}
+scifi_quarter = scifi_books[scifi_books['book'].isin(G.nodes)].set_index('book')['quarter_century'].to_dict()
+nx.set_node_attributes(G, scifi_quarter, 'quarter_century')
+
+# print(nx.numeric_mixing_matrix(G, 'quarter_century'))
+nx.numeric_assortativity_coefficient(G, 'quarter_century')
+```
