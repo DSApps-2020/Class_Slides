@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Community Detection</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2020-01-18" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Community Detection
+
+### Applications of Data Science - Class 9
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2020-01-18
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+class: section-slide
+
+# Intro
+
+---
+
+### Why detect communities?
+
+- Understand hidden structure
+- Identify separate functionalities
+- Categorize (e.g. for automating Search &amp; Browse)
+- Divide &amp; Conquer (e.g. for visualization)
+- Optimize (e.g. with software)
+- Reduce size of large networks
+- Sheer Coolness
+
+### What's a "good" community?
+
+- Either "ground truth" .font80percent[(supervised)]
+- Many edges within (dense), few edges between (sparse) .font80percent[(unsupervised)]
+
+---
+
+class: section-slide
+
+# Spectral Partitioning
+
+---
+
+Start with dividing the network into 2 communities.
+
+.insight[
+What is the number of ways to divide n nodes into two distinct groups?
+]
+
+The *cut size* between two sets of nodes is the number of edges between them:
+
+`\(R=\frac{1}{2}\sum_{ij \text{ in different groups}}A_{ij}\)`
+
+Define `\(\mathbf{s}\)` the vector which indicates to which community a network belongs:
+
+`$$s_i =
+ \begin{cases}
+   +1 &amp; \mbox{if node}\ i \mbox{ belongs to community 1} \\
+   -1 &amp; \mbox{if node}\ i \mbox{ belongs to community 2}
+ \end{cases}$$`
+
+Then:
+ 
+`$$\frac{1}{2}(1-s_is_j) =
+ \begin{cases}
+   1 &amp; \mbox{if nodes}\ i,j \mbox{ belong to different communities} \\
+   -1 &amp; \mbox{if nodes}\ i,j \mbox{ belong to the same community}
+ \end{cases}$$`
+
+---
+
+So we can sum over all `\(i,j\)` to express `\(R\)`:
+
+`\(R=\frac{1}{4}\sum_{ij}A_{ij}(1-s_is_j)=\frac{1}{4}\sum_{ij}(A_{ij}-A_{ij}s_is_j)\)`
+
+Do you see where we're going with this?
+
+`\(\sum_{ij}A_{ij}=\sum_i\sum_jA_{ij}=\sum_ik_i=\sum_ik_is_i^2=\sum_{ij}k_i\delta_{ij}s_is_j\)`
+
+Where `\(\delta_{ij}\)` is the *Kronecker delta*, which is 1 if `\(i = j\)` and 0 otherwise.
+
+Then the cut size can be written as:
+
+`\(R=\frac{1}{4}\sum_{ij}(k_i\delta_{ij}-A_{ij})s_is_j=\frac{1}{4}\sum_{ij}L_{ij}s_is_j=\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}\)`
+
+Where `\(L\)` is the network Laplacian defined earlier.
+
+And so we want to minimize `\(\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}\)` s.t. `\(s_i=\pm1\)`.
+
+---
+
+Now suppose `\(n_1\)` and `\(n_2\)`, no. of nodes expected in community 1 and 2 are known .font80percent[(not unrealistic, especially with equal sizes and when you want to avoid degenrate scenarios)].
+
+`\(\sum_is_i=\mathbf{1}^\intercal\cdot\mathbf{s}=n_1-n_2\)`
+
+Relaxation:
+
+We get rid of having `\(s_i=\pm1\)`, instead we'll require `\(\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n\)`
+
+Applying Lagrange multipliers we get:
+
+`\(\frac{\partial R}{\partial s}=\frac{\partial}{\partial s}\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}+\lambda(n-\mathbf{s}^\intercal\mathbf{s})+2\mu((n_1-n_2)-\mathbf{1}^\intercal\cdot\mathbf{s})\)`
+
+Equating to 0 to find the minimum and performing the derivatives we get:
+
+`\(\mathbf{Ls}=\lambda\mathbf{s}+\mu\mathbf{1}\)`
+
+---
+
+.font80percent[(Here if we have time I can show you how we get to...)]
+
+Finally, the solution for `\(\mathbf{s}\)` is:
+
+`\(\mathbf{s}=\mathbf{v_2}+\frac{n1-n2}{n}\)`
+
+Where `\(\mathbf{v_2}\)` is the eigenvector of `\(L\)`, which corresponds to `\(\lambda\)`, the second smallest (after zero) eigenvalue of `\(L\)`.
+
+But `\(\mathbf{s}\)` needs to be at `\(\pm1\)`, so bottom line we take the `\(n_1\)` most positive values in `\(\mathbf{v_2}\)` and put the relevant nodes in community 1, and the rest of the `\(n_2\)` nodes in community 2.
+
+It can be shown that `\(R=\frac{n_1n_2}{n}\lambda\)`, hence `\(\lambda\)`, the second smallest eigenvalue of `\(L\)` (a.k.a *algebraic connectivity*) determines the cut size, how easy it is to divide the network into two communities of sizes `\(n_1\)` and `\(n_2\)`
+
+.insight[
+💡 What if `\(\lambda=0\)`?
+]
+---
+
+class: section-slide
+
+# Betweenness
+
+---
+
+class: section-slide
+
+# Label Propagation
+
+---
+
+class: section-slide
+
+# Modularity Maximization
+
+---
+
+class: section-slide
+
+# node2vec
+
+---
+
+class: section-slide
+
+# Other methods
+
+---
+
+.pull-left[
+Adjacency matrix based:
+- Hierarchical Clustering
+- K-Means
+- Whatever you find in Scikit-Learn...
+
+Heuristics:
+- Kernighan-Lin
+
+Modularity Maximization:
+- Simulated Annealing
+- Genetic Algorithms
+]
+
+.pull-right[
+Nonnegative Matrix Factorization:
+- BigCLAM
+
+Deep Learning:
+- Graph Neural Networks
+- Graph Embeddings
+
+Game Theory:
+- GLEAM
+]
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

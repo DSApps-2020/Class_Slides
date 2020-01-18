@@ -1,0 +1,208 @@
+---
+title: 'Community Detection'
+subtitle: 'Applications of Data Science'
+author: 'Giora Simchoni'
+institute: 'Stat. and OR Department, TAU'
+date: '`r Sys.Date()`'
+output_dir: 'images'
+output:
+  xaringan::moon_reader:
+    css: '../slides.css'
+    seal: false
+    chakra: '../libs/remark-latest.min.js'
+    includes:
+      in_header: '../header.html'
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Community Detection
+
+### Applications of Data Science - Class 9
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = '../setup.Rmd'}
+```
+
+class: section-slide
+
+# Intro
+
+---
+
+### Why detect communities?
+
+- Understand hidden structure
+- Identify separate functionalities
+- Categorize (e.g. for automating Search & Browse)
+- Divide & Conquer (e.g. for visualization)
+- Optimize (e.g. with software)
+- Reduce size of large networks
+- Sheer Coolness
+
+### What's a "good" community?
+
+- Either "ground truth" .font80percent[(supervised)]
+- Many edges within (dense), few edges between (sparse) .font80percent[(unsupervised)]
+
+---
+
+class: section-slide
+
+# Spectral Partitioning
+
+---
+
+Start with dividing the network into 2 communities.
+
+.insight[
+What is the number of ways to divide n nodes into two distinct groups?
+]
+
+The *cut size* between two sets of nodes is the number of edges between them:
+
+$R=\frac{1}{2}\sum_{ij \text{ in different groups}}A_{ij}$
+
+Define $\mathbf{s}$ the vector which indicates to which community a network belongs:
+
+$$s_i =
+ \begin{cases}
+   +1 & \mbox{if node}\ i \mbox{ belongs to community 1} \\
+   -1 & \mbox{if node}\ i \mbox{ belongs to community 2}
+ \end{cases}$$
+
+Then:
+ 
+$$\frac{1}{2}(1-s_is_j) =
+ \begin{cases}
+   1 & \mbox{if nodes}\ i,j \mbox{ belong to different communities} \\
+   -1 & \mbox{if nodes}\ i,j \mbox{ belong to the same community}
+ \end{cases}$$
+
+---
+
+So we can sum over all $i,j$ to express $R$:
+
+$R=\frac{1}{4}\sum_{ij}A_{ij}(1-s_is_j)=\frac{1}{4}\sum_{ij}(A_{ij}-A_{ij}s_is_j)$
+
+Do you see where we're going with this?
+
+$\sum_{ij}A_{ij}=\sum_i\sum_jA_{ij}=\sum_ik_i=\sum_ik_is_i^2=\sum_{ij}k_i\delta_{ij}s_is_j$
+
+Where $\delta_{ij}$ is the *Kronecker delta*, which is 1 if $i = j$ and 0 otherwise.
+
+Then the cut size can be written as:
+
+$R=\frac{1}{4}\sum_{ij}(k_i\delta_{ij}-A_{ij})s_is_j=\frac{1}{4}\sum_{ij}L_{ij}s_is_j=\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}$
+
+Where $L$ is the network Laplacian defined earlier.
+
+And so we want to minimize $\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}$ s.t. $s_i=\pm1$.
+
+---
+
+Now suppose $n_1$ and $n_2$, no. of nodes expected in community 1 and 2 are known .font80percent[(not unrealistic, especially with equal sizes and when you want to avoid degenrate scenarios)].
+
+$\sum_is_i=\mathbf{1}^\intercal\cdot\mathbf{s}=n_1-n_2$
+
+Relaxation:
+
+We get rid of having $s_i=\pm1$, instead we'll require $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
+
+Applying Lagrange multipliers we get:
+
+$\frac{\partial R}{\partial s}=\frac{\partial}{\partial s}\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}+\lambda(n-\mathbf{s}^\intercal\mathbf{s})+2\mu((n_1-n_2)-\mathbf{1}^\intercal\cdot\mathbf{s})$
+
+Equating to 0 to find the minimum and performing the derivatives we get:
+
+$\mathbf{Ls}=\lambda\mathbf{s}+\mu\mathbf{1}$
+
+---
+
+.font80percent[(Here if we have time I can show you how we get to...)]
+
+Finally, the solution for $\mathbf{s}$ is:
+
+$\mathbf{s}=\mathbf{v_2}+\frac{n1-n2}{n}$
+
+Where $\mathbf{v_2}$ is the eigenvector of $L$, which corresponds to $\lambda$, the second smallest (after zero) eigenvalue of $L$.
+
+But $\mathbf{s}$ needs to be at $\pm1$, so bottom line we take the $n_1$ most positive values in $\mathbf{v_2}$ and put the relevant nodes in community 1, and the rest of the $n_2$ nodes in community 2.
+
+It can be shown that $R=\frac{n_1n_2}{n}\lambda$, hence $\lambda$, the second smallest eigenvalue of $L$ (a.k.a *algebraic connectivity*) determines the cut size, how easy it is to divide the network into two communities of sizes $n_1$ and $n_2$
+
+.insight[
+`r emo::ji("bulb")` What if $\lambda=0$?
+]
+---
+
+class: section-slide
+
+# Betweenness
+
+---
+
+class: section-slide
+
+# Label Propagation
+
+---
+
+class: section-slide
+
+# Modularity Maximization
+
+---
+
+class: section-slide
+
+# node2vec
+
+---
+
+class: section-slide
+
+# Other methods
+
+---
+
+.pull-left[
+Adjacency matrix based:
+- Hierarchical Clustering
+- K-Means
+- Whatever you find in Scikit-Learn...
+
+Heuristics:
+- Kernighan-Lin
+
+Modularity Maximization:
+- Simulated Annealing
+- Genetic Algorithms
+]
+
+.pull-right[
+Nonnegative Matrix Factorization:
+- BigCLAM
+
+Deep Learning:
+- Graph Neural Networks
+- Graph Embeddings
+
+Game Theory:
+- GLEAM
+]
