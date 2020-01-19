@@ -4,7 +4,7 @@
     <title>Community Detection</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-18" />
+    <meta name="date" content="2020-01-19" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-18
+### 2020-01-19
 
 ---
 
@@ -157,6 +157,51 @@ It can be shown that `\(R=\frac{n_1n_2}{n}\lambda\)`, hence `\(\lambda\)`, the s
 .insight[
 💡 What if `\(\lambda=0\)`?
 ]
+
+---
+
+Regarding implementation, I do not think Spectral Clustering is implemented in NetworkX, however you can either implement it yourself or use [`SpectralClustering()`](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralClustering.html) from Scikit-Learn.
+
+.font80percent[
+The `SpectralClustering()` of Scikit-Learn isn't identical to what we defined though. I believe that after obtaining `\(\mathbf{v_2}\)`, there is no way of specifying `\(n_1\)` and `\(n_2\)`, instead all nodes with positive values in `\(\mathbf{v_2}\)` are taken for community 1 and all nodes with negative values are taken to community 2.
+]
+
+
+```python
+import pandas as pd
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+from sklearn.cluster import SpectralClustering
+
+scifi_edgelist = pd.read_csv('../data/sci_fi_final_edgelist.csv')
+G = nx.from_pandas_edgelist(scifi_edgelist, 'book', 'book2', ['corr'])
+A = nx.to_numpy_matrix(G)
+sc = SpectralClustering(2, affinity='precomputed', n_init=100,
+  assign_labels='discretize')
+communities = sc.fit_predict(A)
+
+communities[:10]
+```
+
+```
+## array([0, 0, 0, 0, 0, 1, 1, 0, 0, 1], dtype=int64)
+```
+
+---
+
+
+```python
+color_dict = {0: 'blue', 1: 'red'}
+nx.draw_networkx(G, node_list = G.nodes,
+  node_color = [color_dict[comm] for comm in communities])
+plt.show()
+```
+
+&lt;img src="images/SpectralClustering-1.png" width="60%" /&gt;
+
+
+
 ---
 
 class: section-slide
