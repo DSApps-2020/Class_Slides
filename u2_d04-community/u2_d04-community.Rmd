@@ -71,7 +71,7 @@ class: section-slide
 Start with dividing the network into 2 communities.
 
 .insight[
-What is the number of ways to divide n nodes into two distinct groups?
+`r emo::ji("bulb")` What is the number of ways to divide n nodes into two distinct groups?
 ]
 
 The *cut size* between two sets of nodes is the number of edges between them:
@@ -140,7 +140,7 @@ Finally, the solution for $\mathbf{s}$ is:
 
 $\mathbf{s}=\mathbf{v_2}+\frac{n1-n2}{n}$
 
-Where $\mathbf{v_2}$ is the eigenvector of $L$, which corresponds to $\lambda$, the second smallest (after zero) eigenvalue of $L$.
+Where $\mathbf{v_2}$ is the Fiedler vector: eigenvector of $L$, which corresponds to $\lambda$, the second smallest (after zero) eigenvalue of $L$.
 
 But $\mathbf{s}$ needs to be at $\pm1$, so bottom line we take the $n_1$ most positive values in $\mathbf{v_2}$ and put the relevant nodes in community 1, and the rest of the $n_2$ nodes in community 2.
 
@@ -177,7 +177,7 @@ communities[:10]
 
 ---
 
-```{python SpectralClustering, out.width="60%"}
+```{python SpectralClustering, out.width="50%"}
 color_dict = {0: 'blue', 1: 'red'}
 nx.draw_networkx(G, node_list = G.nodes,
   node_color = [color_dict[comm] for comm in communities])
@@ -188,8 +188,157 @@ plt.show()
 
 class: section-slide
 
-# Betweenness
+# Girvan-Newman (Betweennees)
 
+---
+
+[Girvan & Newman (2002)](https://www.pnas.org/content/pnas/99/12/7821.full.pdf) suggested a divisive strategy of repeatedly removing "strongest" edges from the network, slowly uncovering the community structure of the network, until we're left with $n$ communities for $n$ nodes.
+
+This will create a dendrogram of nodes, from a point where all are connected to where all are "leaves":
+
+<img src = "images/dendrogram.png" style = "width: 40%">
+
+To choose the community structure best for you either cut the dendrogram where you get $k$ communities or use some other metric.
+
+But what criterion to choose for "strongest" edges?
+
+---
+
+Girvan & Newman suggested *edge betweenness* which is the same *betweenness centrality* we have defined, using edges:
+
+$x_e = \sum_{u,v}\frac{\tau(u,v|e)}{\tau(u,v)}$
+
+Where $\tau(u,v)$ is the number of shortest paths from node $u$ to node $v$ and $\tau(u,v|e)$ is the number of those shortest paths which pass through edge $e$.
+
+To summarize:
+
+1. Calculate the betweenness for all edges in the network.
+2. Remove the edge with the highest betweenness.
+3. Recalculate betweennesses for all edges affected by the removal.
+4. Repeat from step 2 until no edges remain.
+
+.insight[
+`r emo::ji("bulb")` Why recalculate betweenness at each iteration?
+]
+
+---
+
+```{python Girvan-Newman, out.width="50%"}
+communities = nx.community.girvan_newman(G) # returns an iterator on tuples of sets of nodes
+community1, community2 = tuple(next(communities)) # we take the first tuple for 2 communities
+
+node_colors = []
+for book in G.nodes:
+  if book in community1:
+    node_colors.append('blue')
+  else:
+    node_colors.append('red')
+nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+plt.show()
+```
+
+---
+
+Getting the actual dendrogram turned out to be quite laborious, you can see [here](https://stackoverflow.com/questions/59821151/plot-the-dendrogram-of-communities-found-by-networkx-girvan-newman-algorithm/59827653#59827653) how I got it to work or see the slides source (this chunk is hidden because it's a lot of code...)
+
+```{python scifi-dendrogram, echo=FALSE, out.width="70%", fig.asp=0.4}
+import networkx as nx
+import matplotlib.pyplot as plt
+from itertools import chain, combinations
+from scipy.cluster.hierarchy import dendrogram, set_link_color_palette
+
+# get Girvan-Newman communities list
+communities = nx.community.girvan_newman(G) # returns an iterator on tuples of sets of nodes
+communities = list(communities)
+
+# building initial dict of node_id to each possible subset:
+node_id = 0
+init_node2community_dict = {node_id: communities[0][0].union(communities[0][1])}
+for comm in communities:
+    for subset in list(comm):
+        if subset not in init_node2community_dict.values():
+            node_id += 1
+            init_node2community_dict[node_id] = subset
+
+# turning this dictionary to the desired format in @mdml's answer
+node_id_to_children = {e: [] for e in init_node2community_dict.keys()}
+for node_id1, node_id2 in combinations(init_node2community_dict.keys(), 2):
+    for node_id_parent, group in init_node2community_dict.items():
+        if len(init_node2community_dict[node_id1].intersection(init_node2community_dict[node_id2])) == 0 and group == init_node2community_dict[node_id1].union(init_node2community_dict[node_id2]):
+            node_id_to_children[node_id_parent].append(node_id1)
+            node_id_to_children[node_id_parent].append(node_id2)
+
+# also recording node_labels dict for the correct label for dendrogram leaves
+node_labels = dict()
+for node_id, group in init_node2community_dict.items():
+    if len(group) == 1:
+        node_labels[node_id] = list(group)[0]
+    else:
+        node_labels[node_id] = ''
+
+# also needing a subset to rank dict to later know within all k-length merges which came first
+subset_rank_dict = dict()
+rank = 0
+for e in communities[::-1]:
+    for p in list(e):
+        if tuple(p) not in subset_rank_dict:
+            subset_rank_dict[tuple(sorted(p))] = rank
+            rank += 1
+subset_rank_dict[tuple(sorted(chain.from_iterable(communities[-1])))] = rank
+
+# my function to get a merge height so that it is unique (probably not that efficient)
+def get_merge_height(sub):
+    sub_tuple = tuple(sorted([node_labels[i] for i in sub]))
+    n = len(sub_tuple)
+    other_same_len_merges = {k: v for k, v in subset_rank_dict.items() if len(k) == n}
+    min_rank, max_rank = min(other_same_len_merges.values()), max(other_same_len_merges.values())
+    range = (max_rank-min_rank) if max_rank > min_rank else 1
+    return float(len(sub)) + 0.8 * (subset_rank_dict[sub_tuple] - min_rank) / range
+
+# finally using @mdml's magic, slightly modified:
+G1 = nx.DiGraph(node_id_to_children)
+nodes = G1.nodes()
+leaves = set( n for n in nodes if G1.out_degree(n) == 0 )
+inner_nodes = [ n for n in nodes if G1.out_degree(n) > 0 ]
+
+# Compute the size of each subtree
+subtree = dict( (n, [n]) for n in leaves )
+for u in inner_nodes:
+    children = set()
+    node_list = list(node_id_to_children[u])
+    while len(node_list) > 0:
+        v = node_list.pop(0)
+        children.add( v )
+        node_list += node_id_to_children[v]
+    subtree[u] = sorted(children & leaves)
+
+inner_nodes.sort(key=lambda n: len(subtree[n])) # <-- order inner nodes ascending by subtree size, root is last
+
+# Construct the linkage matrix
+leaves = sorted(leaves)
+index  = dict( (tuple([n]), i) for i, n in enumerate(leaves) )
+Z = []
+k = len(leaves)
+for i, n in enumerate(inner_nodes):
+    children = node_id_to_children[n]
+    x = children[0]
+    for y in children[1:]:
+        z = tuple(sorted(subtree[x] + subtree[y]))
+        i, j = index[tuple(sorted(subtree[x]))], index[tuple(sorted(subtree[y]))]
+        Z.append([i, j, get_merge_height(subtree[n]), len(z)]) # <-- float is required
+        index[z] = k
+        subtree[z] = list(z)
+        x = z
+        k += 1
+
+# dendrogram
+# plt.figure()
+set_link_color_palette(['b', 'r'])
+d = dendrogram(Z, labels=[node_labels[node_id] for node_id in leaves],
+  orientation='top', above_threshold_color='k', leaf_font_size=10, leaf_rotation=90)
+plt.gcf().subplots_adjust(bottom=0.35)
+plt.show()
+```
 ---
 
 class: section-slide
