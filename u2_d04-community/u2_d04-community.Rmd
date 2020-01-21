@@ -347,6 +347,146 @@ class: section-slide
 
 ---
 
+### Proposition 1: Synchronous
+
+1. Initialize a unique label (community) for each node
+2. For each node (in parallel): choose the the most common label in neighbors
+3. If there is a tie: choose label at random
+4. Go back to 2 until some stopping criteria (e.g. no change)
+
+.font80percent[
+Notice the beautiful idea of information diffusion, very democratic
+]
+
+Pros                          | Cons
+----------------------------- | -----------------------
+Relatively fast (in parallel) | May not converge
+                              | Reproducibility issue
+                              
+.insight[
+`r emo::ji("bulb")` Can you think of a network that will never converge?
+]
+
+---
+
+### Proposition 2: Asynchronous
+
+1. Initialize a unique label (community) for each node
+2. Decide on a nodes permutation
+3. For each node (one after the other): choose the the most common label in neighbors
+4. If there is a tie: choose label at random
+5. Go back to 2 until some stopping criteria (e.g. no change)
+
+
+Pros               | Cons
+------------------ | -----------------------
+Relatively slow    | Even worse reproducibility issue, no single solution
+Better convergence | "Monster communities"
+
+---
+
+### Improving Convergence
+
+- Smarter tie breakers:
+  - If the node is labelled with one of the tied labels in its neighborhood - keep it
+  - Set an order on labels (e.g. $1, ..., l$) and always choose the max label
+  - Or both
+
+- Stopping Criterion
+  - Unfortunately "no change in labels" may be too an optimistic criterion to achieve.
+  - "Equilibrium": if in the current structure each node has a label no different than the majority label in its neighborhood - stop. In other words: if in the next iteration nodes will change label only due to ties - stop.
+
+---
+
+class: section-slide
+
+# Detour: The Network Coloring Problem
+
+---
+
+Can you color a network using as few colors as possible, where no two adjacent nodes share the same nodes?
+
+```{python Coloring-Problem, out.width = "30%"}
+F = nx.petersen_graph()
+color_dict = nx.coloring.greedy_color(F)
+colors = ['green', 'red', 'blue']
+node_colors = [colors[color_ind] for node, color_ind in color_dict.items()]
+nx.draw_shell(F, node_list=F.nodes, node_color=node_colors)
+plt.show()
+```
+
+.insight[
+`r emo::ji("bulb")` Think of a not-so-fast simple algorithm to get this done (A fast algorithm can make this in O(max(deg(G))) time!)
+]
+
+---
+
+The smallest number of colors required to color a given network $G$ is called its *chromatic number*, $\chi(G)$
+
+.insight[
+`r emo::ji("bulb")` What is an "easy" upper bound on $\chi(G)$?
+]
+
+What is it good for?
+
+- Scheduling: imagine each node is a university course and two courses share an edge if they have common students. How would you schedule exam times, such that no student has to attend two exams at the same time?
+- Political map coloring: no two adjacent countries share a color
+- A network $G$ is bipartite iff $\chi(G)=2$
+- Sudoku: 9x9=81 cells (nodes), two cells are connected if they are in the same row/column/square. Can you put in each cell 1 out of 9 numbers (colors) such that no two adjacent cells share the same number?
+- And...
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+### Proposition 3: Both ("Semi-Synchronous")
+
+1. Initialize a unique label (community) for each node
+2.  Network coloring: assign a "color" to the nodes of the network such that no two adjacent nodes share the same color
+3. **In each color group** (one after the other), for each node (in parallel): choose the the most common label in neighbors
+4. If there is a tie: choose a label by one of the "smarter" tie breakers
+5. Go back to 3 until some stopping criteria ("Equilibrium")
+
+.insight[
+`r emo::ji("bulb")` Do you see the sense in iterating the nodes in parallel *in each color group*?
+]
+---
+
+```{python Label-Propagation, fig.show = "hide"}
+communities = nx.community.label_propagation_communities(G)
+
+colors = ['green', 'blue', 'red', 'purple'] # cheating...
+node_colors = []
+books = []
+color_ind = 0
+for comm in communities:
+  node_colors.extend([colors[color_ind]] * len(comm))
+  color_ind += 1
+  books.extend(list(comm))
+
+colors_dict = {book: color for book, color in zip(books, node_colors)}
+book_index = {book: i for i, book in enumerate(G.nodes)}
+sorted_colors_dict = sorted(colors_dict.items(), key=lambda pair: book_index[pair[0]])
+node_colors = [color for book, color in sorted_colors_dict]
+
+plt.figure()
+nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+plt.show()
+```
+
+---
+
+```{python ref.label = "Label-Propagation", echo = FALSE, out.width = "70%"}
+
+```
+
+
+---
+
 class: section-slide
 
 # Modularity Maximization
