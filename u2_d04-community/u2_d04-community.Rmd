@@ -39,6 +39,23 @@ class: title-slide
 ```{r child = '../setup.Rmd'}
 ```
 
+```{python}
+def get_node_colors_by_communities(communities, nodes, colors = ['green', 'blue', 'red', 'purple']):
+  colors = ['green', 'blue', 'red', 'purple'] # cheating...
+  node_colors = []
+  books = []
+  color_ind = 0
+  for comm in communities:
+    node_colors.extend([colors[color_ind]] * len(comm))
+    color_ind += 1
+    books.extend(list(comm))
+  colors_dict = {book: color for book, color in zip(books, node_colors)}
+  book_index = {book: i for i, book in enumerate(nodes)}
+  sorted_colors_dict = sorted(colors_dict.items(), key=lambda pair: book_index[pair[0]])
+  node_colors = [color for book, color in sorted_colors_dict]
+  return node_colors
+```
+
 class: section-slide
 
 # Intro
@@ -68,7 +85,7 @@ class: section-slide
 
 ---
 
-Start with dividing the network into 2 communities.
+Start with dividing the network into 2 communities ("bisection").
 
 .insight[
 `r emo::ji("bulb")` What is the number of ways to divide n nodes into two distinct groups?
@@ -225,15 +242,11 @@ To summarize:
 
 ```{python Girvan-Newman, out.width="50%"}
 communities = nx.community.girvan_newman(G) # returns an iterator on tuples of sets of nodes
-community1, community2 = tuple(next(communities)) # we take the first tuple for 2 communities
+communities = list(next(communities)) # we take the first tuple for 2 communities
 
-node_colors = []
-for book in G.nodes:
-  if book in community1:
-    node_colors.append('blue')
-  else:
-    node_colors.append('red')
-nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+nx.draw_networkx(G, node_list = G.nodes,
+  node_color = get_node_colors_by_communities(communities, G.nodes))
+
 plt.show()
 ```
 
@@ -339,6 +352,7 @@ d = dendrogram(Z, labels=[node_labels[node_id] for node_id in leaves],
 plt.gcf().subplots_adjust(bottom=0.35)
 plt.show()
 ```
+
 ---
 
 class: section-slide
@@ -349,14 +363,12 @@ class: section-slide
 
 ### Proposition 1: Synchronous
 
+Completely different, beautiful, democratic idea:
+
 1. Initialize a unique label (community) for each node
 2. For each node (in parallel): choose the the most common label in neighbors
 3. If there is a tie: choose label at random
 4. Go back to 2 until some stopping criteria (e.g. no change)
-
-.font80percent[
-Notice the beautiful idea of information diffusion, very democratic
-]
 
 Pros                          | Cons
 ----------------------------- | -----------------------
@@ -445,6 +457,8 @@ class: section-slide
 
 ### Proposition 3: Both ("Semi-Synchronous")
 
+[Cordasco & Gargano (2010)](https://arxiv.org/abs/1103.4550):
+
 1. Initialize a unique label (community) for each node
 2.  Network coloring: assign a "color" to the nodes of the network such that no two adjacent nodes share the same color
 3. **In each color group** (one after the other), for each node (in parallel): choose the the most common label in neighbors
@@ -456,40 +470,183 @@ class: section-slide
 ]
 ---
 
-```{python Label-Propagation, fig.show = "hide"}
+```{python Label-Propagation, out.width="50%"}
 communities = nx.community.label_propagation_communities(G)
 
-colors = ['green', 'blue', 'red', 'purple'] # cheating...
-node_colors = []
-books = []
-color_ind = 0
-for comm in communities:
-  node_colors.extend([colors[color_ind]] * len(comm))
-  color_ind += 1
-  books.extend(list(comm))
-
-colors_dict = {book: color for book, color in zip(books, node_colors)}
-book_index = {book: i for i, book in enumerate(G.nodes)}
-sorted_colors_dict = sorted(colors_dict.items(), key=lambda pair: book_index[pair[0]])
-node_colors = [color for book, color in sorted_colors_dict]
-
 plt.figure()
-nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+nx.draw_networkx(G, node_list = G.nodes,
+  node_color = get_node_colors_by_communities(communities, G.nodes))
 plt.show()
 ```
-
----
-
-```{python ref.label = "Label-Propagation", echo = FALSE, out.width = "70%"}
-
-```
-
 
 ---
 
 class: section-slide
 
 # Modularity Maximization
+
+---
+
+## Modularity
+
+<img src = "images/modularity_def.png" style = "width: 90%">
+
+Modularity in words: “the fraction of the edges that fall within the given groups minus the expected fraction if edges were distributed at random.”
+
+.insight[
+`r emo::ji("bulb")` Statisticians might know this from the "observed minus expected" approach for Goodness of Fit statistics.
+]
+
+---
+
+If the number of within-community edges is no better than random, $Q=0$ .font80percent[(why?)].
+
+In general $Q$ ranges from -0.5 to (nearly) 1. You can see the full proof [here](https://www.uni-konstanz.de/mmsp/pubsys/publishedFiles/BrDeGa08.pdf), but you can also develop some intuition:
+
+```{python Modularity1, out.width = "40%"}
+F = nx.Graph()
+F.add_nodes_from(range(4))
+F.add_edges_from([(0, 1), (2, 3)])
+nx.draw_networkx(F)
+plt.show()
+```
+
+---
+
+```{python}
+print(nx.community.modularity(F, [{0, 1}, {2, 3}]))
+print(nx.community.modularity(F, [{0, 2}, {1, 3}]))
+```
+
+```{python}
+F = nx.Graph()
+F.add_nodes_from(range(8)) # Add more communities
+F.add_edges_from([(0, 1), (2, 3), (4, 5), (6, 7)])
+print(nx.community.modularity(F, [{0, 1}, {2, 3}, {4, 5}, {6, 7}]))
+print(nx.community.modularity(F, [{0, 2, 4, 6}, {1, 3, 5, 7}]))
+```
+
+.insight[
+`r emo::ji("bulb")` A good $Q$ is said to be above 0.3. What do you think of that?
+
+What would you do with a weighted network?
+]
+
+---
+
+### Bisection, inspired by Spectral Partitioning
+
+Define $M$ to be the *modularity matrix*:
+
+$M_{ij}=A_{ij}-\frac{k_ik_j}{2m}$
+
+Note that:
+
+$\sum_iM_{ij}=\sum_iA_{ij}-\frac{k_j}{2m}\sum_ik_i=k_j-\frac{k_j}{2m}2m=0$
+
+Define as in Spectral Partitioning community vector $\mathbf{s}$:
+
+$$s_i =
+ \begin{cases}
+   +1 & \mbox{if node}\ i \mbox{ belongs to community 1} \\
+   -1 & \mbox{if node}\ i \mbox{ belongs to community 2}
+ \end{cases}$$
+ 
+Follow the same logic and you'll get:
+
+$Q=\frac{1}{4m}\mathbf{s}^\intercal \mathbf{M}\mathbf{s}$
+
+---
+
+So our goal is to maximize $\mathbf{s}^\intercal \mathbf{M}\mathbf{s}$ s.t. $s_i=\pm1$.
+
+And as before we will relax $\mathbf{s}$ to have a norm of $n$: $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
+
+Applying Lagrange multplier, taking derivative, equating to zero:
+
+$\frac{\partial Q}{\partial s}=\frac{\partial}{\partial s}\mathbf{s}^\intercal\mathbf{M}\mathbf{s}+\lambda(n-\mathbf{s}^\intercal\mathbf{s})=0$
+
+$\mathbf{Ms}=\lambda\mathbf{s}$
+
+Which means that $s$ is an eigenvector of $M$ with eigenvalue $\lambda$.
+
+Since we can now write: $Q=\frac{1}{4m}\mathbf{s}^\intercal \mathbf{M}\mathbf{s}=\frac{1}{4m}\lambda\mathbf{s^\intercal s}=\frac{\lambda n}{4m}$
+
+It is clear we need the maximum eigenvalue $\lambda$, corresponding to the leading eigenvector $\mathbf{u_1}$ of $M$.
+
+---
+
+But $\mathbf{s}$ still needs to be $\pm1$, and so usually:
+
+$$s_i =
+ \begin{cases}
+   +1 & \mbox{if }\ [u_1]_i > 0 \\
+   -1 & \mbox{if }\ [u_1]_i < 0 \\
+ \end{cases}$$
+
+This "Spectral bisection" modularity maximization version isn't implemented in NetworkX, probably because you don't necessarily desire only two communities, and finding the leading eigenvector of a $M$ takes time $O(n^2)$, not that fast for large networks.
+
+Still, modularity is widely used.
+
+---
+
+### Greedy Modularity Maximization
+
+[Clauset, Newman & Moore (2004)](https://arxiv.org/abs/cond-mat/0408187) suggested an *agglomerative* strategy of greedily combining communities to find the partition with maximum modularity:
+
+1. Start with $n$ communities: each node as a community of its own
+2. Choose the pair of communities that grouping together would result in maximum increase or minimum decrease in Modularity
+3. Go back to 2 until only one community is left
+4. Review resulting dendrogram choosing the partition (cut) with maximum modularity
+
+The authors show that for sparse networks where $n \sim m$ the complexity is $O(nlog^2(n))$
+
+---
+
+```{python Greedy-Modularity, out.width="50%"}
+communities = nx.community.greedy_modularity_communities(G)
+print(nx.community.modularity(G, communities))
+
+nx.draw_networkx(G, node_list = G.nodes,
+  node_color = get_node_colors_by_communities(communities, G.nodes))
+plt.show()
+```
+
+---
+
+### The Louvain Method .font80percent[(What everyone uses...)]
+
+<img src = "images/louvain_algo.png" style = "width: 90%">
+
+[Blondel et. al. (2008)](https://arxiv.org/abs/0803.0476) were all researchers at Louvain Uni., so...
+
+---
+
+1. Start with $n$ communities: each node as a community of its own
+2. For each node $i$, go over all its neighbors communities:
+  Switch node $i$'s community with the community for which $max_j(\Delta Q)$ is reached, s.t. $max_j(\Delta Q) > 0$ (otherwise leave node $i$). 
+  Keep going (passing all nodes as many times necessary) until no improvement in $Q$ is possible
+3. Build a new network: amalgamate each community into a single node, where all its within edges are are summed into a single self-loop edge with weight x 2
+4. Go back to 2 until no improvement in $Q$ is possible
+
+---
+
+The Louvain method is extremely fast, "empirical" complexity appears to be linear. It is not implemented in NetworkX but there is a library called [python-louvain](https://github.com/taynaud/python-louvain) .font80percent[(import name is `community`, not confusing at all)] which works with a NetworkX `Graph()` object:
+
+```{python}
+import community
+
+communities = community.best_partition(G) # returns a dict: node to community
+print(community.modularity(communities, G))
+```
+
+---
+```{python Louvain, out.width="50%"}
+color_dict = {0: 'blue', 1: 'red', 2: 'green'}
+node_colors = [color_dict[communities[book]] for book in G.nodes]
+nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+plt.show()
+```
 
 ---
 
