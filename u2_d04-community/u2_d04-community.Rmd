@@ -39,9 +39,9 @@ class: title-slide
 ```{r child = '../setup.Rmd'}
 ```
 
-```{python}
+```{python, echo=FALSE}
 def get_node_colors_by_communities(communities, nodes, colors = ['green', 'blue', 'red', 'purple']):
-  colors = ['green', 'blue', 'red', 'purple'] # cheating...
+  colors = ['red', 'blue', 'green', 'purple'] # cheating...
   node_colors = []
   books = []
   color_ind = 0
@@ -133,13 +133,13 @@ And so we want to minimize $\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}$
 
 ---
 
-Now suppose $n_1$ and $n_2$, no. of nodes expected in community 1 and 2 are known .font80percent[(not unrealistic, especially with equal sizes and when you want to avoid degenrate scenarios)].
+Now suppose $n_1$ and $n_2$, no. of nodes expected in community 1 and 2 are known .font80percent[(not unrealistic, especially with equal sizes and when you want to avoid degenerate scenarios)].
 
 $\sum_is_i=\mathbf{1}^\intercal\cdot\mathbf{s}=n_1-n_2$
 
-Relaxation:
+**Relaxation**:
 
-We get rid of having $s_i=\pm1$, instead we'll require $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
+We get rid of having $s_i=\pm1$, instead we'll require its $l2$ norm to be: $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
 
 Applying Lagrange multipliers we get:
 
@@ -164,7 +164,7 @@ But $\mathbf{s}$ needs to be at $\pm1$, so bottom line we take the $n_1$ most po
 It can be shown that $R=\frac{n_1n_2}{n}\lambda$, hence $\lambda$, the second smallest eigenvalue of $L$ (a.k.a *algebraic connectivity*) determines the cut size, how easy it is to divide the network into two communities of sizes $n_1$ and $n_2$
 
 .insight[
-`r emo::ji("bulb")` What if $\lambda=0$?
+`r emo::ji("bulb")` What if $\lambda=0$? What if we didn't assume we knew $n_1$ and $n_2$?
 ]
 
 ---
@@ -652,7 +652,221 @@ plt.show()
 
 class: section-slide
 
+# Graph Embeddings
+
+---
+
+### Embeddings aren't new.
+
+- A different name for "Embeddings" could be "Dimensionality Reduction".
+
+- In modern Machine Learning, we often get a high-demensional dataset (say $X_{n\text{x}p}$ and $p$ is very large) some methods cannot handle. One go-to strategy is to reduce the dimension of this dataset matrix by PCA or NMF.
+
+- In Network Analysis too, imagine a huge adjacency matrix $A$. Especially for the purpose of Community Detection (a.k.a clustering) what if you could reduce the dimensionality of $A$ first, then perform your clustering method of choice (e.g. K-Means)?
+
+- These reduced-dimension vectors are "Embeddings".
+
+- The only question left is: how to reduce the dimensionality?
+
+---
+
+class: section-slide
+
+# Detour: word2vec
+
+---
+
+### Bag of Words Model (BOW)
+
+.insight[
+`r emo::ji("bulb")` What is the dimensionality of "words"?
+]
+
+- In the Oxford English dictionary there are 171K words. When expanding to jargon etc. the estimate is 1M words
+- Now suppose you have 3,000 Yelp reviews classified as "positive" or "negative", which you would use train a classification model to deploy on the Yelp website
+- Each sentence is comprised of a few words
+- If a word is a categorical variable which can receive 1 in 1M levels, using the classic approach of dummy variables, in order to build a simple $X_{n\text{x}p}$ matrix for say, logistic regression, you would need to build a 3K x 1M matrix
+
+Don't do it .font80percent[(why?)].
+
+---
+
+### The road to word2vec
+
+"Regular" dimensionality reduction methods do not work well on text data. 
+
+1. They tend to be slow.
+2. They ignore (and therefore lose) semantic meaning and grammatical function of a word, as can be seen by unsatisfactory performance in NLP tasks such as transaltion, finding synonyms and analogies.
+
+
+Q: What model *would* preserve semantic/sytactic meaning?
+
+A: A model which would be excellent at predicting a word out of context (or the opposite!).
+
+---
+
+That's exactly what [Mikolov et. al. (2013)](https://arxiv.org/abs/1301.3781) did:
+
+<img src = "images/cbow_skipgram.png" style = "width: 70%">
+
+They had a 2-layer (not that deep) neural network predict:
+1. CBOW - a few past and future context-words from a single middle-word
+2. Skip-Gram - a single middle-word from a few past and future context-words
+
+---
+
+### Skip-Gram
+
+<img src = "images/skipgram_example.png" style = "width: 80%">
+
+.font80percent[
+Actually these aren't all the pairs, the final version also includes "negative sampling" of non-correct words.
+]
+
+.font80percent[
+Source: [Chris McCormick](http://mccormickml.com/2016/04/19/word2vec-tutorial-the-skip-gram-model/)
+]
+
+---
+
+### Network Architecture
+
+So for a vocabulary size of 10K words...
+
+<img src = "images/word2vec_network.png" style = "width: 70%">
+
+Q: How well did this network do in predicting words?
+
+A: I have no idea. Because...
+
+---
+
+### word2vec
+
+The model was only trained to find the weight matrix $W$ of dimension $|V|\text{x}D$ where:
+- $|V|$ is the vocabulary size, the length of the dummy vectors input to the network
+- $D$ the size of the hidden layer
+
+In the above example this would be a 10K x 300 matrix where for each word there would be a 300-long *word vector* or *embedding* hopefully representing its sematic/syntactic better than traditional dimensionality reduction methods.
+
+This form of learning is also called *Representation Learning*.
+
+Now take these "embeddings" and do whatever with them, from regression to clustering.
+
+
+---
+
+Or just do the usual trick of "King - Man + Woman = ?" to get "Queen"...
+
+Note that it doesn't always work!
+
+<img src = "images/word2vec_analogies.png" style = "width: 100%">
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
 # node2vec
+
+[Grover & Leskovec (2016)](https://arxiv.org/abs/1607.00653):
+
+> learn a mapping of nodes to a low-dimensional space
+of features that maximizes the likelihood of preserving network
+neighborhoods of nodes.
+
+In short, if:
+- a word is a node
+- a sentence .font80percent[or a window of words] is a neighborhood
+
+We could just use word2vec to get *meaningful* node emebeddings!
+
+Then, in this low-dimensional space perform node clustering to communities with your clustering method of choice (original article uses K-Means).
+
+---
+
+### How to sample a neighborhood?
+
+The researchers differentiate between two similarities between a pair of nodes:
+
+- Homophily: which are your immediate neighbors? .font80percent[similar to semantics?]
+- Structural Equivalence: what is your *role* in the neighborhood? .font80percent[similar to syntactics?]
+
+In addition they point out that the two common serach strategies BFS and DFS "play a key role in producing representations that reflect either of the above equivalences".
+
+<img src = "images/node2vec_bfs_dfs.png" style = "width: 50%">
+
+---
+
+### The biased random walk procedure
+
+<img src = "images/node2vec_biased_walk.png" style = "width: 30%">
+
+For each node $v$, the "search bias" $\alpha_{vx}$ of advancing to the following node $x$ after coming from node $t$ is computed before hand, using parameters $p$ and $q$:
+
+- if node $x$ is $t$ iteslf: $1/p$
+- if node $x$ is connected to $t$: 1
+- if node $x$ isn't connected to $t$: $1/q$
+
+Obviously these aren't probabilities, these are weights whose sum needs to be normalized to 1.
+
+---
+
+### The biased random walk procedure
+
+Which $p, q$ to use?
+
+- low $p$, high $q$: we are unlikely to progress, and stick to the local neighborhood of $t$ (related to BFS, emphasis on Homophily)
+- high $p$, low $q$: we are unlikely to go back to $t$, we are progressing (related to DFS, emphasis on Structural Equivalence)
+
+
+<img src = "images/node2vec_les_mis.png" style = "width: 45%">
+
+---
+
+node2vec isn't implemented in NetworkX but has been implemented by Elior Cohen in the [`node2vec`](https://github.com/eliorc/node2vec) library, based on [`gensim`](https://radimrehurek.com/gensim/) word2vec fitting.
+
+Initialize the random walk probabilities, say $p=q=1$ and the dimensionality of the embeddings is 64:
+
+```{python}
+from node2vec import Node2Vec
+
+node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=1, p=1, q=1)
+```
+
+---
+
+Perform SGD to fit the $W_{23\text{x}64}$ matrix which we call `X` here for what's coming next:
+
+```{python}
+model = node2vec.fit(window=6, min_count=1, batch_words=4)
+
+X = model.wv.vectors
+
+print(X.shape)
+```
+
+Perform K-means on `X`, specifying k = 2:
+
+```{python}
+from sklearn.cluster import KMeans
+
+kmeans = KMeans(n_clusters=2, random_state=0).fit(X)
+```
+
+---
+
+```{python Node2Vec, out.width="50%"}
+color_dict = {0: 'blue', 1: 'red'}
+book_color_dict = {book: color_dict[color] for book, color in zip(model.wv.index2entity, kmeans.labels_)}
+node_colors = [book_color_dict[book] for book in G.nodes]
+
+nx.draw_networkx(G, node_list = G.nodes, node_color = node_colors)
+plt.show()
+```
 
 ---
 
@@ -680,9 +894,9 @@ Modularity Maximization:
 Nonnegative Matrix Factorization:
 - BigCLAM
 
-Deep Learning:
+Graph Embeddings (Deep Learning):
 - Graph Neural Networks
-- Graph Embeddings
+- SDNE
 
 Game Theory:
 - GLEAM
