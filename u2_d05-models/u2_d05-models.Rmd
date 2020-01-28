@@ -1,0 +1,385 @@
+---
+title: 'Network Models'
+subtitle: 'Applications of Data Science'
+author: 'Giora Simchoni'
+institute: 'Stat. and OR Department, TAU'
+date: '`r Sys.Date()`'
+output_dir: 'images'
+output:
+  xaringan::moon_reader:
+    css: '../slides.css'
+    seal: false
+    chakra: '../libs/remark-latest.min.js'
+    includes:
+      in_header: '../header.html'
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Network Models
+
+### Applications of Data Science - Class 10
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = '../setup.Rmd'}
+```
+
+```{python, echo=FALSE}
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+
+def degree_hist(G, xlabel='Degree', ylabel='Freq'):
+  deg = [deg for node, deg in G.degree()]
+  plt.hist(deg)
+  plt.xlabel(xlabel, fontsize=16)
+  plt.ylabel(ylabel, fontsize=16)
+```
+
+class: section-slide
+
+# Motivation
+
+---
+
+### *Degree histograms* of 3 real networks:
+
+- The cast of RuPaul's Drag Race Twitterverse
+- The Israeli artists musical cooperations in the 21st century
+- The Sci-Fi themed correlation network
+
+```{python Degree-Hists, echo=FALSE, fig.asp=0.5, out.width="80%"}
+rupaul = pd.read_csv('../data/queens_edges.csv')
+Ru = nx.from_pandas_edgelist(rupaul, source='from', target='to', create_using=nx.Graph)
+scifi_books = pd.read_csv('../data/sci_fi_final_edgelist.csv')
+Sc = nx.from_pandas_edgelist(scifi_books, 'book', 'book2', ['corr'])
+israeli_artists = pd.read_csv('../data/israeli_artists_coops.csv')
+I = nx.from_pandas_edgelist(israeli_artists, 'from', 'to')
+
+
+plt.gcf().subplots_adjust(bottom=0.15)
+plt.subplot(1, 3, 1)
+degree_hist(I, xlabel='')
+plt.subplot(1, 3, 2)
+degree_hist(Sc, ylabel='')
+plt.subplot(1, 3, 3)
+degree_hist(Ru, xlabel='', ylabel='')
+plt.show()
+```
+
+.insight[
+`r emo::ji("bulb")` Which is which?
+]
+
+---
+
+### Why model networks?
+
+- Know your network better:
+  - how it was formed
+  - what class it belongs to (clustering)
+  - how and why it deviates from model
+- Predict behavior in network:
+  - epidemic spread/resistance
+  - search
+  - link prediction
+  - node disambiguation
+- Generalization
+- Simulations and the ability to estimate metrics on huge networks
+  
+---
+
+class: section-slide
+
+# Erdős–Rényi model .font80percent[(Random Graphs)]
+
+---
+
+## You know the ER model
+
+In a $n$ nodes undirected network, suppose edges form identically and independently from each other.
+
+Each possible edge is a Bernoulli trial with probability $p$.
+
+Then the no. of edges $M$ is a Binomial RV $\sim Binom({n\choose 2},p)$
+
+.insight[
+`r emo::ji("bulb")` So what is $P(M=m)$? What is $E(M)$? What is $Var(M)$?
+]
+
+The $G(n, p)$ collection of all simple networks formed this way is the Erdős–Rényi model.
+
+---
+
+## Mean Degree
+
+The mean number of edges is: $E(M)={n\choose 2}p$
+
+We have defined the mean degree to be: $c = \frac{2m}{n}$, but now we treat $m$ as a RV, so the mean degree would be:
+
+$c=E(D)=E(\frac{2M}{n})=\frac{2E(M)}{n}=\frac{2}{n}{n\choose 2}p=(n-1)p$
+
+.insight[
+`r emo::ji("bulb")` Say it in words, it makes sense.
+]
+
+But this implies we could have formulated the ER model slightly different:
+
+Let $D$ be the degree of a particular node in an undirected network with $n$ nodes. Suppose each node "chooses" its neighbors with probability $p$, then:  $D\sim Binom(n-1,p)$
+
+---
+
+## Degree Distribution
+
+And since we're dealing with large *sparse* networks, we might mention that as $n\to\infty$ and $p$ is small, we expect the Binomial distribution to be approximated by the Poisson distribution, such that:
+
+$D \sim Pois((n-1)p)$ or $D \sim Pois(c)$
+
+Which is why the ER model is sometimes referred to the Poisson random graph.
+
+---
+
+## ER model In NetworkX
+
+```{python ER, out.width="50%"}
+G = nx.erdos_renyi_graph(n = 100, p = 0.3)
+
+plt.figure()
+nx.draw_networkx(G)
+plt.show()
+```
+
+---
+
+```{python ER-Deg_Dist, out.width="50%"}
+deg = [deg for node, deg in G.degree()]
+h = plt.hist(deg)
+plt.show()
+```
+
+.insight[
+`r emo::ji("bulb")` Does this degree distribution resemble any of the distributions we've seen?
+]
+
+---
+
+## Transitivity
+
+We have defined the Clustering Coefficient or Transitivity to be:
+
+$Transitivity(G)=\frac{\text{#closed triads}}{\text{#triads}}$
+
+In other words it is the probability of two neighbors of the same node to also be connected.
+
+.insight[
+`r emo::ji("bulb")` What is that probability in the ER model?
+
+What do you think of it after what you have seen?
+]
+
+---
+
+## Diameter
+
+We have defined the diameter as the maximal shortest distance between any pair of nodes.
+
+It turns out this has a nice expression in the ER model:
+
+- Take a random node in a ER network, how many neighbors do you expect it to have?
+- Take each one of these neighbors, and take each and one's neighbors - what do you get?
+- Do this $l$ times, what do you get? What would you get "in the end"?
+
+The average path length from a node to all other nodes is $\sim \frac{\ln(n)}{\ln(c)}$.
+
+Similarly one can show the diameter is $\sim 2\frac{\ln(n)}{\ln(c)}$
+
+---
+
+```{python}
+d_isr = nx.diameter(I)
+d_sci = nx.diameter(Sc)
+d_ru = nx.diameter(Ru)
+
+c_isr = np.mean([deg for node, deg in I.degree()])
+c_sci = np.mean([deg for node, deg in Sc.degree()])
+c_ru = np.mean([deg for node, deg in Ru.degree()])
+
+n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
+
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'c': [c_isr, c_sci, c_ru],
+  '2ln(n)/ln(c)': [2 * np.log(n_isr)/np.log(c_isr), 2 * np.log(n_sci)/np.log(c_sci), 2 * np.log(n_ru)/np.log(c_ru)],
+  'd': [d_isr, d_sci, d_ru]
+})
+```
+
+.insight[
+`r emo::ji("bulb")` What famous phenomenon this could help explain?
+]
+
+---
+
+
+
+## The Giant Component
+
+.insight[
+`r emo::ji("bulb")` What is the size of the largest component with $p=0$?
+
+What is the size of the largest component with $p=1$?
+]
+
+```{python GCC-Size0, fig.show="hide"}
+n = 100
+s = []
+for p in np.linspace(0, 1, 101):
+  s_p = []
+  for i in range(10):
+    G = nx.erdos_renyi_graph(n = n, p = p)
+    Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
+    Gcc_n = G.subgraph(Gcc[0]).number_of_nodes()
+    s_p.append(Gcc_n / n)
+  s.append(np.mean(s_p))
+
+plt.plot(s, marker='*')
+locs, labels = plt.xticks(np.linspace(0, 100, 11), np.round(np.linspace(0, 1, 11), 1))
+plt.xlabel('p (where n = 100)')
+plt.ylabel('GCC size S')
+plt.show()
+```
+
+---
+
+```{python GCC-Size, ref.label = "GCC-Size0", echo = FALSE, out.width = "50%"}
+
+```
+
+Surprisingly, for a given $n$, when $p$ is varied from 0 to 1, the giant component size $S$ suddenly "jumps"!
+
+This is also true for a given $p$ as you increase $n$: imagine sitting at the comfort of your home watching your ER network form, when suddenly...
+
+---
+
+```{python GCC-Size2, echo=FALSE, out.width="50%"}
+p = 0.1
+s = []
+for n in np.int8(np.linspace(10, 100, 100)):
+  s_n = []
+  for i in range(20):
+    G = nx.erdos_renyi_graph(n = n, p = p)
+    Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
+    Gcc_n = G.subgraph(Gcc[0]).number_of_nodes()
+    s_n.append(Gcc_n / n)
+  s.append(np.mean(s_n))
+
+plt.plot(s, marker='*')
+locs, labels = plt.xticks(np.linspace(0, 90, 10), np.int8(np.linspace(10, 100, 10)))
+plt.xlabel('n (where p = 0.1)')
+plt.ylabel('GCC size S')
+plt.show()
+```
+
+Don't blink! Because there seems to be a *critical point*, a *transition point*, a *percolation point* where $S$ increases from 0 and finally reaches to 1 making your network fully connected.
+
+---
+
+### A slight wave of hands
+
+$S$ is the probability of a node being connected to the GCC.
+
+$S = P(\text{node i is connected to GCC})=$
+$= 1-P(\text{node i is disconnected from GCC})=$
+$= 1-P(\text{node i is disconnected from GCC via node j})^{n-1}$
+
+For a given $i,j$:
+
+$P(\text{node i is disconnected via node j})=$
+$= P(\text{node i is disconnected with j}) +$
+$P(\text{node i is connected with j but j is disconnected from GCC})=$
+$= (1-p) + p(1-S) = 1-pS$
+
+---
+
+So:
+
+$S = 1-(1-pS)^{n-1}$
+
+And you can immediately tell finding a closed solution for $S$ would be hard.
+
+Substituting $p=\frac{c}{n-1}$ where $c$ is the mean degree:
+
+$S = 1-(1-\frac{c}{n-1}S)^{n-1}$
+
+Recall that $e^x=\lim_{n\to \infty}(1+\frac {x}{n})^{n}$ so in the limit of $n$:
+
+$S = 1-e^{-cS}$
+
+Now there is no closed solution for $S$ but we can isolate $c=(n-1)p$:
+
+$c=-\frac{\ln(1-S)}{S}$
+
+---
+
+```{python GCC-Size3, out.width="30%", echo=FALSE}
+s = np.linspace(0, 1, 101)
+plt.plot(s, -np.log(1-s)/s)
+plt.xlabel("S", fontsize=16)
+plt.ylabel("c", fontsize=16)
+plt.show()
+```
+
+We can see that around $c=1$ (or $p=1/n$) the size of the GCC starts increasing .font80percent[(makes sense)].
+
+It can be shown that around $c=\ln(n)$ (or $p=\frac{\ln(n)}{n}$) we expect the network to be fully connected.
+
+.insight[
+`r emo::ji("bulb")` So according to the ER model, for 1K nodes, a probability of 0.7% of an edge is enough to make the network connected. What do you think of that?
+]
+
+---
+
+All of the 3 networks we've talked about are fully connected .font80percent[(though notice how the Israeli Artists and the Sci-Fi Books networks were created)].
+
+But the model gives us a way of describing at what *stage* they are and how *robust* they are to node failures:
+
+```{python}
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'c': [c_isr, c_sci, c_ru],
+  'ln(n)': [np.log(n_isr), np.log(n_sci), np.log(n_ru)],
+  'stage': ['subcritcial', 'supercritical', 'connected']
+})
+```
+
+---
+
+## ER Model Summary
+
+Models well:
+- Diameter, average path length
+- Giant Component, Percolation, Network Robustness
+
+Does not model well:
+- Degree distribution
+- Transitivity (CC)
+- Communities
+- Homophily

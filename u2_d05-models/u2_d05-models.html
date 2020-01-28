@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Network Models</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2020-01-28" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Network Models
+
+### Applications of Data Science - Class 10
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2020-01-28
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# Motivation
+
+---
+
+### *Degree histograms* of 3 real networks:
+
+- The cast of RuPaul's Drag Race Twitterverse
+- The Israeli artists musical cooperations in the 21st century
+- The Sci-Fi themed correlation network
+
+&lt;img src="images/Degree-Hists-1.png" width="80%" /&gt;
+
+.insight[
+💡 Which is which?
+]
+
+---
+
+### Why model networks?
+
+- Know your network better:
+  - how it was formed
+  - what class it belongs to (clustering)
+  - how and why it deviates from model
+- Predict behavior in network:
+  - epidemic spread/resistance
+  - search
+  - link prediction
+  - node disambiguation
+- Generalization
+- Simulations and the ability to estimate metrics on huge networks
+  
+---
+
+class: section-slide
+
+# Erdős–Rényi model .font80percent[(Random Graphs)]
+
+---
+
+## You know the ER model
+
+In a `\(n\)` nodes undirected network, suppose edges form identically and independently from each other.
+
+Each possible edge is a Bernoulli trial with probability `\(p\)`.
+
+Then the no. of edges `\(M\)` is a Binomial RV `\(\sim Binom({n\choose 2},p)\)`
+
+.insight[
+💡 So what is `\(P(M=m)\)`? What is `\(E(M)\)`? What is `\(Var(M)\)`?
+]
+
+The `\(G(n, p)\)` collection of all simple networks formed this way is the Erdős–Rényi model.
+
+---
+
+## Mean Degree
+
+The mean number of edges is: `\(E(M)={n\choose 2}p\)`
+
+We have defined the mean degree to be: `\(c = \frac{2m}{n}\)`, but now we treat `\(m\)` as a RV, so the mean degree would be:
+
+`\(c=E(D)=E(\frac{2M}{n})=\frac{2E(M)}{n}=\frac{2}{n}{n\choose 2}p=(n-1)p\)`
+
+.insight[
+💡 Say it in words, it makes sense.
+]
+
+But this implies we could have formulated the ER model slightly different:
+
+Let `\(D\)` be the degree of a particular node in an undirected network with `\(n\)` nodes. Suppose each node "chooses" its neighbors with probability `\(p\)`, then:  `\(D\sim Binom(n-1,p)\)`
+
+---
+
+## Degree Distribution
+
+And since we're dealing with large *sparse* networks, we might mention that as `\(n\to\infty\)` and `\(p\)` is small, we expect the Binomial distribution to be approximated by the Poisson distribution, such that:
+
+`\(D \sim Pois((n-1)p)\)` or `\(D \sim Pois(c)\)`
+
+Which is why the ER model is sometimes referred to the Poisson random graph.
+
+---
+
+## ER model In NetworkX
+
+
+```python
+G = nx.erdos_renyi_graph(n = 100, p = 0.3)
+
+plt.figure()
+nx.draw_networkx(G)
+plt.show()
+```
+
+&lt;img src="images/ER-1.png" width="50%" /&gt;
+
+---
+
+
+```python
+deg = [deg for node, deg in G.degree()]
+h = plt.hist(deg)
+plt.show()
+```
+
+&lt;img src="images/ER-Deg_Dist-1.png" width="50%" /&gt;
+
+.insight[
+💡 Does this degree distribution resemble any of the distributions we've seen?
+]
+
+---
+
+## Transitivity
+
+We have defined the Clustering Coefficient or Transitivity to be:
+
+`\(Transitivity(G)=\frac{\text{#closed triads}}{\text{#triads}}\)`
+
+In other words it is the probability of two neighbors of the same node to also be connected.
+
+.insight[
+💡 What is that probability in the ER model?
+
+What do you think of it after what you have seen?
+]
+
+---
+
+## Diameter
+
+We have defined the diameter as the maximal shortest distance between any pair of nodes.
+
+It turns out this has a nice expression in the ER model:
+
+- Take a random node in a ER network, how many neighbors do you expect it to have?
+- Take each one of these neighbors, and take each and one's neighbors - what do you get?
+- Do this `\(l\)` times, what do you get? What would you get "in the end"?
+
+The average path length from a node to all other nodes is `\(\sim \frac{\ln(n)}{\ln(c)}\)`.
+
+Similarly one can show the diameter is `\(\sim 2\frac{\ln(n)}{\ln(c)}\)`
+
+---
+
+
+```python
+d_isr = nx.diameter(I)
+d_sci = nx.diameter(Sc)
+d_ru = nx.diameter(Ru)
+
+c_isr = np.mean([deg for node, deg in I.degree()])
+c_sci = np.mean([deg for node, deg in Sc.degree()])
+c_ru = np.mean([deg for node, deg in Ru.degree()])
+
+n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
+
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'c': [c_isr, c_sci, c_ru],
+  '2ln(n)/ln(c)': [2 * np.log(n_isr)/np.log(c_isr), 2 * np.log(n_sci)/np.log(c_sci), 2 * np.log(n_ru)/np.log(c_ru)],
+  'd': [d_isr, d_sci, d_ru]
+})
+```
+
+```
+##            network    n          c  2ln(n)/ln(c)   d
+## 0  Israeli Artists  321   2.373832     13.352007  17
+## 1     Sci-Fi Books   23   4.434783      4.210190   5
+## 2     RuPaul Verse  112  91.410714      2.089976   3
+```
+
+.insight[
+💡 What famous phenomenon this could help explain?
+]
+
+---
+
+
+
+## The Giant Component
+
+.insight[
+💡 What is the size of the largest component with `\(p=0\)`?
+
+What is the size of the largest component with `\(p=1\)`?
+]
+
+
+```python
+n = 100
+s = []
+for p in np.linspace(0, 1, 101):
+  s_p = []
+  for i in range(10):
+    G = nx.erdos_renyi_graph(n = n, p = p)
+    Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
+    Gcc_n = G.subgraph(Gcc[0]).number_of_nodes()
+    s_p.append(Gcc_n / n)
+  s.append(np.mean(s_p))
+
+plt.plot(s, marker='*')
+locs, labels = plt.xticks(np.linspace(0, 100, 11), np.round(np.linspace(0, 1, 11), 1))
+plt.xlabel('p (where n = 100)')
+plt.ylabel('GCC size S')
+plt.show()
+```
+
+---
+
+&lt;img src="images/GCC-Size-1.png" width="50%" /&gt;
+
+Surprisingly, for a given `\(n\)`, when `\(p\)` is varied from 0 to 1, the giant component size `\(S\)` suddenly "jumps"!
+
+This is also true for a given `\(p\)` as you increase `\(n\)`: imagine sitting at the comfort of your home watching your ER network form, when suddenly...
+
+---
+
+&lt;img src="images/GCC-Size2-1.png" width="50%" /&gt;
+
+Don't blink! Because there seems to be a *critical point*, a *transition point*, a *percolation point* where `\(S\)` increases from 0 and finally reaches to 1 making your network fully connected.
+
+---
+
+### A slight wave of hands
+
+`\(S\)` is the probability of a node being connected to the GCC.
+
+`\(S = P(\text{node i is connected to GCC})=\)`
+`\(= 1-P(\text{node i is disconnected from GCC})=\)`
+`\(= 1-P(\text{node i is disconnected from GCC via node j})^{n-1}\)`
+
+For a given `\(i,j\)`:
+
+`\(P(\text{node i is disconnected via node j})=\)`
+`\(= P(\text{node i is disconnected with j}) +\)`
+`\(P(\text{node i is connected with j but j is disconnected from GCC})=\)`
+`\(= (1-p) + p(1-S) = 1-pS\)`
+
+---
+
+So:
+
+`\(S = 1-(1-pS)^{n-1}\)`
+
+And you can immediately tell finding a closed solution for `\(S\)` would be hard.
+
+Substituting `\(p=\frac{c}{n-1}\)` where `\(c\)` is the mean degree:
+
+`\(S = 1-(1-\frac{c}{n-1}S)^{n-1}\)`
+
+Recall that `\(e^x=\lim_{n\to \infty}(1+\frac {x}{n})^{n}\)` so in the limit of `\(n\)`:
+
+`\(S = 1-e^{-cS}\)`
+
+Now there is no closed solution for `\(S\)` but we can isolate `\(c=(n-1)p\)`:
+
+`\(c=-\frac{\ln(1-S)}{S}\)`
+
+---
+
+&lt;img src="images/GCC-Size3-1.png" width="30%" /&gt;
+
+We can see that around `\(c=1\)` (or `\(p=1/n\)`) the size of the GCC starts increasing .font80percent[(makes sense)].
+
+It can be shown that around `\(c=\ln(n)\)` (or `\(p=\frac{\ln(n)}{n}\)`) we expect the network to be fully connected.
+
+.insight[
+💡 So according to the ER model, for 1K nodes, a probability of 0.7% of an edge is enough to make the network connected. What do you think of that?
+]
+
+---
+
+All of the 3 networks we've talked about are fully connected .font80percent[(though notice how the Israeli Artists and the Sci-Fi Books networks were created)].
+
+But the model gives us a way of describing at what *stage* they are and how *robust* they are to node failures:
+
+
+```python
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'c': [c_isr, c_sci, c_ru],
+  'ln(n)': [np.log(n_isr), np.log(n_sci), np.log(n_ru)],
+  'stage': ['subcritcial', 'supercritical', 'connected']
+})
+```
+
+```
+##            network    n          c     ln(n)          stage
+## 0  Israeli Artists  321   2.373832  5.771441    subcritcial
+## 1     Sci-Fi Books   23   4.434783  3.135494  supercritical
+## 2     RuPaul Verse  112  91.410714  4.718499      connected
+```
+
+---
+
+## ER Model Summary
+
+Models well:
+- Diameter, average path length
+- Giant Component, Percolation, Network Robustness
+
+Does not model well:
+- Degree distribution
+- Transitivity (CC)
+- Communities
+- Homophily
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
