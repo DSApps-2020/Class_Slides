@@ -107,7 +107,7 @@ plt.show()
 
 class: section-slide
 
-# Erdős–Rényi model .font80percent[(Random Graphs)]
+# The Erdős–Rényi model .font80percent[(Random Graphs)]
 
 ---
 
@@ -142,6 +142,29 @@ $c=E(D)=E(\frac{2M}{n})=\frac{2E(M)}{n}=\frac{2}{n}{n\choose 2}p=(n-1)p$
 But this implies we could have formulated the ER model slightly different:
 
 Let $D$ be the degree of a particular node in an undirected network with $n$ nodes. Suppose each node "chooses" its neighbors with probability $p$, then:  $D\sim Binom(n-1,p)$
+
+---
+
+Estimating $n$, $p$ and $c$ from our networks:
+
+```{python}
+def estimate_p(m, n): return m / (n * (n - 1) / 2)
+def estimate_c(G): return np.mean(list(dict(G.degree()).values()))
+
+n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
+m_isr, m_sci, m_ru = I.number_of_edges(), Sc.number_of_edges(), Ru.number_of_edges()
+p_isr, p_sci, p_ru = estimate_p(m_isr, n_isr), estimate_p(m_sci, n_sci), estimate_p(m_ru, n_ru)
+c_isr, c_sci, c_ru = estimate_c(I), estimate_c(Sc), estimate_c(Ru)
+
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'm': [m_isr, m_sci, m_ru],
+  'p': [p_isr, p_sci, p_ru],
+  'c': [c_isr, c_sci, c_ru]
+})
+```
+
 
 ---
 
@@ -215,12 +238,6 @@ Similarly one can show the diameter is $\sim 2\frac{\ln(n)}{\ln(c)}$
 d_isr = nx.diameter(I)
 d_sci = nx.diameter(Sc)
 d_ru = nx.diameter(Ru)
-
-c_isr = np.mean([deg for node, deg in I.degree()])
-c_sci = np.mean([deg for node, deg in Sc.degree()])
-c_ru = np.mean([deg for node, deg in Ru.degree()])
-
-n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
 
 pd.DataFrame({
   'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
@@ -383,3 +400,204 @@ Does not model well:
 - Transitivity (CC)
 - Communities
 - Homophily
+
+---
+
+class: section-slide
+
+# The Configuration Model
+
+---
+
+Let's see some larger real-life networks:
+
+- The clients of a high-end Brazilian escort service, connected by whether they used the same escort
+- Amazon products, scraped online, connected by whether they are recommended with each other
+- Astrophysics researchers co-authorship network
+
+```{python, echo=FALSE}
+# escort = pd.read_csv('../data/escort.csv', skiprows=24,
+#   sep=';', header=None, usecols=[0,1], names=['escort_id', 'client_id'])
+# E = nx.from_pandas_edgelist(escort, 'client_id', 'escort_id', create_using=nx.Graph)
+# E = nx.bipartite.projected_graph(E, escort['client_id'].to_list())
+# df = nx.to_pandas_edgelist(E, nodelist=E.nodes)
+# df.to_csv('../data/escort_clients.csv')
+# isolated_clients = [node for node, degree in E.degree() if degree == 0]
+# pd.DataFrame({'isolated_client_id': isolated_clients}).to_csv('../data/escort_clients_isolated.csv')
+
+escort = pd.read_csv('../data/escort_clients.csv')
+isolated_clients = pd.read_csv('../data/escort_clients_isolated.csv')['isolated_client_id'].to_list()
+E = nx.from_pandas_edgelist(escort)
+E.add_nodes_from(isolated_clients)
+
+amazon = pd.read_csv("../data/com-amazon.ungraph.txt", skiprows=4, sep='\t', names=['source', 'target'])
+Amz = nx.from_pandas_edgelist(amazon)
+
+astro = pd.read_csv("../data/CA-AstroPh.txt", skiprows=4, sep='\t', names=['source', 'target'])
+CA = nx.from_pandas_edgelist(astro)
+```
+
+```{python, echo=FALSE}
+def size_of_GCC(G): return round(len(max(nx.connected_components(G), key=len))/G.number_of_nodes(), 2)
+
+n_e, n_amz, n_ca = E.number_of_nodes(), Amz.number_of_nodes(), CA.number_of_nodes()
+m_e, m_amz, m_ca = E.number_of_edges(), Amz.number_of_edges(), CA.number_of_edges()
+p_e, p_amz, p_ca = estimate_p(m_e, n_e), estimate_p(m_amz, n_amz), estimate_p(m_ca, n_ca)
+c_e, c_amz, c_ca = estimate_c(E), estimate_c(Amz), estimate_c(CA)
+S_e, S_amz, S_ca = size_of_GCC(E), size_of_GCC(Amz), size_of_GCC(CA)
+
+pd.DataFrame({
+  'network': ['Escort', 'Amazon Products', 'CoAuthorship'],
+  'n': [n_e, n_amz, n_ca],
+  'm': [m_e, m_amz, m_ca],
+  'p': [p_e, p_amz, p_ca],
+  'c': [c_e, c_amz, c_ca],
+  'S': [S_e, S_amz, S_ca]
+})
+```
+
+---
+
+### Degree histograms
+
+```{python Degree-Hists2, echo=FALSE, fig.asp=0.5, out.width="80%"}
+plt.figure()
+plt.gcf().subplots_adjust(bottom=0.15)
+plt.subplot(1, 3, 1)
+degree_hist(E, xlabel='')
+plt.subplot(1, 3, 2)
+degree_hist(Amz, ylabel='')
+plt.subplot(1, 3, 3)
+degree_hist(CA, xlabel='', ylabel='')
+plt.show()
+```
+
+---
+
+class: section-slide
+
+# Detour: The Power Law Distribution
+
+---
+
+### Power Law
+
+If $X \sim PL(\alpha, x_\text{min})$, then:
+
+$f(x) = Cx^{-\alpha}\space\mbox{for}\ x\ge x_\text{min}>0;\alpha>1$
+
+where $C=(\alpha - 1)x^{\alpha-1}_\text{min}$
+
+and we can write: $f(x)=\frac{\alpha-1}{x_\text{min}}(\frac{x}{x_\text{min}})^{-\alpha}$
+
+.insight[
+`r emo::ji("bulb")` What do you need to check in order to verify this is a proper density function?
+]
+
+Why do we like the Power Law distribution so much?
+
+- scale invariance
+- heavy tail
+- the 80/20 (Pareto) rule
+
+---
+
+### Scale Invariance
+
+If we multiply $X$ by constant $m$ the density "scales":
+
+$f(mx)=C(mx)^{-\alpha}=Cm^{\alpha}x^{-\alpha}=C'x^{-\alpha}\propto f(x)$
+
+Thus, $mX$ will distribute Power-Law with the same $\alpha$ parameter and a different constant.
+
+The relative likelihood between small and large events is the same, no matter what choice of “small” we make.
+
+.insight[
+`r emo::ji("bulb")` How would $mX$ distribute if $X$ distributed Normal?
+]
+
+---
+
+Another way of seeing this:
+
+If we take the log-log transformation of the Power-Law distribution we get:
+
+$\ln(f(x))=\ln(Cx^{-\alpha})=\ln(C)-\alpha\ln(x)$
+
+Thus the log-log plot of Power-Law should show a straight line with slope $-\alpha$, and multiplying by $m$ only changes the intercept.
+
+```{r Scale-Invariance, echo=FALSE, out.width="80%", fig.asp=0.5}
+x <- seq(1, 10, 0.1)
+par(mfcol = c(1, 2))
+plot(x, (2.5-1)/1 * (x/1)^(-2.5), type = "l", ylab = "f(x)")
+lines(x, (2.5-1)/1 * (x/1)^(-2.5)*(2^(-2.5)), col="red")
+lines(x, (2.5-1)/1 * (x/1)^(-2.5)*(3^(-2.5)), col="green")
+legend("topright", legend = paste0("m=", 1:3), col = 1:3, lty = 1)
+plot(log(x), log((2.5-1)/1 * (x/1)^(-2.5)), type = "l", xlab = "ln(x)", ylab = "ln(f(x))")
+lines(log(x), log((2.5-1)/1 * (x/1)^(-2.5)*(2^(-2.5))), col="red")
+lines(log(x), log((2.5-1)/1 * (x/1)^(-2.5)*(3^(-2.5))), col="green")
+legend("topright", legend = paste0("m=", 1:3), col = 1:3, lty = 1)
+```
+
+---
+
+### Heavy Tail
+
+The $k$-th moment of the PL distribution converges only for $k < \lfloor{\alpha-1}\rfloor$:
+
+$E(X^k)=\int_{x_\text{min}}^{\infty}x^kf(x)=\frac{\alpha-1}{x^{\alpha-1}_\text{min}}\int_{x_\text{min}}^{\infty}x^{k-\alpha}=x^k_\text{min}(\frac{\alpha-1}{\alpha-1-k})$
+
+So:
+- For $1<\alpha\le2$ the mean is infinite (and all higher moments)
+- For $2<\alpha\le3$ the mean is finite but the variance is infinite
+
+As a result, the PL distribution is very good for modeling extreme distributions, where we *expect* extreme values, as opposed to e.g. the Normal distribution.
+
+---
+
+For example, here is a [post](http://giorasimchoni.com/2019/03/04/2019-03-04-on-fechner-weber-whorf-zipf-and-pareto/) of mine, showing how the PL distribution is much more suitable for modeling how words are distributed in a large corpus of text such as Wikipedia, in comparison with the Exponential distribution, both fitted via MLE:
+
+<img src = "images/Wikipedia-Pareto-Exponential_Fit.png" style="width: 100%">
+
+---
+
+Another nice way of showing this is comparing $f(X)$ under the PL distribution vs. $f(X)$ under the Exponential distribution for suitable values of $\alpha$ and $\lambda$:
+
+<img src = "images/PL-Exponential-Compare.png" style="width: 100%">
+
+---
+
+### 80/20 (Pareto) Rule
+
+The Pareto rule says that "80% of the wealth is in the hands of the richest 20% of people".
+
+But the Pareto distribution is just a different formulation of the Power Law distribution, and this phenomenon is indeed characteristic to the PL distribution.
+
+If $X$ is "wealth" and we want to know what is the probability of being "wealthy", i.e. the part *of population* which holds at least $m$ wealth:
+
+$P(X)=P(X>m)=1-F_m(X)=\int_{m}^{\infty}Cx^{-\alpha}dx=(\frac{m}{x_\text{min}})^{1-\alpha}$
+
+The part *of wealth* that those "wealthy" have is the division of expectations:
+
+$W(X) = \frac{E(X > m)}{E(X)}=\frac{\int_{m}^{\infty}xCx^{-\alpha}dx}{x^k_\text{min}(\frac{\alpha-1}{\alpha-2})}=(\frac{m}{x_\text{min}})^{2-\alpha}$
+
+---
+
+So, being wealthy isn't dependent on $m$, only on $\alpha$:
+
+$W(X)=P(X)^{\frac{\alpha-2}{\alpha-1}}$
+
+And this is how we get to the 80/20 rule without defining what wealthy is:
+
+<img src = "images/PL-Pareto-Rule.png" style="width: 100%">
+
+.insight[
+`r emo::ji("bulb")` The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the United States (data from the Forbes 400, 2003)!
+]
+---
+
+class: section-slide
+
+# End of Detour
+
+---

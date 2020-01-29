@@ -4,7 +4,7 @@
     <title>Network Models</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-28" />
+    <meta name="date" content="2020-01-29" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-28
+### 2020-01-29
 
 ---
 
@@ -87,7 +87,7 @@ class: section-slide
 
 class: section-slide
 
-# Erdős–Rényi model .font80percent[(Random Graphs)]
+# The Erdős–Rényi model .font80percent[(Random Graphs)]
 
 ---
 
@@ -122,6 +122,37 @@ We have defined the mean degree to be: `\(c = \frac{2m}{n}\)`, but now we treat 
 But this implies we could have formulated the ER model slightly different:
 
 Let `\(D\)` be the degree of a particular node in an undirected network with `\(n\)` nodes. Suppose each node "chooses" its neighbors with probability `\(p\)`, then:  `\(D\sim Binom(n-1,p)\)`
+
+---
+
+Estimating `\(n\)`, `\(p\)` and `\(c\)` from our networks:
+
+
+```python
+def estimate_p(m, n): return m / (n * (n - 1) / 2)
+def estimate_c(G): return np.mean(list(dict(G.degree()).values()))
+
+n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
+m_isr, m_sci, m_ru = I.number_of_edges(), Sc.number_of_edges(), Ru.number_of_edges()
+p_isr, p_sci, p_ru = estimate_p(m_isr, n_isr), estimate_p(m_sci, n_sci), estimate_p(m_ru, n_ru)
+c_isr, c_sci, c_ru = estimate_c(I), estimate_c(Sc), estimate_c(Ru)
+
+pd.DataFrame({
+  'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'm': [m_isr, m_sci, m_ru],
+  'p': [p_isr, p_sci, p_ru],
+  'c': [c_isr, c_sci, c_ru]
+})
+```
+
+```
+##            network    n     m         p          c
+## 0  Israeli Artists  321   381  0.007418   2.373832
+## 1     Sci-Fi Books   23    51  0.201581   4.434783
+## 2     RuPaul Verse  112  5119  0.823520  91.410714
+```
+
 
 ---
 
@@ -202,12 +233,6 @@ Similarly one can show the diameter is `\(\sim 2\frac{\ln(n)}{\ln(c)}\)`
 d_isr = nx.diameter(I)
 d_sci = nx.diameter(Sc)
 d_ru = nx.diameter(Ru)
-
-c_isr = np.mean([deg for node, deg in I.degree()])
-c_sci = np.mean([deg for node, deg in Sc.degree()])
-c_ru = np.mean([deg for node, deg in Ru.degree()])
-
-n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
 
 pd.DataFrame({
   'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
@@ -361,6 +386,155 @@ Does not model well:
 - Transitivity (CC)
 - Communities
 - Homophily
+
+---
+
+class: section-slide
+
+# The Configuration Model
+
+---
+
+Let's see some larger real-life networks:
+
+- The clients of a high-end Brazilian escort service, connected by whether they used the same escort
+- Amazon products, scraped online, connected by whether they are recommended with each other
+- Astrophysics researchers co-authorship network
+
+
+
+
+```
+##            network       n       m         p           c     S
+## 0           Escort   10106  668183  0.013086  132.234910  0.96
+## 1  Amazon Products  334863  925872  0.000017    5.529855  1.00
+## 2     CoAuthorship   18772  198110  0.001124   21.106968  0.95
+```
+
+---
+
+### Degree histograms
+
+&lt;img src="images/Degree-Hists2-1.png" width="80%" /&gt;
+
+---
+
+class: section-slide
+
+# Detour: The Power Law Distribution
+
+---
+
+### Power Law
+
+If `\(X \sim PL(\alpha, x_\text{min})\)`, then:
+
+`\(f(x) = Cx^{-\alpha}\space\mbox{for}\ x\ge x_\text{min}&gt;0;\alpha&gt;1\)`
+
+where `\(C=(\alpha - 1)x^{\alpha-1}_\text{min}\)`
+
+and we can write: `\(f(x)=\frac{\alpha-1}{x_\text{min}}(\frac{x}{x_\text{min}})^{-\alpha}\)`
+
+.insight[
+💡 What do you need to check in order to verify this is a proper density function?
+]
+
+Why do we like the Power Law distribution so much?
+
+- scale invariance
+- heavy tail
+- the 80/20 (Pareto) rule
+
+---
+
+### Scale Invariance
+
+If we multiply `\(X\)` by constant `\(m\)` the density "scales":
+
+`\(f(mx)=C(mx)^{-\alpha}=Cm^{\alpha}x^{-\alpha}=C'x^{-\alpha}\propto f(x)\)`
+
+Thus, `\(mX\)` will distribute Power-Law with the same `\(\alpha\)` parameter and a different constant.
+
+The relative likelihood between small and large events is the same, no matter what choice of “small” we make.
+
+.insight[
+💡 How would `\(mX\)` distribute if `\(X\)` distributed Normal?
+]
+
+---
+
+Another way of seeing this:
+
+If we take the log-log transformation of the Power-Law distribution we get:
+
+`\(\ln(f(x))=\ln(Cx^{-\alpha})=\ln(C)-\alpha\ln(x)\)`
+
+Thus the log-log plot of Power-Law should show a straight line with slope `\(-\alpha\)`, and multiplying by `\(m\)` only changes the intercept.
+
+&lt;img src="images/Scale-Invariance-1.png" width="80%" /&gt;
+
+---
+
+### Heavy Tail
+
+The `\(k\)`-th moment of the PL distribution converges only for `\(k &lt; \lfloor{\alpha-1}\rfloor\)`:
+
+`\(E(X^k)=\int_{x_\text{min}}^{\infty}x^kf(x)=\frac{\alpha-1}{x^{\alpha-1}_\text{min}}\int_{x_\text{min}}^{\infty}x^{k-\alpha}=x^k_\text{min}(\frac{\alpha-1}{\alpha-1-k})\)`
+
+So:
+- For `\(1&lt;\alpha\le2\)` the mean is infinite (and all higher moments)
+- For `\(2&lt;\alpha\le3\)` the mean is finite but the variance is infinite
+
+As a result, the PL distribution is very good for modeling extreme distributions, where we *expect* extreme values, as opposed to e.g. the Normal distribution.
+
+---
+
+For example, here is a [post](http://giorasimchoni.com/2019/03/04/2019-03-04-on-fechner-weber-whorf-zipf-and-pareto/) of mine, showing how the PL distribution is much more suitable for modeling how words are distributed in a large corpus of text such as Wikipedia, in comparison with the Exponential distribution, both fitted via MLE:
+
+&lt;img src = "images/Wikipedia-Pareto-Exponential_Fit.png" style="width: 100%"&gt;
+
+---
+
+Another nice way of showing this is comparing `\(f(X)\)` under the PL distribution vs. `\(f(X)\)` under the Exponential distribution for suitable values of `\(\alpha\)` and `\(\lambda\)`:
+
+&lt;img src = "images/PL-Exponential-Compare.png" style="width: 100%"&gt;
+
+---
+
+### 80/20 (Pareto) Rule
+
+The Pareto rule says that "80% of the wealth is in the hands of the richest 20% of people".
+
+But the Pareto distribution is just a different formulation of the Power Law distribution, and this phenomenon is indeed characteristic to the PL distribution.
+
+If `\(X\)` is "wealth" and we want to know what is the probability of being "wealthy", i.e. the part *of population* which holds at least `\(m\)` wealth:
+
+`\(P(X)=P(X&gt;m)=1-F_m(X)=\int_{m}^{\infty}Cx^{-\alpha}dx=(\frac{m}{x_\text{min}})^{1-\alpha}\)`
+
+The part *of wealth* that those "wealthy" have is the division of expectations:
+
+`\(W(X) = \frac{E(X &gt; m)}{E(X)}=\frac{\int_{m}^{\infty}xCx^{-\alpha}dx}{x^k_\text{min}(\frac{\alpha-1}{\alpha-2})}=(\frac{m}{x_\text{min}})^{2-\alpha}\)`
+
+---
+
+So, being wealthy isn't dependent on `\(m\)`, only on `\(\alpha\)`:
+
+`\(W(X)=P(X)^{\frac{\alpha-2}{\alpha-1}}\)`
+
+And this is how we get to the 80/20 rule without defining what wealthy is:
+
+&lt;img src = "images/PL-Pareto-Rule.png" style="width: 100%"&gt;
+
+.insight[
+💡 The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the United States (data from the Forbes 400, 2003)!
+]
+---
+
+class: section-slide
+
+# End of Detour
+
+---
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
