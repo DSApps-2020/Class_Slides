@@ -4,7 +4,7 @@
     <title>Network Models</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-29" />
+    <meta name="date" content="2020-01-30" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-29
+### 2020-01-30
 
 ---
 
@@ -391,13 +391,13 @@ Does not model well:
 
 class: section-slide
 
-# The Configuration Model
+# The Power-Law Distribution
 
 ---
 
 Let's see some larger real-life networks:
 
-- The clients of a high-end Brazilian escort service, connected by whether they used the same escort
+- The clients of a high-end Brazilian escort service, connected by whether they hired the same escort
 - Amazon products, scraped online, connected by whether they are recommended with each other
 - Astrophysics researchers co-authorship network
 
@@ -417,21 +417,17 @@ Let's see some larger real-life networks:
 
 &lt;img src="images/Degree-Hists2-1.png" width="80%" /&gt;
 
----
-
-class: section-slide
-
-# Detour: The Power Law Distribution
+One of the main shortcomings of the ER model is that none of these look even remotely Poisson.
 
 ---
 
-### Power Law
+## Power Law
 
 If `\(X \sim PL(\alpha, x_\text{min})\)`, then:
 
 `\(f(x) = Cx^{-\alpha}\space\mbox{for}\ x\ge x_\text{min}&gt;0;\alpha&gt;1\)`
 
-where `\(C=(\alpha - 1)x^{\alpha-1}_\text{min}\)`
+where `\(C=\frac{\alpha - 1}{x^{1-\alpha}_\text{min}}\)`
 
 and we can write: `\(f(x)=\frac{\alpha-1}{x_\text{min}}(\frac{x}{x_\text{min}})^{-\alpha}\)`
 
@@ -439,7 +435,81 @@ and we can write: `\(f(x)=\frac{\alpha-1}{x_\text{min}}(\frac{x}{x_\text{min}})^
 💡 What do you need to check in order to verify this is a proper density function?
 ]
 
-Why do we like the Power Law distribution so much?
+---
+
+The CDF of `\(X\)`:
+
+`\(F_X(x)=\int_{-\infty}^x f(x)dx=C\int_{x_{\text{min}}}^x x^{-\alpha}dx=C \cdot [\frac{x^{1-\alpha}}{1-\alpha}]^x_{x_{\text{min}}}=\)`
+`\(\frac{\alpha - 1}{x^{1-\alpha}_\text{min}}[\frac{x^{1-\alpha}}{1-\alpha}-\frac{x_{\text{min}}^{1-\alpha}}{1-\alpha}]=1-(\frac{x}{x_{\text{min}}})^{1-\alpha}\)`
+
+The Expectation of `\(X\)`:
+
+`\(E(X)=\int_{-\infty}^{\infty} xf(x)dx=C\int_{x_{\text{min}}}^{\infty} x^{1-\alpha}dx=\frac{\alpha - 1}{x^{1-\alpha}_\text{min}}[\frac{x^{2-\alpha}}{2-\alpha}]^{\infty}_{x_\text{min}}=x_\text{min}(\frac{\alpha-1}{\alpha-2})\)`
+
+Where `\(E(X)\)` converges only if `\(\alpha&gt;2\)`.
+
+The MLE for `\(\alpha\)` is: `\(\hat\alpha=1+\frac{n}{\sum_i\ln(\frac{x_i}{x_\text{min}})}\)`
+
+.insight[
+💡 The MLE for `\(x_\text{min}\)` is...
+]
+
+---
+
+### Fitting the PL to our networks
+
+
+```python
+def fit_pl(G):
+  degree_seq = np.array(list(dict(G.degree()).values()))
+  d_min = np.min(degree_seq)
+  n = G.number_of_nodes()
+  if d_min == 0:
+    d_min = 1
+    degree_seq = degree_seq[degree_seq &gt;= 1]
+    n = len(degree_seq)
+  alpha = 1 + n/np.sum(np.log(degree_seq/d_min))
+  davg = np.mean(degree_seq)
+  Ed = dmin * (alpha - 1)/(alpha - 2) if alpha &gt; 2 else np.inf
+  dvar = np.var(degree_seq)
+  Ed2 = dmin**2 * (alpha - 1)/(alpha - 3) if alpha &gt; 3 else np.inf
+  Vd = Ed2 - (Ed)**2 if alpha &gt; 3 else np.inf
+  return d_min, alpha, davg, Ed, dvar, Vd
+```
+
+---
+
+
+```python
+dmin_e, alpha_e, davg_e, Ed_e, dvar_e, Vd_e = fit_pl(E)
+dmin_amz, alpha_amz, davg_amz, Ed_amz, dvar_amz, Vd_amz = fit_pl(Amz)
+dmin_ca, alpha_ca, davg_ca, Ed_ca, dvar_ca, Vd_ca = fit_pl(CA)
+
+pd.DataFrame({
+  'network': ['Escort', 'Amazon', 'Co-Authorship'],
+  'dmin': [dmin_e, dmin_amz, dmin_ca],
+  'alpha': [alpha_e, alpha_amz, alpha_ca],
+  'Avg(d)': [davg_e, davg_amz, davg_ca],
+  'E(d)': [Ed_e, Ed_amz, Ed_ca],
+  'Var(d)': [dvar_e, dvar_amz, dvar_ca],
+  'V(d)': [Vd_e, Vd_amz, Vd_ca],
+})
+```
+
+```
+##          network  dmin     alpha      Avg(d)  E(d)        Var(d)  V(d)
+## 0         Escort     1  1.262319  137.457930   inf  49816.740516   inf
+## 1         Amazon     1  1.691223    5.529855   inf     33.196380   inf
+## 2  Co-Authorship     1  1.439148   21.106968   inf    934.606926   inf
+```
+
+---
+
+&lt;img src="images/Degree-Hists3-1.png" width="100%" /&gt;
+
+---
+
+### Why do we like the Power Law distribution so much?
 
 - scale invariance
 - heavy tail
@@ -451,15 +521,19 @@ Why do we like the Power Law distribution so much?
 
 If we multiply `\(X\)` by constant `\(m\)` the density "scales":
 
-`\(f(mx)=C(mx)^{-\alpha}=Cm^{\alpha}x^{-\alpha}=C'x^{-\alpha}\propto f(x)\)`
+`\(f(mx)=C(mx)^{-\alpha}=Cm^{-\alpha}x^{-\alpha}=C'x^{-\alpha}\propto f(x)\)`
 
 Thus, `\(mX\)` will distribute Power-Law with the same `\(\alpha\)` parameter and a different constant.
 
-The relative likelihood between small and large events is the same, no matter what choice of “small” we make.
-
 .insight[
-💡 How would `\(mX\)` distribute if `\(X\)` distributed Normal?
+💡 How would `\(mX\)` distribute if `\(X\)` distributed Normal? Exponential?
 ]
+
+---
+
+Meaning, the relative likelihood between small and large events is the same, no matter what choice of "small" we make:
+
+&lt;img src="images/Scale-Invariance-1.png" width="80%" /&gt;
 
 ---
 
@@ -471,7 +545,18 @@ If we take the log-log transformation of the Power-Law distribution we get:
 
 Thus the log-log plot of Power-Law should show a straight line with slope `\(-\alpha\)`, and multiplying by `\(m\)` only changes the intercept.
 
-&lt;img src="images/Scale-Invariance-1.png" width="80%" /&gt;
+&lt;img src="images/Scale-Invariance2-1.png" width="80%" /&gt;
+
+---
+
+Seeing the log-log transformation with our distributions should also result in a straight line:
+
+
+```
+## &lt;string&gt;:6: RuntimeWarning: divide by zero encountered in log
+```
+
+&lt;img src="images/Degree-Hists4-1.png" width="100%" /&gt;
 
 ---
 
@@ -479,13 +564,18 @@ Thus the log-log plot of Power-Law should show a straight line with slope `\(-\a
 
 The `\(k\)`-th moment of the PL distribution converges only for `\(k &lt; \lfloor{\alpha-1}\rfloor\)`:
 
-`\(E(X^k)=\int_{x_\text{min}}^{\infty}x^kf(x)=\frac{\alpha-1}{x^{\alpha-1}_\text{min}}\int_{x_\text{min}}^{\infty}x^{k-\alpha}=x^k_\text{min}(\frac{\alpha-1}{\alpha-1-k})\)`
+`\(E(X^k)=\int_{x_\text{min}}^{\infty}x^kf(x)dx=\frac{\alpha-1}{x^{1-\alpha}_\text{min}}\int_{x_\text{min}}^{\infty}x^{k-\alpha}dx=x^k_\text{min}(\frac{\alpha-1}{\alpha-1-k})\)`
 
-So:
 - For `\(1&lt;\alpha\le2\)` the mean is infinite (and all higher moments)
 - For `\(2&lt;\alpha\le3\)` the mean is finite but the variance is infinite
 
 As a result, the PL distribution is very good for modeling extreme distributions, where we *expect* extreme values, as opposed to e.g. the Normal distribution.
+
+Also, if we sample from a typical PL distribution with `\(2&lt;\alpha&lt;3\)` the value could be "anywhere" and isn't confined by a scale parameter
+
+.insight[
+💡 When sampling from a Normal distribution, we can expect in 95% of cases...
+]
 
 ---
 
@@ -509,11 +599,11 @@ But the Pareto distribution is just a different formulation of the Power Law dis
 
 If `\(X\)` is "wealth" and we want to know what is the probability of being "wealthy", i.e. the part *of population* which holds at least `\(m\)` wealth:
 
-`\(P(X)=P(X&gt;m)=1-F_m(X)=\int_{m}^{\infty}Cx^{-\alpha}dx=(\frac{m}{x_\text{min}})^{1-\alpha}\)`
+`\(P(X)=P(X&gt;m)=1-F_X(m)=(\frac{m}{x_\text{min}})^{1-\alpha}\)`
 
 The part *of wealth* that those "wealthy" have is the division of expectations:
 
-`\(W(X) = \frac{E(X &gt; m)}{E(X)}=\frac{\int_{m}^{\infty}xCx^{-\alpha}dx}{x^k_\text{min}(\frac{\alpha-1}{\alpha-2})}=(\frac{m}{x_\text{min}})^{2-\alpha}\)`
+`\(W(X) = \frac{E(X &gt; m)}{E(X)}=\frac{\int_{m}^{\infty}xCx^{-\alpha}dx}{x_\text{min}(\frac{\alpha-1}{\alpha-2})}=(\frac{m}{x_\text{min}})^{2-\alpha}\)`
 
 ---
 
@@ -532,9 +622,46 @@ And this is how we get to the 80/20 rule without defining what wealthy is:
 
 class: section-slide
 
-# End of Detour
+# The Configuration Model
 
 ---
+
+### Scenario 1
+
+- We have a sequence of each node's degree: `\({k_1, ..., k_n}\)`
+- Each node is given a number of "stubs" of edges equal to its required degree.
+- Choose a random pair of stubs, connect.
+- From the stubs left, choose another random pair, connect.
+- Repeat until all stubs are left.
+
+&lt;img src = "images/Configuration-Model-Stubs.png" style="width: 40%"&gt;
+
+---
+
+### Scenario 2:
+
+- We have a degree *distribution*: `\({k_1:p_{k_1}, ..., k_m: p_{k_m}}\)` where `\(\sum_{i=1}^{m}p_{k_i}=1\)`
+- We sample `\(n\)` degrees from this distribution and continue as usual.
+
+.insight[
+💡 What if `\(p_{k_i}\)` is Poisson?
+]
+
+Finally notice that as with the ER model, we get a *distribution* of networks from every sequence or degree-distribution specified. And this distribution of networks is Uniform!
+
+---
+
+### Two issues
+
+.insight[
+💡 Try building a network with degree sequence `\(\{1,2,2\}\)`
+]
+
+1. If `\(m\)` is no. of edges `\(\sum_i k_i = 2m\)` --&gt; the sum of degrees must be even! Even those sampled from `\(p_{k_i}\)`
+
+2. Nothing preventing connecting two of node `\(i\)`'s stubs together
+Nothing preventing commcting nodes `\(i\)` and `\(j\)` more than once
+--&gt; Self-edges and multi-edges are possible! .font80percent[(But with large n chances are small)]
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
