@@ -130,7 +130,7 @@ Estimating `\(n\)`, `\(p\)` and `\(c\)` from our networks:
 
 ```python
 def estimate_p(m, n): return m / (n * (n - 1) / 2)
-def estimate_c(G): return np.mean(list(dict(G.degree()).values()))
+def estimate_c(G, l=1): return np.mean(np.array(list(dict(G.degree()).values()))**l)
 
 n_isr, n_sci, n_ru = I.number_of_nodes(), Sc.number_of_nodes(), Ru.number_of_nodes()
 m_isr, m_sci, m_ru = I.number_of_edges(), Sc.number_of_edges(), Ru.number_of_edges()
@@ -198,17 +198,28 @@ plt.show()
 
 ## Transitivity
 
-We have defined the Clustering Coefficient or Transitivity to be:
-
 `\(Transitivity(G)=\frac{\text{#closed triads}}{\text{#triads}}\)`
 
 In other words it is the probability of two neighbors of the same node to also be connected.
 
 .insight[
-💡 What is that probability in the ER model?
-
-What do you think of it after what you have seen?
+💡 What is that probability in the ER model? Reasonable?
 ]
+
+
+```python
+pd.DataFrame({'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
+  'n': [n_isr, n_sci, n_ru],
+  'p': [p_isr, p_sci, p_ru],
+  'transitivity': [nx.transitivity(I), nx.transitivity(Sc), nx.transitivity(Ru)]})
+```
+
+```
+##            network    n         p  transitivity
+## 0  Israeli Artists  321  0.007418      0.019231
+## 1     Sci-Fi Books   23  0.201581      0.522388
+## 2     RuPaul Verse  112  0.823520      0.888871
+```
 
 ---
 
@@ -224,7 +235,7 @@ It turns out this has a nice expression in the ER model:
 
 The average path length from a node to all other nodes is `\(\sim \frac{\ln(n)}{\ln(c)}\)`.
 
-Similarly one can show the diameter is `\(\sim 2\frac{\ln(n)}{\ln(c)}\)`
+Similarly one can show the diameter is `\(\sim \frac{\ln(n)}{\ln(c)}\)`
 
 ---
 
@@ -238,16 +249,16 @@ pd.DataFrame({
   'network': ['Israeli Artists', 'Sci-Fi Books', 'RuPaul Verse'],
   'n': [n_isr, n_sci, n_ru],
   'c': [c_isr, c_sci, c_ru],
-  '2ln(n)/ln(c)': [2 * np.log(n_isr)/np.log(c_isr), 2 * np.log(n_sci)/np.log(c_sci), 2 * np.log(n_ru)/np.log(c_ru)],
+  'ln(n)/ln(c)': [np.log(n_isr)/np.log(c_isr), np.log(n_sci)/np.log(c_sci), np.log(n_ru)/np.log(c_ru)],
   'd': [d_isr, d_sci, d_ru]
 })
 ```
 
 ```
-##            network    n          c  2ln(n)/ln(c)   d
-## 0  Israeli Artists  321   2.373832     13.352007  17
-## 1     Sci-Fi Books   23   4.434783      4.210190   5
-## 2     RuPaul Verse  112  91.410714      2.089976   3
+##            network    n          c  ln(n)/ln(c)   d
+## 0  Israeli Artists  321   2.373832     6.676003  17
+## 1     Sci-Fi Books   23   4.434783     2.105095   5
+## 2     RuPaul Verse  112  91.410714     1.044988   3
 ```
 
 .insight[
@@ -255,8 +266,6 @@ pd.DataFrame({
 ]
 
 ---
-
-
 
 ## The Giant Component
 
@@ -362,14 +371,14 @@ pd.DataFrame({
   'n': [n_isr, n_sci, n_ru],
   'c': [c_isr, c_sci, c_ru],
   'ln(n)': [np.log(n_isr), np.log(n_sci), np.log(n_ru)],
-  'stage': ['subcritcial', 'supercritical', 'connected']
+  'stage': ['supercritical', 'connected', 'connected']
 })
 ```
 
 ```
 ##            network    n          c     ln(n)          stage
-## 0  Israeli Artists  321   2.373832  5.771441    subcritcial
-## 1     Sci-Fi Books   23   4.434783  3.135494  supercritical
+## 0  Israeli Artists  321   2.373832  5.771441  supercritical
+## 1     Sci-Fi Books   23   4.434783  3.135494      connected
 ## 2     RuPaul Verse  112  91.410714  4.718499      connected
 ```
 
@@ -559,7 +568,7 @@ Seeing the log-log transformation with our distributions should also result in a
 
 &lt;img src="images/Degree-Hists4-1.png" width="100%" /&gt;
 
-😿
+🙍
 
 ---
 
@@ -653,6 +662,15 @@ P_h, W_h, WE_h = lorenz_curve(H, alpha_h)
 
 ---
 
+## Nice, but. 
+
+So we agree many large networks degree distributions behave Power-Law.
+
+- That is not a model of a how a network was formed, what process causes "scale-free" networks?
+- How do all *other* network metrics behave? Do we see improvement where the ER model did not make sense?
+
+---
+
 class: section-slide
 
 # The Configuration Model
@@ -677,7 +695,7 @@ class: section-slide
 - We sample `\(n\)` degrees from this distribution and continue as usual.
 
 .insight[
-💡 What if `\(p_{k_i}\)` is Poisson?
+💡 What if `\(p_{k_i}\)` is Poisson? What if it is Power-Law?
 ]
 
 Finally notice that as with the ER model, we get a *distribution* of networks from every sequence or degree-distribution specified. And this distribution of networks is Uniform!
@@ -695,6 +713,225 @@ Finally notice that as with the ER model, we get a *distribution* of networks fr
 2. Nothing preventing connecting two of node `\(i\)`'s stubs together
 Nothing preventing commcting nodes `\(i\)` and `\(j\)` more than once
 --&gt; Self-edges and multi-edges are possible! .font80percent[(But with large n chances are small)]
+
+---
+
+## Configuration model In NetworkX
+
+
+```python
+G = nx.configuration_model([1,2,3,4,6])
+print(G.degree())
+```
+
+```
+## [(0, 1), (1, 2), (2, 3), (3, 4), (4, 6)]
+```
+
+```python
+nx.draw_networkx(G)
+plt.show()
+```
+
+&lt;img src="images/Configuration-1.png" width="50%" /&gt;
+
+Unfortunately matplotlib cannot draw self edges easily 🤬
+
+---
+
+Again:
+
+
+```python
+G = nx.configuration_model([1,2,3,4,6])
+nx.draw_networkx(G)
+plt.show()
+```
+
+&lt;img src="images/Configuration2-1.png" width="50%" /&gt;
+
+Each such graph is a sample from the same sequence/distribution of degrees.
+
+---
+
+## Transitivity
+
+It can be shown that the Clustering Coefficient can be defined via the degree distribution moments:
+
+`\(Transitivity(G_{Conf})=\frac{1}{n}\frac{[E(D^2) - E(D)]^2}{E(D)^3}\)`
+
+Which can be estimated by: `\(\frac{1}{n}\frac{[\overline{D^2} - \overline D]^2}{\overline D^3}\)`
+
+In the case `\(D_G \sim Pois(\lambda)\)`:
+
+`\(Transitivity(G_{Conf})=\frac{1}{n}\frac{[\lambda + \lambda^2 - \lambda]^2}{\lambda^3}=\frac{\lambda}{n}\)`
+
+But `\(\lambda \approx np\)` under the ER model, so we get the original estimate: `\(Transitivity(G_{Conf})=p\)`
+
+---
+
+In the case `\(D_G \sim PL(\alpha,d_\text{min})\)`, notice this estimate will only be valid if `\(\alpha&gt;3\)`, otherwise the second moment does not converge:
+
+`\(Transitivity(G_{Conf})=\frac{1}{nx_\text{min}}[\frac{\alpha-2}{\alpha-1}](x_\text{min}[\frac{\alpha-2 }{\alpha-3}]-1)^2\)`
+
+So we now have a way of seeing the actual Transitivity of our networks, vs. a theoretical result of two models:
+
+
+```python
+def transitivity_conf(G):
+  D = estimate_c(G, l=1)
+  D2 = estimate_c(G, l=2)
+  n = G.number_of_nodes()
+  return (1/n)*((D2-D)**2/(D**3))
+
+def transitivity_pl_theoretical(n, alpha, dmin):
+  if dmin &gt; 0 and alpha &gt; 3:
+    return (1/(alpha*dmin)) * ((alpha-2)/(alpha-1)) * (dmin*(alpha-2)/(alpha-3)-1)**2
+  else:
+    return np.nan
+```
+
+---
+
+
+```python
+tc_e = transitivity_conf(E); tpl_e = transitivity_pl_theoretical(n_e, alpha_e, dmin_e)
+tc_eu = transitivity_conf(Euro); tpl_eu = transitivity_pl_theoretical(n_eu, alpha_eu, dmin_eu)
+tc_h = transitivity_conf(H); tpl_h = transitivity_pl_theoretical(n_h, alpha_h, dmin_h)
+
+pd.DataFrame({
+  'network': ['Escort', 'EuroRoad', 'Hyves'],
+  'Trans_actual': [0.377628, nx.transitivity(Euro), 0.001559],
+  'Trans_ER': [p_e, p_eu, p_h],
+  'Trans_conf': [tc_e, tc_eu, tc_h],
+  'Trans_pl_theoretical': [tpl_e, tpl_eu, tpl_h]})
+```
+
+```
+##     network  Trans_actual  Trans_ER  Trans_conf  Trans_pl_theoretical
+## 0    Escort      0.377628  0.013086    0.186232                   NaN
+## 1  EuroRoad      0.033886  0.002058    0.001410                   NaN
+## 2     Hyves      0.001559  0.000003    0.048872                   NaN
+```
+
+- The Configuration model is (maybe) slightly better than ER in estimating Transitivity
+- For large networks I input the actual Transitivity (too long! that's why we need an estimator)
+- But it seems that with these types of Random Graphs models, estimating Transitivity is hard
+
+---
+
+## Diameter
+
+It can be shown that the maximal shortest distance between any pair of nodes in the Configuration model is:
+
+`\(Diameter(G_{Conf})=\frac{\ln(n)}{\ln(\frac{E(D^2)-E(D)}{E(D)})}\)`
+
+Which can be estimated by: `\(\frac{\ln(n)}{\ln(\frac{\overline{D^2}- \overline D}{\overline D})}\)`
+
+In the case `\(D_G \sim Pois(\lambda)\)`:
+
+`\(Diameter(G_{Conf})=\frac{\ln(n)}{\ln(\frac{\lambda + \lambda^2- \lambda}{\lambda})}=\frac{\ln(n)}{\ln(\lambda)}\)`
+
+But `\(\lambda \approx np \approx c\)` under the ER model, so we get the original number: `\(Diameter(G_{Conf})=\frac{\ln(n)}{\ln(c)}\)`
+
+---
+
+In the case `\(D_G \sim PL(\alpha,d_\text{min})\)`, again this estimate is only valid if `\(\alpha&gt;3\)`, otherwise the second moment does not converge:
+
+`\(Diameter(G_{Conf})=\frac{\ln(n)}{\ln(x_\text{min}[\frac{\alpha-2}{\alpha-3}]-1)}\)`
+
+
+```python
+def diameter_conf(G):
+  D = estimate_c(G, l=1)
+  D2 = estimate_c(G, l=2)
+  n = G.number_of_nodes()
+  return np.log(n) / np.log((D2-D)/D)
+
+def diameter_pl_theoretical(n, alpha, dmin):
+  if dmin &gt; 0 and alpha &gt; 3:
+    return np.log(n) / np.log(dmin * (alpha - 2)/(alpha - 3) - 1)
+  else:
+    return np.nan
+```
+
+---
+
+
+```python
+dc_e = diameter_conf(E); dpl_e = diameter_pl_theoretical(n_e, alpha_e, dmin_e)
+dc_eu = diameter_conf(Euro); dpl_eu = diameter_pl_theoretical(n_eu, alpha_eu, dmin_eu)
+dc_h = diameter_conf(H); dpl_h = diameter_pl_theoretical(n_h, alpha_h, dmin_h)
+
+pd.DataFrame({
+  'network': ['Escort', 'EuroRoad', 'Hyves'],
+  'Diameter_actual': ['?', '62*', 10],
+  'Diameter_ER': [np.log(n_e)/np.log(c_e), np.log(n_eu)/np.log(c_eu), np.log(n_h)/np.log(c_h)],
+  'Diameter_conf': [dc_e, dc_eu, dc_h],
+})
+```
+
+```
+##     network Diameter_actual  Diameter_ER  Diameter_conf
+## 0    Escort               ?     1.887754       1.484283
+## 1  EuroRoad             62*     8.020417      10.202411
+## 2     Hyves              10    10.284093       2.262518
+```
+
+---
+
+## The Giant Component
+
+In the ER model we found:
+
+&lt;img src = "images/gcc_vs_c.png" style="width: 100%"&gt;
+
+.insight[
+💡 What is the maximum value `\(c\)` can reach?
+]
+
+In the Configuration model we find a similar pattern. It can be shown that once `\(E(D^2)&gt;2E(D)\)` (estimated by `\(\overline{D^2}&gt;2\overline{D}\)`) the giant component starts forming, until the network is fully connected.
+
+---
+
+In the case `\(D_G \sim Pois(\lambda)\)` this means `\(\lambda &gt; 1\)` but again we note `\(\lambda=c\)` and this is the original ER critical point.
+
+In the case `\(D_G \sim PL(\alpha,d_\text{min})\)` it can be shown the critical point is determined by `\(\alpha\)` and `\(d_\text{min}\)`. But for a pure PL distribution one can show:
+
+- for `\(\alpha &gt; 3.478\)` we would expect a subcritical phase and no giant component
+- once `\(\alpha&lt;3.478\)` (critical point) the giant component starts to emerge
+- for `\(2&lt;\alpha\le3\)` the second moment is infinite, the first moment is finite and so the `\(E(D^2)&gt;2E(D)\)` definitely holds an we are still in the supercritical phase
+- for `\(\alpha&lt;2\)` the network is fully connected
+
+---
+
+## Configuration Model Summary
+
+Models well:
+- Diameter, average path length
+- Giant Component, Percolation, Network Robustness
+- Degree Distribution
+
+Does not model well:
+- Transitivity (CC)
+- Communities
+- Homophily
+
+---
+
+### Why model networks?
+
+- Know your network better:
+  - how it was formed
+  - what class it belongs to (clustering)
+  - how and why it deviates from model
+- Predict behavior in network:
+  - epidemic spread/resistance
+  - search
+  - link prediction
+  - node disambiguation
+- Generalization
+- Simulations and the ability to estimate metrics on huge networks
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
