@@ -4,7 +4,7 @@
     <title>Network Models</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-01-30" />
+    <meta name="date" content="2020-01-31" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-01-30
+### 2020-01-31
 
 ---
 
@@ -398,17 +398,17 @@ class: section-slide
 Let's see some larger real-life networks:
 
 - The clients of a high-end Brazilian escort service, connected by whether they hired the same escort
-- Amazon products, scraped online, connected by whether they are recommended with each other
-- Astrophysics researchers co-authorship network
+- European cities, connected by whether a E-Road connects them
+- Hyves - A Dutch social network
 
 
 
 
 ```
-##            network       n       m         p           c     S
-## 0           Escort   10106  668183  0.013086  132.234910  0.96
-## 1  Amazon Products  334863  925872  0.000017    5.529855  1.00
-## 2     CoAuthorship   18772  198110  0.001124   21.106968  0.95
+##     network        n        m         p           c     S
+## 0    Escort    10106   668183  0.013086  132.234910  0.96
+## 1  EuroRoad     1174     1417  0.002058    2.413969  0.89
+## 2     Hyves  1402673  2777419  0.000003    3.960180  1.00
 ```
 
 ---
@@ -450,8 +450,8 @@ Where `\(E(X)\)` converges only if `\(\alpha&gt;2\)`.
 
 The MLE for `\(\alpha\)` is: `\(\hat\alpha=1+\frac{n}{\sum_i\ln(\frac{x_i}{x_\text{min}})}\)`
 
-.insight[
-💡 The MLE for `\(x_\text{min}\)` is...
+.warning[
+💡 The estimate for `\(x_\text{min}\)` is not simply `\(min(X)\)`! With empirical data it is best advised to first estimate `\(x_\text{min}\)`, i.e. from *where* the distribution behaves like PL. See [Clauset et. al.](https://arxiv.org/abs/0706.1062) article and the [powerlaw](https://github.com/jeffalstott/powerlaw) library.
 ]
 
 ---
@@ -462,17 +462,18 @@ The MLE for `\(\alpha\)` is: `\(\hat\alpha=1+\frac{n}{\sum_i\ln(\frac{x_i}{x_\te
 ```python
 def fit_pl(G):
   degree_seq = np.array(list(dict(G.degree()).values()))
-  d_min = np.min(degree_seq)
   n = G.number_of_nodes()
+  # estimating d_min as min(d) is NOT right!
+  d_min = np.min(degree_seq)
   if d_min == 0:
     d_min = 1
     degree_seq = degree_seq[degree_seq &gt;= 1]
     n = len(degree_seq)
   alpha = 1 + n/np.sum(np.log(degree_seq/d_min))
   davg = np.mean(degree_seq)
-  Ed = dmin * (alpha - 1)/(alpha - 2) if alpha &gt; 2 else np.inf
+  Ed = d_min * (alpha - 1)/(alpha - 2) if alpha &gt; 2 else np.inf
   dvar = np.var(degree_seq)
-  Ed2 = dmin**2 * (alpha - 1)/(alpha - 3) if alpha &gt; 3 else np.inf
+  Ed2 = d_min**2 * (alpha - 1)/(alpha - 3) if alpha &gt; 3 else np.inf
   Vd = Ed2 - (Ed)**2 if alpha &gt; 3 else np.inf
   return d_min, alpha, davg, Ed, dvar, Vd
 ```
@@ -482,25 +483,25 @@ def fit_pl(G):
 
 ```python
 dmin_e, alpha_e, davg_e, Ed_e, dvar_e, Vd_e = fit_pl(E)
-dmin_amz, alpha_amz, davg_amz, Ed_amz, dvar_amz, Vd_amz = fit_pl(Amz)
-dmin_ca, alpha_ca, davg_ca, Ed_ca, dvar_ca, Vd_ca = fit_pl(CA)
+dmin_eu, alpha_eu, davg_eu, Ed_eu, dvar_eu, Vd_eu = fit_pl(Euro)
+dmin_h, alpha_h, davg_h, Ed_h, dvar_h, Vd_h = fit_pl(H)
 
 pd.DataFrame({
-  'network': ['Escort', 'Amazon', 'Co-Authorship'],
-  'dmin': [dmin_e, dmin_amz, dmin_ca],
-  'alpha': [alpha_e, alpha_amz, alpha_ca],
-  'Avg(d)': [davg_e, davg_amz, davg_ca],
-  'E(d)': [Ed_e, Ed_amz, Ed_ca],
-  'Var(d)': [dvar_e, dvar_amz, dvar_ca],
-  'V(d)': [Vd_e, Vd_amz, Vd_ca],
+  'network': ['Escort', 'EuroRoad', 'Hyves'],
+  'dmin': [dmin_e, dmin_eu, dmin_h],
+  'alpha': [alpha_e, alpha_eu, alpha_h],
+  'Avg(d)': [davg_e, davg_eu, davg_h],
+  'E(d)': [Ed_e, Ed_eu, Ed_h],
+  'Var(d)': [dvar_e, dvar_eu, dvar_h],
+  'V(d)': [Vd_e, Vd_eu, Vd_h],
 })
 ```
 
 ```
-##          network  dmin     alpha      Avg(d)  E(d)        Var(d)  V(d)
-## 0         Escort     1  1.262319  137.457930   inf  49816.740516   inf
-## 1         Amazon     1  1.691223    5.529855   inf     33.196380   inf
-## 2  Co-Authorship     1  1.439148   21.106968   inf    934.606926   inf
+##     network  dmin     alpha      Avg(d)      E(d)        Var(d)  V(d)
+## 0    Escort     1  1.262319  137.457930       inf  49816.740516   inf
+## 1  EuroRoad     1  2.289899    2.413969  4.449473      1.412956   inf
+## 2     Hyves     1  2.658003    3.960180  2.519750   2051.663316   inf
 ```
 
 ---
@@ -549,14 +550,26 @@ Thus the log-log plot of Power-Law should show a straight line with slope `\(-\a
 
 ---
 
-Seeing the log-log transformation with our distributions should also result in a straight line:
+Seeing the log-log transformation with our distributions should also result in a straight line with a slope roughly `\(-\alpha\)`:
 
 
 ```
-## &lt;string&gt;:6: RuntimeWarning: divide by zero encountered in log
+## &lt;string&gt;:7: RuntimeWarning: divide by zero encountered in log
 ```
 
 &lt;img src="images/Degree-Hists4-1.png" width="100%" /&gt;
+
+😿
+
+---
+
+### Do not estimate `\(\alpha\)` from log-log plots
+
+This does not look "good" for a few reasons:
+- `\(n\)`, choice of log
+- We did not estimate `\(x_\text{min}\)` correctly (and therefor `\(\alpha\)`), using simply the minimum degree
+- log-log plots, even when done right, are misleading, do not extrapolate `\(\alpha\)` out of them
+- Maybe the PL fit is useful but just not right
 
 ---
 
@@ -611,13 +624,33 @@ So, being wealthy isn't dependent on `\(m\)`, only on `\(\alpha\)`:
 
 `\(W(X)=P(X)^{\frac{\alpha-2}{\alpha-1}}\)`
 
-And this is how we get to the 80/20 rule without defining what wealthy is:
+And this is how we get to the 80/20 rule without defining what wealthy is, the Lorenz curve:
 
 &lt;img src = "images/PL-Pareto-Rule.png" style="width: 100%"&gt;
 
 .insight[
-💡 The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the United States (data from the Forbes 400, 2003)!
+💡 The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the USA (data from the Forbes, 2003)!
 ]
+
+---
+
+
+```python
+def lorenz_curve(G, alpha):
+  deg = [deg for node, deg in G.degree()]
+  deg_sorted = np.array(sorted(deg, reverse=True))
+  W = deg_sorted.cumsum() / deg_sorted.sum()
+  P = np.linspace(0.0, 1.0, W.size)
+  alpha = alpha if alpha &gt; 2 else 2.2
+  WE = P**((alpha-2)/(alpha-1))
+  return P, W, WE
+P_e, W_e, WE_e = lorenz_curve(E, alpha_e)
+P_eu, W_eu, WE_eu = lorenz_curve(Euro, alpha_eu)
+P_h, W_h, WE_h = lorenz_curve(H, alpha_h)
+```
+
+&lt;img src="images/Lorenz-Curves-1.png" width="90%" /&gt;
+
 ---
 
 class: section-slide

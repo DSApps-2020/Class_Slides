@@ -53,7 +53,7 @@ def degree_hist(G, xlabel='Degree', ylabel='Freq'):
 
 def degree_hist_with_pl_fit(G, alpha, dmin, xlabel='Degree', ylabel='%Freq or f(d)'):
   deg = [deg for node, deg in G.degree()]
-  N, bins, patches = plt.hist(deg, density=True, bins=range(dmin, 1000))
+  N, bins, patches = plt.hist(deg, density=True, bins=range(dmin, min(max(deg), 1000)))
   d = bins
   f_d = ((alpha-1)/dmin**alpha)*(d/dmin)**(-alpha)
   plt.plot(d, f_d, color='red')
@@ -62,14 +62,22 @@ def degree_hist_with_pl_fit(G, alpha, dmin, xlabel='Degree', ylabel='%Freq or f(
   plt.ylabel(ylabel, fontsize=16)
 
 def degree_hist_with_pl_fit_log_log(G, alpha, dmin, xlabel='log(Degree)', ylabel='log(%Freq) or log(f(d))'):
+  max_pow = 9
   deg = [deg for node, deg in G.degree() if deg > 0]
-  N, bins = np.histogram(deg, bins = list(np.exp(np.arange(9))))
-  d = np.exp(np.arange(1, 9))
+  N, bins = np.histogram(deg, bins = list(np.exp(np.arange(max_pow))))
+  d = np.exp(np.arange(1, max_pow))
   f_d = ((alpha-1)/dmin)*(d/dmin)**(-alpha)
-  plt.plot(np.arange(1, 9), np.log(N/len(deg)), 'bo')
-  plt.plot(np.arange(1, 9), np.log(f_d), color='red')
+  plt.plot(np.arange(1, max_pow), np.log(N/len(deg)), 'bo')
+  plt.plot(np.arange(1, max_pow), np.log(f_d), color='red')
   plt.xlabel(xlabel, fontsize=16)
   plt.ylabel(ylabel, fontsize=12)
+
+def plot_lorenz_curve(P, W, WE, xlabel='P', ylabel='W'):
+  plt.plot(P, W, linestyle=':')
+  plt.plot(P, WE, color='red')
+  plt.plot([0,1], [0,1], color='black', linestyle='--')
+  plt.xlabel(xlabel, fontsize=16)
+  plt.ylabel(ylabel, fontsize=16)
 ```
 
 class: section-slide
@@ -432,8 +440,8 @@ class: section-slide
 Let's see some larger real-life networks:
 
 - The clients of a high-end Brazilian escort service, connected by whether they hired the same escort
-- Amazon products, scraped online, connected by whether they are recommended with each other
-- Astrophysics researchers co-authorship network
+- European cities, connected by whether a E-Road connects them
+- Hyves - A Dutch social network
 
 ```{python, echo=FALSE}
 # escort = pd.read_csv('../data/escort.csv', skiprows=24,
@@ -450,29 +458,29 @@ isolated_clients = pd.read_csv('../data/escort_clients_isolated.csv')['isolated_
 E = nx.from_pandas_edgelist(escort)
 E.add_nodes_from(isolated_clients)
 
-amazon = pd.read_csv("../data/com-amazon.ungraph.txt", skiprows=4, sep='\t', names=['source', 'target'])
-Amz = nx.from_pandas_edgelist(amazon)
+hyves = pd.read_csv('../data/hyves.zip', skiprows=1, sep=' ', names=['source', 'target'], usecols=[0, 1])
+H =nx.from_pandas_edgelist(hyves)
 
-astro = pd.read_csv("../data/CA-AstroPh.txt", skiprows=4, sep='\t', names=['source', 'target'])
-CA = nx.from_pandas_edgelist(astro)
+euroroad = pd.read_csv('../data/euroroad.net', skiprows=1185, sep=' ', names=['source', 'target'], header=None)
+Euro =nx.from_pandas_edgelist(euroroad)
 ```
 
 ```{python, echo=FALSE}
 def size_of_GCC(G): return round(len(max(nx.connected_components(G), key=len))/G.number_of_nodes(), 2)
 
-n_e, n_amz, n_ca = E.number_of_nodes(), Amz.number_of_nodes(), CA.number_of_nodes()
-m_e, m_amz, m_ca = E.number_of_edges(), Amz.number_of_edges(), CA.number_of_edges()
-p_e, p_amz, p_ca = estimate_p(m_e, n_e), estimate_p(m_amz, n_amz), estimate_p(m_ca, n_ca)
-c_e, c_amz, c_ca = estimate_c(E), estimate_c(Amz), estimate_c(CA)
-S_e, S_amz, S_ca = size_of_GCC(E), size_of_GCC(Amz), size_of_GCC(CA)
+n_e, n_eu, n_h = E.number_of_nodes(), Euro.number_of_nodes(), H.number_of_nodes()
+m_e, m_eu, m_h = E.number_of_edges(), Euro.number_of_edges(), H.number_of_edges()
+p_e, p_eu, p_h = estimate_p(m_e, n_e), estimate_p(m_eu, n_eu), estimate_p(m_h, n_h)
+c_e, c_eu, c_h = estimate_c(E), estimate_c(Euro), estimate_c(H)
+S_e, S_eu, S_h = size_of_GCC(E), size_of_GCC(Euro), size_of_GCC(H)
 
 pd.DataFrame({
-  'network': ['Escort', 'Amazon Products', 'CoAuthorship'],
-  'n': [n_e, n_amz, n_ca],
-  'm': [m_e, m_amz, m_ca],
-  'p': [p_e, p_amz, p_ca],
-  'c': [c_e, c_amz, c_ca],
-  'S': [S_e, S_amz, S_ca]
+  'network': ['Escort', 'EuroRoad', 'Hyves'],
+  'n': [n_e, n_eu, n_h],
+  'm': [m_e, m_eu, m_h],
+  'p': [p_e, p_eu, p_h],
+  'c': [c_e, c_eu, c_h],
+  'S': [S_e, S_eu, S_h]
 })
 ```
 
@@ -486,9 +494,9 @@ plt.gcf().subplots_adjust(bottom=0.15)
 plt.subplot(1, 3, 1)
 degree_hist(E, xlabel='')
 plt.subplot(1, 3, 2)
-degree_hist(Amz, ylabel='')
+degree_hist(Euro, ylabel='')
 plt.subplot(1, 3, 3)
-degree_hist(CA, xlabel='', ylabel='')
+degree_hist(H, xlabel='', ylabel='')
 plt.show()
 ```
 
@@ -525,8 +533,8 @@ Where $E(X)$ converges only if $\alpha>2$.
 
 The MLE for $\alpha$ is: $\hat\alpha=1+\frac{n}{\sum_i\ln(\frac{x_i}{x_\text{min}})}$
 
-.insight[
-`r emo::ji("bulb")` The MLE for $x_\text{min}$ is...
+.warning[
+`r emo::ji("bulb")` The estimate for $x_\text{min}$ is not simply $min(X)$! With empirical data it is best advised to first estimate $x_\text{min}$, i.e. from *where* the distribution behaves like PL. See [Clauset et. al.](https://arxiv.org/abs/0706.1062) article and the [powerlaw](https://github.com/jeffalstott/powerlaw) library.
 ]
 
 ---
@@ -536,17 +544,18 @@ The MLE for $\alpha$ is: $\hat\alpha=1+\frac{n}{\sum_i\ln(\frac{x_i}{x_\text{min
 ```{python}
 def fit_pl(G):
   degree_seq = np.array(list(dict(G.degree()).values()))
-  d_min = np.min(degree_seq)
   n = G.number_of_nodes()
+  # estimating d_min as min(d) is NOT right!
+  d_min = np.min(degree_seq)
   if d_min == 0:
     d_min = 1
     degree_seq = degree_seq[degree_seq >= 1]
     n = len(degree_seq)
   alpha = 1 + n/np.sum(np.log(degree_seq/d_min))
   davg = np.mean(degree_seq)
-  Ed = dmin * (alpha - 1)/(alpha - 2) if alpha > 2 else np.inf
+  Ed = d_min * (alpha - 1)/(alpha - 2) if alpha > 2 else np.inf
   dvar = np.var(degree_seq)
-  Ed2 = dmin**2 * (alpha - 1)/(alpha - 3) if alpha > 3 else np.inf
+  Ed2 = d_min**2 * (alpha - 1)/(alpha - 3) if alpha > 3 else np.inf
   Vd = Ed2 - (Ed)**2 if alpha > 3 else np.inf
   return d_min, alpha, davg, Ed, dvar, Vd
 ```
@@ -555,17 +564,17 @@ def fit_pl(G):
 
 ```{python}
 dmin_e, alpha_e, davg_e, Ed_e, dvar_e, Vd_e = fit_pl(E)
-dmin_amz, alpha_amz, davg_amz, Ed_amz, dvar_amz, Vd_amz = fit_pl(Amz)
-dmin_ca, alpha_ca, davg_ca, Ed_ca, dvar_ca, Vd_ca = fit_pl(CA)
+dmin_eu, alpha_eu, davg_eu, Ed_eu, dvar_eu, Vd_eu = fit_pl(Euro)
+dmin_h, alpha_h, davg_h, Ed_h, dvar_h, Vd_h = fit_pl(H)
 
 pd.DataFrame({
-  'network': ['Escort', 'Amazon', 'Co-Authorship'],
-  'dmin': [dmin_e, dmin_amz, dmin_ca],
-  'alpha': [alpha_e, alpha_amz, alpha_ca],
-  'Avg(d)': [davg_e, davg_amz, davg_ca],
-  'E(d)': [Ed_e, Ed_amz, Ed_ca],
-  'Var(d)': [dvar_e, dvar_amz, dvar_ca],
-  'V(d)': [Vd_e, Vd_amz, Vd_ca],
+  'network': ['Escort', 'EuroRoad', 'Hyves'],
+  'dmin': [dmin_e, dmin_eu, dmin_h],
+  'alpha': [alpha_e, alpha_eu, alpha_h],
+  'Avg(d)': [davg_e, davg_eu, davg_h],
+  'E(d)': [Ed_e, Ed_eu, Ed_h],
+  'Var(d)': [dvar_e, dvar_eu, dvar_h],
+  'V(d)': [Vd_e, Vd_eu, Vd_h],
 })
 ```
 
@@ -577,9 +586,9 @@ plt.gcf().subplots_adjust(bottom=0.15)
 res = plt.subplot(1, 3, 1)
 degree_hist_with_pl_fit(E, alpha_e, dmin_e, xlabel='')
 res = plt.subplot(1, 3, 2)
-degree_hist_with_pl_fit(Amz, alpha_amz, dmin_amz, ylabel='')
+degree_hist_with_pl_fit(Euro, alpha_eu, dmin_eu, ylabel='')
 res = plt.subplot(1, 3, 3)
-degree_hist_with_pl_fit(CA, alpha_ca, dmin_ca, xlabel='', ylabel='')
+degree_hist_with_pl_fit(H, alpha_h, dmin_h, xlabel='', ylabel='')
 plt.show()
 ```
 
@@ -647,7 +656,7 @@ legend("topright", legend = paste0("m=", 1:3), col = 1:3, lty = 1)
 
 ---
 
-Seeing the log-log transformation with our distributions should also result in a straight line:
+Seeing the log-log transformation with our distributions should also result in a straight line with a slope roughly $-\alpha$:
 
 ```{python Degree-Hists4, echo=FALSE, fig.asp=0.5, out.width="100%"}
 res = plt.figure()
@@ -655,11 +664,23 @@ plt.gcf().subplots_adjust(bottom=0.15)
 res = plt.subplot(1, 3, 1)
 degree_hist_with_pl_fit_log_log(E, alpha_e, dmin_e, xlabel='')
 res = plt.subplot(1, 3, 2)
-degree_hist_with_pl_fit_log_log(Amz, alpha_amz, dmin_amz, ylabel='')
+degree_hist_with_pl_fit_log_log(Euro, alpha_eu, dmin_eu, ylabel='')
 res = plt.subplot(1, 3, 3)
-degree_hist_with_pl_fit_log_log(CA, alpha_ca, dmin_ca, xlabel='', ylabel='')
+degree_hist_with_pl_fit_log_log(H, alpha_h, dmin_h, xlabel='', ylabel='')
 plt.show()
 ```
+
+`r emo::ji("sad")`
+
+---
+
+### Do not estimate $\alpha$ from log-log plots
+
+This does not look "good" for a few reasons:
+- $n$, choice of log
+- We did not estimate $x_\text{min}$ correctly (and therefor $\alpha$), using simply the minimum degree
+- log-log plots, even when done right, are misleading, do not extrapolate $\alpha$ out of them
+- Maybe the PL fit is useful but just not right
 
 ---
 
@@ -714,13 +735,42 @@ So, being wealthy isn't dependent on $m$, only on $\alpha$:
 
 $W(X)=P(X)^{\frac{\alpha-2}{\alpha-1}}$
 
-And this is how we get to the 80/20 rule without defining what wealthy is:
+And this is how we get to the 80/20 rule without defining what wealthy is, the Lorenz curve:
 
 <img src = "images/PL-Pareto-Rule.png" style="width: 100%">
 
 .insight[
-`r emo::ji("bulb")` The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the United States (data from the Forbes 400, 2003)!
+`r emo::ji("bulb")` The dashed line shows the empirical Lorenz curve for the wealthiest individuals in the USA (data from the Forbes, 2003)!
 ]
+
+---
+
+```{python}
+def lorenz_curve(G, alpha):
+  deg = [deg for node, deg in G.degree()]
+  deg_sorted = np.array(sorted(deg, reverse=True))
+  W = deg_sorted.cumsum() / deg_sorted.sum()
+  P = np.linspace(0.0, 1.0, W.size)
+  alpha = alpha if alpha > 2 else 2.2
+  WE = P**((alpha-2)/(alpha-1))
+  return P, W, WE
+P_e, W_e, WE_e = lorenz_curve(E, alpha_e)
+P_eu, W_eu, WE_eu = lorenz_curve(Euro, alpha_eu)
+P_h, W_h, WE_h = lorenz_curve(H, alpha_h)
+```
+
+```{python Lorenz-Curves, echo=FALSE, fig.asp=0.5, out.width="90%"}
+res = plt.figure()
+plt.gcf().subplots_adjust(bottom=0.15)
+res = plt.subplot(1, 3, 1)
+plot_lorenz_curve(P_e, W_e, WE_e, xlabel='')
+res = plt.subplot(1, 3, 2)
+plot_lorenz_curve(P_eu, W_eu, WE_eu, ylabel='')
+res = plt.subplot(1, 3, 3)
+plot_lorenz_curve(P_h, W_h, WE_h, xlabel='', ylabel='')
+plt.show()
+```
+
 ---
 
 class: section-slide
