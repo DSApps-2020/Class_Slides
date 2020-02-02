@@ -953,7 +953,7 @@ dc_h = diameter_conf(H); dpl_h = diameter_pl_theoretical(n_h, alpha_h, dmin_h)
 
 pd.DataFrame({
   'network': ['Escort', 'EuroRoad', 'Hyves'],
-  'Diameter_actual': ['?', '62*', 10],
+  'Diameter_actual': ['8*', '62*', 10],
   'Diameter_ER': [np.log(n_e)/np.log(c_e), np.log(n_eu)/np.log(c_eu), np.log(n_h)/np.log(c_h)],
   'Diameter_conf': [dc_e, dc_eu, dc_h],
 })
