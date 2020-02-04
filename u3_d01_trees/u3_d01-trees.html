@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>The Trees</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Giora Simchoni" />
+    <meta name="date" content="2020-02-04" />
+    <head>
+      <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
+      <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
+    </head>
+    <link rel="stylesheet" href="..\slides.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## The Trees
+
+### Applications of Data Science - Class 11
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### 2020-02-04
+
+---
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+  &lt;span&gt;
+    &lt;a href="https://dsapps-2020.github.io/Class_Slides/" target="_blank"&gt;Applications of Data Science
+    &lt;/a&gt;
+  &lt;/span&gt;
+&lt;/div&gt;
+
+---
+
+
+
+class: section-slide
+
+# The Pros and Cons of Trees
+
+---
+
+## Pros
+
+- It's just a set of if-else statements my 7 y/o can get
+- Highly interpretable (when tree is not large)
+- Easy to implement
+- Fast? (to predict)
+- Handle all types of predictors (continuous, categorical)
+- Handle missing data, *predict* missing data
+- Assumption free
+- Feature selection built-in (but when predictors are correlated...)
+- Low bias, in general
+
+---
+
+## Cons
+
+- High variance, in general
+- Rectangular predictor regions - not always a good thing
+- Complexity of prediction limited in no. of leaves! (For a simple CART)
+- Not so fast? (to train)
+- Greedy
+- Selection Bias of predictors with more distinct values?
+- Variable Importance when predictors are correlated
+
+---
+
+class: section-slide
+
+# Detour: A Regression Problem
+
+---
+
+### OKCupid: Predicting Annual Income
+
+It won't be easy:
+
+
+```r
+okcupid &lt;- read_csv("../data/okcupid.csv.zip")
+
+okcupid %&gt;% count(income, sort = TRUE) %&gt;% head(20)
+```
+
+```
+## # A tibble: 13 x 2
+##     income     n
+##      &lt;dbl&gt; &lt;int&gt;
+##  1      -1 48442
+##  2   20000  2952
+##  3  100000  1621
+##  4   80000  1111
+##  5   30000  1048
+##  6   40000  1005
+##  7   50000   975
+##  8   60000   736
+##  9   70000   707
+## 10  150000   631
+## 11 1000000   521
+## 12  250000   149
+## 13  500000    48
+```
+
+---
+
+We will stick to non-NA (income) observations, and predict `\(\log_{10}(income/100000)\)`:
+
+
+```r
+okcupid2 &lt;- okcupid %&gt;%
+  mutate(income = ifelse(income == -1, NA, log10(income/100000))) %&gt;%
+  drop_na(income)
+```
+
+
+
+In the vector `predictors` .font80percent[(see slides Rmd source)] we have 42 continuous and categorical variables which may or may not be predictive to income:
+
+
+```r
+okcupid2 &lt;- okcupid2 %&gt;%
+  select(income, predictors) %&gt;%
+  mutate(id = 1:n())
+
+dim(okcupid2)
+```
+
+```
+## [1] 11504    44
+```
+
+---
+
+
+```r
+glimpse(okcupid2)
+```
+
+```
+## Observations: 11,504
+## Variables: 44
+## $ income                &lt;dbl&gt; -0.09691001, -0.69897000, -0.39794001, -...
+## $ age                   &lt;dbl&gt; 35, 23, 28, 30, 29, 40, 31, 22, 35, 31, ...
+## $ height_cm             &lt;dbl&gt; 177.80, 180.34, 182.88, 167.64, 157.48, ...
+## $ sex                   &lt;fct&gt; m, m, m, f, f, m, f, m, m, f, m, m, f, m...
+## $ body_type             &lt;fct&gt; average, thin, average, skinny, thin, fi...
+## $ body_type_not_perfect &lt;fct&gt; TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, ...
+## $ diet2                 &lt;fct&gt; other, vegetarian, anything, anything, a...
+## $ drinks                &lt;fct&gt; often, socially, socially, socially, soc...
+## $ drugs                 &lt;fct&gt; sometimes, NA, never, never, never, NA, ...
+## $ religion2             &lt;fct&gt; atheist, NA, christian, christian, chris...
+## $ education2            &lt;fct&gt; other, student1, degree1, high_school, s...
+## $ education_kind        &lt;fct&gt; working, working, graduated, graduated, ...
+## $ education_academic    &lt;fct&gt; FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, ...
+## $ ethnicity2            &lt;fct&gt; white, white, white, white, other, white...
+## $ part_black            &lt;fct&gt; FALSE, FALSE, FALSE, FALSE, FALSE, FALSE...
+## $ part_white            &lt;fct&gt; TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, NA, ...
+## $ part_asian            &lt;fct&gt; FALSE, FALSE, FALSE, FALSE, FALSE, FALSE...
+## $ part_hispanic         &lt;fct&gt; FALSE, FALSE, FALSE, FALSE, TRUE, FALSE,...
+## $ job3                  &lt;fct&gt; travel, student, financial, marketing, o...
+## $ orientation           &lt;fct&gt; straight, straight, straight, straight, ...
+## $ pets_has_dogs         &lt;fct&gt; FALSE, FALSE, FALSE, TRUE, FALSE, FALSE,...
+## $ pets_has_cats         &lt;fct&gt; FALSE, FALSE, FALSE, FALSE, TRUE, FALSE,...
+## $ pets_likes_cats       &lt;fct&gt; TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NA...
+## $ pets_likes_dogs       &lt;fct&gt; TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, N...
+## $ sign_fun              &lt;fct&gt; FALSE, FALSE, FALSE, NA, FALSE, TRUE, NA...
+## $ sign_not_matter       &lt;fct&gt; FALSE, FALSE, TRUE, NA, FALSE, FALSE, NA...
+## $ sign_matters          &lt;fct&gt; FALSE, FALSE, FALSE, NA, FALSE, FALSE, N...
+## $ sign2                 &lt;fct&gt; cancer, pisces, leo, NA, taurus, gemini,...
+## $ speaks_spanish        &lt;fct&gt; TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, ...
+## $ speaks_french         &lt;fct&gt; TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, ...
+## $ speaks_german         &lt;fct&gt; FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,...
+## $ speaks_chinese        &lt;fct&gt; FALSE, FALSE, FALSE, FALSE, FALSE, FALSE...
+## $ status                &lt;fct&gt; single, single, seeing someone, single, ...
+## $ essay0_len            &lt;dbl&gt; 6.538163, 3.713962, 7.336296, NA, NA, 6....
+## $ essay1_len            &lt;dbl&gt; 3.951551, 3.713962, 6.095861, NA, 5.8435...
+## $ essay2_len            &lt;dbl&gt; 4.564515, 4.605330, 6.109283, NA, 6.4281...
+## $ essay3_len            &lt;dbl&gt; NA, 3.496992, 5.733393, NA, 4.204931, 4....
+## $ essay4_len            &lt;dbl&gt; 5.517517, 5.327954, 6.278551, NA, 6.9716...
+## $ essay5_len            &lt;dbl&gt; 5.723637, NA, 6.424895, NA, 4.812314, 5....
+## $ essay6_len            &lt;dbl&gt; NA, 3.258712, 5.459654, NA, 4.709674, 5....
+## $ essay7_len            &lt;dbl&gt; NA, NA, 4.709674, NA, 4.875319, 5.459654...
+## $ essay8_len            &lt;dbl&gt; 3.9123430, NA, 4.5645148, NA, 4.5434650,...
+## $ essay9_len            &lt;dbl&gt; NA, 3.045284, 5.669936, NA, 3.784553, 8....
+## $ id                    &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1...
+```
+
+---
+
+We split the data into training, validation and test sets:
+
+
+```r
+# test_idx &lt;- sample(1:nrow(okcupid2), 2000, replace = FALSE)
+# train_idx &lt;- okcupid2 %&gt;% filter(!id %in% test_idx) %&gt;% sample_n(8000) %&gt;% pull(id)
+# valid_idx &lt;- okcupid2 %&gt;% filter(!id %in% test_idx, !id %in% train_idx) %&gt;% pull(id)
+okcupid2 &lt;- okcupid2 %&gt;% select(-id)
+
+idx &lt;- read_rds("../data/okcupid_idx.rda")
+train_idx &lt;- idx$train_idx
+valid_idx &lt;- idx$valid_idx
+test_idx &lt;- idx$test_idx
+
+okcupid2_train &lt;- okcupid2[train_idx, ]
+okcupid2_valid &lt;- okcupid2[valid_idx, ]
+okcupid2_test &lt;- okcupid2[test_idx, ]
+
+library(glue)
+glue("train no. of rows: {nrow(okcupid2_train)}
+     validation no. of rows: {nrow(okcupid2_valid)}
+     test no. of rows: {nrow(okcupid2_test)}")
+```
+
+```
+## train no. of rows: 8000
+## validation no. of rows: 1504
+## test no. of rows: 2000
+```
+
+---
+
+Our transformed income dependent variable behaves "ok":
+
+
+```r
+ggplot(okcupid2_train, aes(income)) +
+  geom_histogram(fill = "red", alpha = 0.5) +
+  theme_classic()
+```
+
+&lt;img src="images/Income-Hist-1.png" width="100%" /&gt;
+
+---
+
+We can quickly see percentage of missing values with [`naniar`](http://naniar.njtierney.com/):
+
+
+```r
+library(naniar)
+
+vis_miss(okcupid2_train %&gt;%
+           sample_frac(0.2) %&gt;%
+           select(-starts_with("essay")))
+```
+
+&lt;img src="images/Missingness-1.png" width="100%" /&gt;
+
+---
+
+Also worth exploring some basic relations between predictors and income. You can use the work of others, e.g. [`ggpairs`](https://ggobi.github.io/ggally/):
+
+
+```r
+library(GGally)
+
+ggpairs(okcupid2_train %&gt;%
+          select(income, age, sex, height_cm, body_type_not_perfect))
+```
+
+&lt;img src="images/GGPairs-1.png" width="100%" /&gt;
+
+---
+
+But don't be ashamed of simply exploring on your own:
+
+
+```r
+cat_vs_income_boxplot &lt;- function(cat) {
+  ggplot(okcupid2_train, aes({{cat}}, income)) +
+  geom_boxplot() +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+```
+
+---
+
+
+```r
+cat_vs_income_boxplot(body_type)
+```
+
+&lt;img src="images/Body_Type-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+cat_vs_income_boxplot(sign2)
+```
+
+&lt;img src="images/Sign-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+cat_vs_income_boxplot(job3)
+```
+
+&lt;img src="images/Job-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+cat_vs_income_boxplot(education2)
+```
+
+&lt;img src="images/Edu-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+cat_vs_income_boxplot(religion2)
+```
+
+&lt;img src="images/Religion-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+cat_vs_income_boxplot(diet2)
+```
+
+&lt;img src="images/Diet-Income-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+ggpairs(okcupid2_train %&gt;%
+          select(essay0_len:essay2_len, income))
+```
+
+&lt;img src="images/Essay-Income-1.png" width="100%" /&gt;
+
+---
+
+### Baseline: Linear Regression
+
+R's `lm` function does not take `NA` values.
+
+One strategy is to impute these values using a "common" value such as the median for continuous variables and mode for categorical variables. This can easily be achieved with `naniar`:
+
+
+```r
+okcupid2_imp &lt;- naniar::impute_median_all(okcupid2)
+okcupid2_imp_train &lt;- okcupid2_imp[train_idx, ]
+okcupid2_imp_valid &lt;- okcupid2_imp[valid_idx, ]
+
+mod_lm &lt;- lm(income ~ ., data = okcupid2_imp_train)
+pred_lm &lt;- predict(mod_lm, okcupid2_imp_valid)
+
+rmse &lt;- function(obs, pred) sqrt(mean((obs - pred)^2))
+
+report_rmse_and_cor &lt;- function(obs, pred) {
+  RMSE &lt;- rmse(obs, pred)
+  CORR &lt;- cor(obs, pred)
+  glue("RMSE: {format(RMSE, digits = 3)}
+       CORR: {format(CORR, digits = 3)}")
+}
+```
+
+---
+
+
+```r
+report_rmse_and_cor(okcupid2_valid$income, pred_lm)
+```
+
+```
+## RMSE: 0.352
+## CORR: 0.501
+```
+
+
+```r
+tibble(income = okcupid2_valid$income, pred = pred_lm) %&gt;%
+  ggplot(aes(income, pred)) + geom_point()
+```
+
+&lt;img src="images/LM-Fit1-1.png" width="100%" /&gt;
+
+---
+
+A more intelligent strategy for imputing missing values would be to *predict* them using whatever data is not missing. This can be done quite seamlessly with the [`mice`](https://stefvanbuuren.name/mice/) package:
+
+
+```r
+# library(mice)
+# mice_obj &lt;- mice(okcupid2, m = 1, maxit = 10, seed = 42)
+# okcupid2_imp_mice &lt;- complete(mice_obj)
+
+okcupid2_imp_mice &lt;- read_rds("../data/okcupid_imp_mice.rds")
+okcupid2_imp_mice_train &lt;- okcupid2_imp_mice[train_idx, ]
+okcupid2_imp_mice_valid &lt;- okcupid2_imp_mice[valid_idx, ]
+
+mod_lm_mice &lt;- lm(income ~ ., data = okcupid2_imp_mice_train)
+pred_lm_mice &lt;- predict(mod_lm_mice, okcupid2_imp_mice_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_mice)
+```
+
+```
+## RMSE: 0.351
+## CORR: 0.504
+```
+
+.insight[
+💡 Can you think of other imputation strategies?
+]
+
+---
+
+
+```r
+tibble(income = okcupid2_valid$income, pred = pred_lm_mice) %&gt;%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+&lt;img src="images/LM-Fit2-1.png" width="100%" /&gt;
+
+---
+
+### Baseline: Ridge Regression
+
+
+```r
+library(glmnet)
+
+okcupid2_imp_mat_train &lt;- model.matrix( ~ ., okcupid2_imp_mice_train[, predictors])
+okcupid2_imp_mat_valid &lt;- model.matrix( ~ ., okcupid2_imp_mice_valid[, predictors])
+
+ridge_cv &lt;- cv.glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 0)
+
+best_lambda &lt;- ridge_cv$lambda.min
+
+mod_lm_ridge &lt;- glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 0,
+                      lambda = best_lambda)
+
+pred_lm_ridge &lt;- predict(mod_lm_ridge, okcupid2_imp_mat_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_ridge)
+```
+
+```
+## RMSE: 0.351
+## CORR: 0.505
+```
+
+---
+
+
+```r
+tibble(income = okcupid2_valid$income, pred = pred_lm_ridge) %&gt;%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+&lt;img src="images/LM-Ridge-Fit-1.png" width="100%" /&gt;
+
+---
+
+### Baseline: Lasso Regression
+
+
+```r
+lasso_cv &lt;- cv.glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_imp_train$income, alpha = 1)
+
+best_lambda &lt;- lasso_cv$lambda.min
+
+mod_lm_lasso &lt;- glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 1,
+                      lambda = best_lambda)
+
+pred_lm_lasso &lt;- predict(mod_lm_lasso, okcupid2_imp_mat_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
+```
+
+```
+## RMSE: 0.351
+## CORR: 0.505
+```
+
+---
+
+
+```r
+tibble(income = okcupid2_valid$income, pred = pred_lm_lasso) %&gt;%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+&lt;img src="images/LM-Lasso-Fit-1.png" width="100%" /&gt;
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The CART (Regression)
+
+---
+
+class: section-slide
+
+# Detour: A Classification Problem
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The CART (Classification)
+
+---
+
+class: section-slide
+
+# Bagged Trees
+
+---
+
+class: section-slide
+
+# Random Forests
+
+---
+
+class: section-slide
+
+# Boosted Trees
+
+---
+
+class: section-slide
+
+# The Others
+
+---
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="../libs/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

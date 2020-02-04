@@ -1,0 +1,503 @@
+---
+title: "The Trees"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## The Trees
+
+### Applications of Data Science - Class 11
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# The Pros and Cons of Trees
+
+---
+
+## Pros
+
+- It's just a set of if-else statements my 7 y/o can get
+- Highly interpretable (when tree is not large)
+- Easy to implement
+- Fast? (to predict)
+- Handle all types of predictors (continuous, categorical)
+- Handle missing data, *predict* missing data
+- Assumption free
+- Feature selection built-in (but when predictors are correlated...)
+- Low bias, in general
+
+---
+
+## Cons
+
+- High variance, in general
+- Rectangular predictor regions - not always a good thing
+- Complexity of prediction limited in no. of leaves! (For a simple CART)
+- Not so fast? (to train)
+- Greedy
+- Selection Bias of predictors with more distinct values?
+- Variable Importance when predictors are correlated
+
+---
+
+class: section-slide
+
+# Detour: A Regression Problem
+
+---
+
+### OKCupid: Predicting Annual Income
+
+It won't be easy:
+
+```{r, message=FALSE}
+okcupid <- read_csv("../data/okcupid.csv.zip")
+
+okcupid %>% count(income, sort = TRUE) %>% head(20)
+```
+
+---
+
+We will stick to non-NA (income) observations, and predict $\log_{10}(income/100000)$:
+
+```{r, warning=FALSE}
+okcupid2 <- okcupid %>%
+  mutate(income = ifelse(income == -1, NA, log10(income/100000))) %>%
+  drop_na(income)
+```
+
+```{r, echo=FALSE}
+ethnicities_keep <- c("white", "asian", "hispanic / latin", "black", "indian", "pacific islander", "middle eastern", "native american")
+not_perfect <- c("a little extra", "average", "curvy", "full figured", "overweight", "rather not say")
+signs <- c("leo", "libra", "cancer", "virgo", "scorpio", "gemini", "taurus", "aries", "pisces", "aquarius", "sagittarius", "capricorn")
+job_underpaid <- c("administrative", "media", "other", "rather not say", "student", "unemployed")
+narrow_category <- function(category, sep = " ") {
+  if (is.na(category)) return(NA_character_)
+  split_diet <- str_split(category, sep)
+  if (length(split_diet[[1]]) == 1) return(category)
+  return(split_diet[[1]][2])
+}
+okcupid2 <- okcupid2 %>%
+  mutate(height_cm = 2.54 * height,
+         religion2 = case_when(
+           str_detect(religion, "agnosticism") | str_detect(religion, "atheism") ~ "atheist",
+           str_detect(religion, "buddhism") ~ "buddhist",
+           str_detect(religion, "christianity") | str_detect(religion, "catholicism") ~ "christian",
+           str_detect(religion, "judaism") ~ "jewish",
+           str_detect(religion, "hinduism") ~ "hindu",
+           str_detect(religion, "islam") ~ "muslim",
+           TRUE ~ NA_character_),
+         education_kind = case_when(
+           str_detect(education, "^dropped") ~ "dropped",
+           str_detect(education, "^graduated") ~ "graduated",
+           str_detect(education, "^working") ~ "working",
+           TRUE ~ "other"),
+         ethnicity2 = ifelse(ethnicity %in% ethnicities_keep, ethnicity, "other"),
+         part_black = str_detect(ethnicity, "black"),
+         part_white = str_detect(ethnicity, "white"),
+         part_asian = str_detect(ethnicity, "asian"),
+         part_hispanic = str_detect(ethnicity, "hispanic"),
+         body_type_not_perfect = body_type %in% not_perfect,
+         diet2 = map_chr(diet, narrow_category),
+         location_sf = location == "san francisco, california",
+         pets_has_dogs = str_detect(pets, "has dogs"),
+         pets_has_cats = str_detect(pets, "has cats"),
+         pets_likes_dogs = str_detect(pets, "likes dogs"),
+         pets_likes_cats = str_detect(pets, "likes cats"),
+         sign_fun = str_detect(sign, "fun"),
+         sign_not_matter = str_detect(sign, "but it does"),
+         sign_matters = str_detect(sign, "matters"),
+         sign2 = str_extract(sign, str_c(signs, collapse = "|")),
+         speaks_spanish = str_detect(speaks, "spanish"),
+         speaks_french = str_detect(speaks, "french"),
+         speaks_german = str_detect(speaks, "german"),
+         speaks_chinese = str_detect(speaks, "chinese"),
+         education2 = case_when(
+           education == "graduated from high school" ~ "high_school",
+           education == "graduated from two-year college" ~ "college",
+           education == "graduated from college/university" ~ "degree1",
+           education == "graduated from masters program" ~ "degree2",
+           education == "graduated from ph.d program" ~ "degree3",
+           education == "working on two-year college" ~ "student0",
+           education == "working on college/university" ~ "student1",
+           education == "working on masters program" ~ "student2",
+           education == "working on ph.d program" ~ "student3",
+           is.na(education) ~ NA_character_,
+           TRUE ~ "other"
+         ),
+         education_academic = education2 %in% c("degree1", "degree2", "degree3", "student2", "student3"),
+         status = ifelse(status == "unknown", NA_character_, status),
+         job2 = map_chr(job, narrow_category, sep = " / "),
+         job3 = case_when(
+           is.na(job2) ~ "other",
+           TRUE ~ job2
+         ),
+         job_underpaid = job2 %in% job_underpaid) %>%
+  mutate_at(vars(essay0:essay9), list("len" = ~log(str_length(.x) + 0.016))) %>%
+  mutate_if(is.character, as.factor) %>%
+  mutate_if(is.logical, as.factor)
+
+predictors <- c("age", "height_cm", "sex", "body_type", "body_type_not_perfect",
+                "diet2", "drinks", "drugs", "religion2",
+                "education2" ,"education_kind", "education_academic",
+                "ethnicity2", "part_black", "part_white",
+                "part_asian", "part_hispanic", "job3",
+                "orientation", "pets_has_dogs", "pets_has_cats", "pets_likes_cats",
+                "pets_likes_dogs", "sign_fun", "sign_not_matter", "sign_matters",
+                "sign2", "speaks_spanish", "speaks_french", "speaks_german",
+                "speaks_chinese", "status",
+                "essay0_len", "essay1_len", "essay2_len", "essay3_len", "essay4_len",
+                "essay5_len", "essay6_len", "essay7_len", "essay8_len", "essay9_len")
+```
+
+In the vector `predictors` .font80percent[(see slides Rmd source)] we have `r length(predictors)` continuous and categorical variables which may or may not be predictive to income:
+
+```{r}
+okcupid2 <- okcupid2 %>%
+  select(income, predictors) %>%
+  mutate(id = 1:n())
+
+dim(okcupid2)
+```
+
+---
+
+```{r}
+glimpse(okcupid2)
+```
+
+---
+
+We split the data into training, validation and test sets:
+
+```{r, message=FALSE}
+# test_idx <- sample(1:nrow(okcupid2), 2000, replace = FALSE)
+# train_idx <- okcupid2 %>% filter(!id %in% test_idx) %>% sample_n(8000) %>% pull(id)
+# valid_idx <- okcupid2 %>% filter(!id %in% test_idx, !id %in% train_idx) %>% pull(id)
+okcupid2 <- okcupid2 %>% select(-id)
+
+idx <- read_rds("../data/okcupid_idx.rda")
+train_idx <- idx$train_idx
+valid_idx <- idx$valid_idx
+test_idx <- idx$test_idx
+
+okcupid2_train <- okcupid2[train_idx, ]
+okcupid2_valid <- okcupid2[valid_idx, ]
+okcupid2_test <- okcupid2[test_idx, ]
+
+library(glue)
+glue("train no. of rows: {nrow(okcupid2_train)}
+     validation no. of rows: {nrow(okcupid2_valid)}
+     test no. of rows: {nrow(okcupid2_test)}")
+```
+
+---
+
+Our transformed income dependent variable behaves "ok":
+
+```{r Income-Hist, message=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(okcupid2_train, aes(income)) +
+  geom_histogram(fill = "red", alpha = 0.5) +
+  theme_classic()
+```
+
+---
+
+We can quickly see percentage of missing values with [`naniar`](http://naniar.njtierney.com/):
+
+```{r Missingness, warning=FALSE, out.width="100%", fig.asp=0.5}
+library(naniar)
+
+vis_miss(okcupid2_train %>%
+           sample_frac(0.2) %>%
+           select(-starts_with("essay")))
+```
+
+---
+
+Also worth exploring some basic relations between predictors and income. You can use the work of others, e.g. [`ggpairs`](https://ggobi.github.io/ggally/):
+
+```{r GGPairs, warning=FALSE, message=FALSE, out.width="100%", fig.asp=0.5}
+library(GGally)
+
+ggpairs(okcupid2_train %>%
+          select(income, age, sex, height_cm, body_type_not_perfect))
+```
+
+---
+
+But don't be ashamed of simply exploring on your own:
+
+```{r}
+cat_vs_income_boxplot <- function(cat) {
+  ggplot(okcupid2_train, aes({{cat}}, income)) +
+  geom_boxplot() +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+```
+
+---
+
+```{r Body_Type-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(body_type)
+```
+
+---
+
+```{r Sign-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(sign2)
+```
+
+---
+
+```{r Job-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(job3)
+```
+
+---
+
+```{r Edu-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(education2)
+```
+
+---
+
+```{r Religion-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(religion2)
+```
+
+---
+
+```{r Diet-Income, out.width="100%", fig.asp=0.5}
+cat_vs_income_boxplot(diet2)
+```
+
+---
+
+```{r Essay-Income, warning=FALSE, message=FALSE, out.width="100%", fig.asp=0.5}
+ggpairs(okcupid2_train %>%
+          select(essay0_len:essay2_len, income))
+```
+
+---
+
+### Baseline: Linear Regression
+
+R's `lm` function does not take `NA` values.
+
+One strategy is to impute these values using a "common" value such as the median for continuous variables and mode for categorical variables. This can easily be achieved with `naniar`:
+
+```{r}
+okcupid2_imp <- naniar::impute_median_all(okcupid2)
+okcupid2_imp_train <- okcupid2_imp[train_idx, ]
+okcupid2_imp_valid <- okcupid2_imp[valid_idx, ]
+
+mod_lm <- lm(income ~ ., data = okcupid2_imp_train)
+pred_lm <- predict(mod_lm, okcupid2_imp_valid)
+
+rmse <- function(obs, pred) sqrt(mean((obs - pred)^2))
+
+report_rmse_and_cor <- function(obs, pred) {
+  RMSE <- rmse(obs, pred)
+  CORR <- cor(obs, pred)
+  glue("RMSE: {format(RMSE, digits = 3)}
+       CORR: {format(CORR, digits = 3)}")
+}
+
+```
+
+---
+
+```{r}
+report_rmse_and_cor(okcupid2_valid$income, pred_lm)
+```
+
+```{r LM-Fit1, out.width="100%", fig.asp=0.5}
+tibble(income = okcupid2_valid$income, pred = pred_lm) %>%
+  ggplot(aes(income, pred)) + geom_point()
+```
+
+---
+
+A more intelligent strategy for imputing missing values would be to *predict* them using whatever data is not missing. This can be done quite seamlessly with the [`mice`](https://stefvanbuuren.name/mice/) package:
+
+```{r, message=FALSE}
+# library(mice)
+# mice_obj <- mice(okcupid2, m = 1, maxit = 10, seed = 42)
+# okcupid2_imp_mice <- complete(mice_obj)
+
+okcupid2_imp_mice <- read_rds("../data/okcupid_imp_mice.rds")
+okcupid2_imp_mice_train <- okcupid2_imp_mice[train_idx, ]
+okcupid2_imp_mice_valid <- okcupid2_imp_mice[valid_idx, ]
+
+mod_lm_mice <- lm(income ~ ., data = okcupid2_imp_mice_train)
+pred_lm_mice <- predict(mod_lm_mice, okcupid2_imp_mice_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_mice)
+```
+
+.insight[
+`r emo::ji("bulb")` Can you think of other imputation strategies?
+]
+
+---
+
+```{r LM-Fit2, out.width="100%", fig.asp=0.5}
+tibble(income = okcupid2_valid$income, pred = pred_lm_mice) %>%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+---
+
+### Baseline: Ridge Regression
+
+```{r, message=FALSE}
+library(glmnet)
+
+okcupid2_imp_mat_train <- model.matrix( ~ ., okcupid2_imp_mice_train[, predictors])
+okcupid2_imp_mat_valid <- model.matrix( ~ ., okcupid2_imp_mice_valid[, predictors])
+
+ridge_cv <- cv.glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 0)
+
+best_lambda <- ridge_cv$lambda.min
+
+mod_lm_ridge <- glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 0,
+                      lambda = best_lambda)
+
+pred_lm_ridge <- predict(mod_lm_ridge, okcupid2_imp_mat_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_ridge)
+```
+
+---
+
+```{r LM-Ridge-Fit, out.width="100%", fig.asp=0.5}
+tibble(income = okcupid2_valid$income, pred = pred_lm_ridge) %>%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+---
+
+### Baseline: Lasso Regression
+
+```{r, message=FALSE}
+lasso_cv <- cv.glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_imp_train$income, alpha = 1)
+
+best_lambda <- lasso_cv$lambda.min
+
+mod_lm_lasso <- glmnet(x = okcupid2_imp_mat_train,
+                      y = okcupid2_train$income, alpha = 1,
+                      lambda = best_lambda)
+
+pred_lm_lasso <- predict(mod_lm_lasso, okcupid2_imp_mat_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
+```
+
+---
+
+```{r LM-Lasso-Fit, out.width="100%", fig.asp=0.5}
+tibble(income = okcupid2_valid$income, pred = pred_lm_lasso) %>%
+  ggplot(aes(income, pred)) +
+  geom_point()
+```
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The CART (Regression)
+
+---
+
+class: section-slide
+
+# Detour: A Classification Problem
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The CART (Classification)
+
+---
+
+class: section-slide
+
+# Bagged Trees
+
+---
+
+class: section-slide
+
+# Random Forests
+
+---
+
+class: section-slide
+
+# Boosted Trees
+
+---
+
+class: section-slide
+
+# The Others
+
+---
+
