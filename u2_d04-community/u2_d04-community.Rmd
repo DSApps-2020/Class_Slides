@@ -650,6 +650,10 @@ plt.show()
 
 ---
 
+### The Leiden Method .font80percent[(What everyone will use?...)]
+
+---
+
 class: section-slide
 
 # Graph Embeddings
