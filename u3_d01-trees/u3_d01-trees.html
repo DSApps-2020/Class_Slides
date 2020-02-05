@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-04" />
+    <meta name="date" content="2020-02-05" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-04
+### 2020-02-05
 
 ---
 
@@ -397,10 +397,10 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm)
 
 ```r
 tibble(income = okcupid2_valid$income, pred = pred_lm) %&gt;%
-  ggplot(aes(income, pred)) + geom_point()
+  ggplot(aes(income, pred)) + geom_point() + ylim(range(okcupid2_valid$income))
 ```
 
-&lt;img src="images/LM-Fit1-1.png" width="100%" /&gt;
+&lt;img src="images/LM-Fit1-1.png" width="50%" /&gt;
 
 ---
 
@@ -437,10 +437,11 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_mice)
 ```r
 tibble(income = okcupid2_valid$income, pred = pred_lm_mice) %&gt;%
   ggplot(aes(income, pred)) +
-  geom_point()
+  geom_point() +
+  ylim(range(okcupid2_valid$income))
 ```
 
-&lt;img src="images/LM-Fit2-1.png" width="100%" /&gt;
+&lt;img src="images/LM-Fit2-1.png" width="60%" /&gt;
 
 ---
 
@@ -478,10 +479,11 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_ridge)
 ```r
 tibble(income = okcupid2_valid$income, pred = pred_lm_ridge) %&gt;%
   ggplot(aes(income, pred)) +
-  geom_point()
+  geom_point() +
+  ylim(range(okcupid2_valid$income))
 ```
 
-&lt;img src="images/LM-Ridge-Fit-1.png" width="100%" /&gt;
+&lt;img src="images/LM-Ridge-Fit-1.png" width="60%" /&gt;
 
 ---
 
@@ -505,7 +507,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.505
+## CORR: 0.506
 ```
 
 ---
@@ -514,10 +516,11 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 ```r
 tibble(income = okcupid2_valid$income, pred = pred_lm_lasso) %&gt;%
   ggplot(aes(income, pred)) +
-  geom_point()
+  geom_point() +
+  ylim(range(okcupid2_valid$income))
 ```
 
-&lt;img src="images/LM-Lasso-Fit-1.png" width="100%" /&gt;
+&lt;img src="images/LM-Lasso-Fit-1.png" width="60%" /&gt;
 
 ---
 
@@ -530,6 +533,331 @@ class: section-slide
 class: section-slide
 
 # The CART (Regression)
+
+---
+
+### The OG CART
+
+1. Find the the predictor to (binary) split on and the value of the split, by `\(SSE\)` criterion
+2. For each resulting node if `\(n_{node} &gt; 20\)` go to 1
+3. Once full tree has been grown, perform pruning using the *cost-complexity parameter* `\(c_p\)` and the `\(SSE_{c_p}\)` criterion
+4. Predict the average value at each terminal node
+
+- For each split *surrogate splits* are saved for future `NA`s
+- An alternative criterion for complexity could be tree maximum depth (sklearn)
+- One can also reduce all tree's unique paths to a set of rules
+- Variables can be ranked by "importance"
+
+.insight[
+💡 What if the best split isn't binary?
+]
+
+---
+
+### The `\(SSE\)` criterion - continuous predictor
+
+- `\(y\)` is the continuous dependent variable
+- a continuous predictor `\(v\)` is nominated for splitting the current node
+- with splitting value `\(l\)`
+- such that `\(S_1\)` is the set of observations for which `\(v_i \le l\)`
+- and `\(S_2\)` is the set of observations for which `\(v_i &gt; l\)`
+- `\(\overline y_1\)` is the average of `\(y\)` in set `\(S_1\)`
+
+`\(SSE = \sum_{i \in S_1}(y_i - \overline y_1)^2 + \sum_{i \in S_2}(y_i - \overline y_2)^2\)`
+
+For example if `age` is candidate in splitting `income`:
+
+---
+
+
+```r
+library(patchwork)
+
+sse &lt;- function(l, df, v) {
+  income_above &lt;- df %&gt;% filter({{v}} &gt;= l) %&gt;% pull(income)
+  income_below &lt;- df %&gt;% filter({{v}} &lt; l) %&gt;% pull(income)
+  sse_above &lt;- sum((income_above - mean(income_above))^2)
+  sse_below &lt;- sum((income_below - mean(income_below))^2)
+  return(sse_above + sse_below)
+}
+age &lt;- seq(18,69, 1)
+sse_age &lt;- map_dbl(age, sse, df = okcupid2_train, v = age)
+
+p1 &lt;- okcupid2_train %&gt;%
+  count(age, income) %&gt;%
+  ggplot(aes(age, income)) +
+  geom_point(aes(size = n)) +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_blank())
+
+p2 &lt;- tibble(age = age, sse = sse_age) %&gt;%
+  ggplot(aes(age, sse)) +
+  geom_line() +
+  geom_point() +
+  theme_classic()
+
+p1 / p2
+```
+
+---
+
+&lt;img src="images/Age-SSE-1.png" width="80%" /&gt;
+
+---
+
+### The `\(SSE\)` criterion - categorical predictor
+
+.insight[
+💡 What could be an issue with a categorical variable with many levels?
+]
+
+- a categorical predictor `\(l\)` is nominated for splitting the current node
+  - option 1: use dummy variables, turning each level into a 2-level 0/1 category variable
+  - option 2: order levels by some criterion like `\(\overline{y_j}\)` and treat `\(l\)` as continuous from here on
+
+For example if `job3` is candidate in splitting `income`:
+---
+
+
+```r
+mean_income_vs_job &lt;- okcupid2_train %&gt;%
+  group_by(job3) %&gt;%
+  summarise(mean_income = mean(income)) %&gt;%
+  arrange(mean_income)
+jobs_levels_sorted &lt;- as.character(mean_income_vs_job$job3)
+okcupid2_train_job_sorted &lt;- okcupid2_train %&gt;%
+  mutate(job_ordered = fct_relevel(job3, jobs_levels_sorted),
+         job_ordered_n = as.numeric(job_ordered))
+
+job_rank &lt;- seq(1, length(jobs_levels_sorted), 1)
+sse_job &lt;- map_dbl(job_rank, sse, df = okcupid2_train_job_sorted, v = job_ordered_n)
+
+p1 &lt;- okcupid2_train_job_sorted %&gt;%
+  ggplot(aes(job_ordered, income)) +
+  geom_boxplot() +
+  theme_classic() + labs(x = "") +
+  theme(axis.text.x = element_blank())
+
+p2 &lt;- tibble(job = factor(jobs_levels_sorted, levels = jobs_levels_sorted), sse = sse_job) %&gt;%
+  ggplot(aes(job, sse, group = 1)) +
+  geom_line() +
+  geom_point() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+p1 / p2
+```
+
+---
+
+&lt;img src="images/Job-SSE-1.png" width="80%" /&gt;
+
+---
+
+### Pruning: The `\(SSE_{c_p}\)` criterion
+
+The "right-sized" tree should not be too deep to avoid overfitting.
+
+Once the full tree is grown, we check for each split:
+
+`\(SSE_{c_p} = SSE_{tot} + c_p \cdot {\text{#terminal nodes}}\)`
+
+Where `\(c_p\)` is a penalty or regularization parameter usually chosen by cross validation.
+
+And we choose the smallest pruned tree with the minimum `\(SSE_{c_p}\)`.
+
+---
+
+### CART with `rpart`
+
+Let's tune `\(c_p\)` for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be RMSE.
+
+
+```r
+library(rpart)
+
+n_cv &lt;- 5; cp_seq &lt;- seq(0, 0.02, 0.001)
+
+okcupid2_train_val &lt;- okcupid2_train %&gt;%
+  mutate(val = sample(1:n_cv, n(), replace = TRUE))
+
+get_validation_set_rmse &lt;- function(i, .cp) {
+  ok_tr &lt;- okcupid2_train_val %&gt;% filter(val != i) %&gt;% select(-val)
+  ok_val &lt;- okcupid2_train_val %&gt;% filter(val == i) %&gt;% select(-val)
+  mod &lt;- rpart(income ~ ., data = ok_tr,
+               control = rpart.control(cp = .cp))
+  pred &lt;- predict(mod, ok_val)
+  rmse(ok_val$income, pred)
+}
+get_cv_rmse &lt;- function(.cp) {
+  tibble(cp = rep(.cp, n_cv),
+         rmse = map_dbl(1:n_cv, get_validation_set_rmse, .cp = .cp))
+}
+```
+
+---
+
+
+```r
+# cv_table &lt;- map_dfr(cp_seq, get_cv_rmse)
+cv_table &lt;- read_rds("../data/okcupid_CART_Reg_Cp_CV.rds")
+
+cv_table %&gt;%
+  mutate(cp = factor(cp)) %&gt;%
+  ggplot(aes(cp, rmse)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+&lt;img src="images/Cp-CV-1.png" width="100%" /&gt;
+
+---
+
+Training on the entire training set:
+
+
+```r
+mod_tree_na &lt;- rpart(income ~ ., data = okcupid2_train,
+                     control = rpart.control(cp = 0.004))
+```
+
+You can plot the tree using `rpart`, but...
+
+
+```r
+plot(mod_tree_na)
+text(mod_tree_na, pretty = 1, use.n = TRUE)
+```
+
+&lt;img src="images/CART-NA1-1.png" width="50%" /&gt;
+
+---
+
+The plotting function in the `rpart.plot` package is slightly nicer:
+
+
+```r
+library(rpart.plot)
+prp(mod_tree_na, type = 5, extra = 1)
+```
+
+&lt;img src="images/CART-NA2-1.png" width="100%" /&gt;
+
+---
+
+You can go fancy and use `partykit` and/or `ggparty`:
+
+
+```r
+library(ggparty)
+
+party_obj &lt;- as.party(mod_tree_na)
+
+ggparty(party_obj) +
+  geom_edge() +
+  # geom_edge_label() +
+  geom_node_label(aes(label = splitvar), ids = "inner") +
+  geom_node_label(aes(label = str_c("n = ", nodesize)),
+                  ids = "terminal", nudge_y = 0.02) +
+  geom_node_plot(gglist = list(geom_boxplot(aes(y = income)),
+                                 theme(axis.text.x=element_blank(),
+                                       axis.ticks.x=element_blank())),
+                 shared_axis_labels=TRUE)
+```
+
+---
+
+&lt;img src="images/CART-NA3-1.png" width="100%" /&gt;
+
+---
+
+Or you can just print the tree and see what is going on:
+
+
+```r
+print(party_obj)
+```
+
+&lt;img src = "images/CART_print.png" style="width: 100%"&gt;
+
+---
+
+### Variables Importance
+
+Summing the reduction in `\(SSE\)` for each split variable, we can get a measure of importance.
+
+.font80percent[Unfortunately in `rpart` the "potential" reduction in `\(SSE\)` for surrogate splits is also summed. You can either ignore or retrain with only the variables chosen by the model.]
+
+
+```r
+enframe(mod_tree_na$variable.importance) %&gt;%
+  arrange(value) %&gt;%
+  mutate(variable = as_factor(name)) %&gt;%
+  ggplot(aes(variable, value)) +
+  geom_segment(aes(x = variable, xend = variable,
+                   y = 0, yend = value)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  coord_flip() +
+  labs(x = "", y = "")
+```
+
+---
+
+&lt;img src="images/CART-VarImp-1.png" width="60%" /&gt;
+
+.insight[
+💡 How would this profile look for a couple of very correlated predictors?
+]
+
+---
+
+### Prediction
+
+
+```r
+pred_tree_na &lt;- predict(mod_tree_na, okcupid2_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_tree_na)
+```
+
+```
+## RMSE: 0.366
+## CORR: 0.436
+```
+
+As expected, far from impressive. Let's try using the imputed `NA` data:
+
+
+```r
+mod_tree_imp &lt;- rpart(income ~ ., data = okcupid2_imp_mice_train,
+                      control = rpart.control(cp = 0.004))
+pred_tree_imp &lt;- predict(mod_tree_imp, okcupid2_imp_mice_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_tree_imp)
+```
+
+```
+## RMSE: 0.368
+## CORR: 0.425
+```
+
+---
+
+
+```r
+tibble(income = okcupid2_valid$income, pred = pred_tree_na) %&gt;%
+  count(income, pred) %&gt;%
+  ggplot(aes(income, pred)) +
+  geom_point(aes(size = n)) +
+  ylim(range(okcupid2_valid$income))
+```
+
+&lt;img src="images/Tree-Fit-1.png" width="60%" /&gt;
 
 ---
 
