@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-05" />
+    <meta name="date" content="2020-02-06" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-05
+### 2020-02-06
 
 ---
 
@@ -212,7 +212,7 @@ We split the data into training, validation and test sets:
 # valid_idx &lt;- okcupid2 %&gt;% filter(!id %in% test_idx, !id %in% train_idx) %&gt;% pull(id)
 okcupid2 &lt;- okcupid2 %&gt;% select(-id)
 
-idx &lt;- read_rds("../data/okcupid_idx.rda")
+idx &lt;- read_rds("../data/okcupid2_idx.rda")
 train_idx &lt;- idx$train_idx
 valid_idx &lt;- idx$valid_idx
 test_idx &lt;- idx$test_idx
@@ -281,8 +281,8 @@ But don't be ashamed of simply exploring on your own:
 
 
 ```r
-cat_vs_income_boxplot &lt;- function(cat) {
-  ggplot(okcupid2_train, aes({{cat}}, income)) +
+var_vs_income_boxplot &lt;- function(var) {
+  ggplot(okcupid2_train, aes({{var}}, income)) +
   geom_boxplot() +
   facet_wrap(~ sex) +
   theme_classic() +
@@ -295,7 +295,7 @@ cat_vs_income_boxplot &lt;- function(cat) {
 
 
 ```r
-cat_vs_income_boxplot(body_type)
+var_vs_income_boxplot(body_type)
 ```
 
 &lt;img src="images/Body_Type-Income-1.png" width="100%" /&gt;
@@ -304,7 +304,7 @@ cat_vs_income_boxplot(body_type)
 
 
 ```r
-cat_vs_income_boxplot(sign2)
+var_vs_income_boxplot(sign2)
 ```
 
 &lt;img src="images/Sign-Income-1.png" width="100%" /&gt;
@@ -313,7 +313,7 @@ cat_vs_income_boxplot(sign2)
 
 
 ```r
-cat_vs_income_boxplot(job3)
+var_vs_income_boxplot(job3)
 ```
 
 &lt;img src="images/Job-Income-1.png" width="100%" /&gt;
@@ -322,7 +322,7 @@ cat_vs_income_boxplot(job3)
 
 
 ```r
-cat_vs_income_boxplot(education2)
+var_vs_income_boxplot(education2)
 ```
 
 &lt;img src="images/Edu-Income-1.png" width="100%" /&gt;
@@ -331,7 +331,7 @@ cat_vs_income_boxplot(education2)
 
 
 ```r
-cat_vs_income_boxplot(religion2)
+var_vs_income_boxplot(religion2)
 ```
 
 &lt;img src="images/Religion-Income-1.png" width="100%" /&gt;
@@ -340,7 +340,7 @@ cat_vs_income_boxplot(religion2)
 
 
 ```r
-cat_vs_income_boxplot(diet2)
+var_vs_income_boxplot(diet2)
 ```
 
 &lt;img src="images/Diet-Income-1.png" width="100%" /&gt;
@@ -412,7 +412,7 @@ A more intelligent strategy for imputing missing values would be to *predict* th
 # mice_obj &lt;- mice(okcupid2, m = 1, maxit = 10, seed = 42)
 # okcupid2_imp_mice &lt;- complete(mice_obj)
 
-okcupid2_imp_mice &lt;- read_rds("../data/okcupid_imp_mice.rds")
+okcupid2_imp_mice &lt;- read_rds("../data/okcupid2_imp_mice.rds")
 okcupid2_imp_mice_train &lt;- okcupid2_imp_mice[train_idx, ]
 okcupid2_imp_mice_valid &lt;- okcupid2_imp_mice[valid_idx, ]
 
@@ -507,7 +507,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.506
+## CORR: 0.505
 ```
 
 ---
@@ -867,6 +867,303 @@ class: section-slide
 
 ---
 
+### OKCupid: Predicting Dogs or Cats People
+
+It won't be easy:
+
+
+```r
+okcupid %&gt;% count(pets)
+```
+
+```
+## # A tibble: 16 x 2
+##    pets                                n
+##    &lt;chr&gt;                           &lt;int&gt;
+##  1 dislikes cats                     122
+##  2 dislikes dogs                      44
+##  3 dislikes dogs and dislikes cats   196
+##  4 dislikes dogs and has cats         81
+##  5 dislikes dogs and likes cats      240
+##  6 has cats                         1406
+##  7 has dogs                         4134
+##  8 has dogs and dislikes cats        552
+##  9 has dogs and has cats            1474
+## 10 has dogs and likes cats          2333
+## 11 likes cats                       1063
+## 12 likes dogs                       7224
+## 13 likes dogs and dislikes cats     2029
+## 14 likes dogs and has cats          4313
+## 15 likes dogs and likes cats       14814
+## 16 &lt;NA&gt;                            19921
+```
+
+---
+
+We will define cats/dogs people in the following way and stick to non-NA observations:
+
+
+```r
+cats_categories &lt;- c("has cats", "likes cats", "dislikes dogs and has cats",
+                     "dislikes dogs and has cats")
+dogs_categories &lt;- c("has dogs", "likes dogs", "has dogs and dislikes cats",
+                     "likes dogs and dislikes cats")
+okcupid3 &lt;- okcupid %&gt;%
+  mutate(pets = case_when(
+           pets %in% cats_categories ~ "cats",
+           pets %in% dogs_categories ~ "dogs",
+           TRUE ~ NA_character_)) %&gt;%
+  drop_na(pets)
+
+okcupid3 %&gt;% count(pets)
+```
+
+```
+## # A tibble: 2 x 2
+##   pets      n
+##   &lt;chr&gt; &lt;int&gt;
+## 1 cats   2550
+## 2 dogs  13939
+```
+
+Notice the classes are very unbalanced, with roughly 11 dogs people to every 2 cats people.
+
+
+---
+
+As before in the vector `predictors` we have 36 continuous and categorical variables which may or may not be predictive to being a cats/dogs person:
+
+
+
+```r
+okcupid3 &lt;- okcupid3 %&gt;%
+  select(pets, predictors) %&gt;%
+  mutate(id = 1:n())
+
+dim(okcupid3)
+```
+
+```
+## [1] 16489    38
+```
+
+And as before we split the data into training, test and validation sets, not shown here:
+
+
+```
+## train no. of rows: 10000
+## validation no. of rows: 2489
+## test no. of rows: 4000
+```
+
+---
+
+Worth exploring relations between predictors and being a cats/dogs person:
+
+
+```r
+var_vs_pets_stackedbar &lt;- function(var) {
+  ggplot(okcupid3_train, aes({{var}}, fill = pets)) +
+  geom_bar(position = "fill") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+
+var_vs_pets_stackedbar(sex)
+```
+
+&lt;img src="images/Sex-Pets-1.png" width="80%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(body_type)
+```
+
+&lt;img src="images/Body-Type-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(sign2)
+```
+
+&lt;img src="images/Sign-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(job3)
+```
+
+&lt;img src="images/Job-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(education2)
+```
+
+&lt;img src="images/Edu-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(religion2)
+```
+
+&lt;img src="images/Religion-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+var_vs_pets_stackedbar(diet2)
+```
+
+&lt;img src="images/Diet-Pets-1.png" width="100%" /&gt;
+
+---
+
+
+```r
+ggpairs(okcupid3_train %&gt;%
+          select(essay0_len:essay2_len, pets))
+```
+
+&lt;img src="images/Essay-Pets-1.png" width="100%" /&gt;
+
+---
+
+### Baseline: Logistic Regression
+
+As in `lm`, it is better to impute missing values than to lose these observations:
+
+
+```r
+# library(mice)
+# mice_obj &lt;- mice(okcupid3, m = 1, maxit = 10, seed = 42)
+# okcupid3_imp_mice &lt;- complete(mice_obj)
+
+okcupid3_imp_mice &lt;- read_rds("../data/okcupid3_imp_mice.rds")
+okcupid3_imp_mice_train &lt;- okcupid3_imp_mice[train_idx, ]
+okcupid3_imp_mice_valid &lt;- okcupid3_imp_mice[valid_idx, ]
+
+mod_glm_mice &lt;- glm(pets ~ ., data = okcupid3_imp_mice_train, family = "binomial")
+pred_glm_mice &lt;- predict(mod_glm_mice, okcupid3_imp_mice_valid, type = "response")
+```
+
+---
+
+Let's plot the ROC curve:
+
+
+```r
+library(pROC)
+roc_obj &lt;- roc(okcupid3_valid$pets, pred_glm_mice)
+
+ggroc(roc_obj) +
+  theme_classic() +
+  geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color="darkgrey", linetype="dashed")
+```
+
+&lt;img src="images/unnamed-chunk-24-1.png" width="50%" /&gt;
+
+---
+
+Choosing a specific cutoff, the proportion of dogs people in the training sample (the "positive" class), 0.84, let's look at the confusion matrix:
+
+
+```r
+cutoff &lt;- mean(okcupid3_train$pets == "dogs")
+pred_class &lt;- ifelse(pred_glm_mice &gt; cutoff, "dogs", "cats")
+true_class &lt;- okcupid3_valid$pets
+
+table(true_class, pred_class)
+```
+
+```
+##           pred_class
+## true_class cats dogs
+##       cats  238  125
+##       dogs  678 1448
+```
+
+.insight[
+💡 What would be the accuracy? Recall (sensitivity, specificity)? Precision (PPV, NPV)?
+]
+
+---
+
+We would like to know the model's AUC, accuracy for a given score cutoff, recall and precision:
+
+
+```r
+report_accuracy_and_auc &lt;- function(obs, pred, cutoff = mean(okcupid3_train$pets == "dogs")) {
+  roc_obj &lt;- roc(obs, pred)
+  AUC &lt;- as.numeric(auc(roc_obj))
+  res &lt;- coords(roc_obj, x = cutoff,
+                ret = c("accuracy", "recall", "precision", "specificity", "npv"),
+                transpose = TRUE)
+  glue("AUC: {format(AUC, digits = 3)}
+  ACC: {format(res['accuracy'], digits = 3)}
+  Dogs: Recall: {format(res['recall'], digits = 3)}
+        Precision: {format(res['precision'], digits = 3)}
+  Cats: Recall: {format(res['specificity'], digits = 3)}
+        Precision: {format(res['npv'], digits = 3)}")
+}
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_mice)
+```
+
+```
+## AUC: 0.738
+## ACC: 0.677
+## Dogs: Recall: 0.681
+##       Precision: 0.921
+## Cats: Recall: 0.656
+##       Precision: 0.26
+```
+
+---
+
+#### Baseline: GLMNET: Penalized Logistic Regression
+
+
+```r
+okcupid3_imp_mat_train &lt;- model.matrix( ~ ., okcupid3_imp_mice_train[, predictors])
+okcupid3_imp_mat_valid &lt;- model.matrix( ~ ., okcupid3_imp_mice_valid[, predictors])
+
+glmnet_cv &lt;- cv.glmnet(x = okcupid3_imp_mat_train,
+                       y = okcupid3_train$pets, family = "binomial")
+
+best_lambda &lt;- glmnet_cv$lambda.min
+
+mod_glm_glmnet &lt;- glmnet(x = okcupid3_imp_mat_train,
+                         y = okcupid3_train$pets,
+                         family = "binomial", lambda = best_lambda)
+pred_glm_glmnet &lt;- predict(mod_glm_glmnet, okcupid3_imp_mat_valid, type = "response")
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
+```
+
+```
+## AUC: 0.739
+## ACC: 0.672
+## Dogs: Recall: 0.672
+##       Precision: 0.923
+## Cats: Recall: 0.672
+##       Precision: 0.259
+```
+
+---
+
 class: section-slide
 
 # End of Detour
@@ -877,6 +1174,211 @@ class: section-slide
 
 # The CART (Classification)
 
+---
+
+### The OG CART
+
+1. Find the the predictor to (binary) split on and the value of the split, by `\(Gini\)` (a.k.a impurity) criterion
+2. For each resulting node if `\(n_{node} &gt; 20\)` go to 1
+3. Once full tree has been grown, perform pruning using the *cost-complexity parameter* `\(c_p\)` and the `\(Gini_{c_p}\)` criterion
+4. Predict the proportion of each class at each terminal node, or most common class
+
+---
+
+### The `\(Gini\)` criterion
+
+- `\(y\)` is the discrete dependent variable with `\(J\)` classes
+- The `\(Gini_{parent}\)` at a parent node is: `\(\sum_{j=1}^JP(y=j)[1-P(y=j)]=\sum_j p_j(1-p_j)\)`
+- a continuous predictor `\(v\)` is nominated for splitting the current node with splitting value `\(l\)`
+- such that `\(S_1\)` is the set of observations for which `\(v_i \le l\)`
+- and `\(S_2\)` is the set of observations for which `\(v_i &gt; l\)`
+- `\(p_{1_j}\)` is the (observed) probability of `\(y\)` equals class `\(j\)` in set `\(S_1\)`
+
+`\(Gini_{split} = \frac{\text{#obs node1}}{\text{#obs parent}}Gini_{node1} + \frac{\text{#obs node2}}{\text{#obs parent}}Gini_{node2}=\)`
+`\(\frac{\text{#obs node1}}{\text{#obs parent}}\sum_j p_{1_j}(1-p_{1_j}) + \frac{\text{#obs node2}}{\text{#obs parent}}\sum_j p_{2_j}(1-p_{2_j})\)`
+
+And we find `\(l\)` for which `\(\Delta G = Gini_{parent} - Gini_{split}\)` is greatest.
+
+---
+
+Why Gini?
+
+For `\(J=2\)` classes this means: `\(p_1(1-p_1)+p_2(1-p_2)=2p_1(1-p_1)\)`
+
+The more "impure" the node, the higher this metric:
+
+
+```r
+p &lt;- seq(0, 1, 0.01)
+plot(p, 2 * p * (1 - p), type = "l")
+```
+
+&lt;img src="images/Gini-2-Classes-1.png" width="45%" /&gt;
+
+---
+
+For example if `religion2` is candidate in splitting `pets`:
+
+
+```r
+gini &lt;- function(l, df, v) {
+  pets_above &lt;- df %&gt;% filter({{v}} &gt;= l) %&gt;% pull(pets)
+  pets_below &lt;- df %&gt;% filter({{v}} &lt; l) %&gt;% pull(pets)
+  p_dogs_above &lt;- mean(pets_above == "dogs")
+  gini_above &lt;- 2 * p_dogs_above * (1 - p_dogs_above)
+  p_dogs_below &lt;- mean(pets_below == "dogs")
+  gini_below &lt;- 2 * p_dogs_below * (1 - p_dogs_below)
+  gini_weighted &lt;- (length(pets_above) / nrow(df)) * gini_above +
+    (length(pets_below) / nrow(df)) * gini_below
+  return(gini_weighted)
+}
+
+age &lt;- seq(18,69, 1)
+gini_age &lt;- map_dbl(age, gini, df = okcupid3_train, v = age)
+
+p1 &lt;- okcupid3_train %&gt;%
+  group_by(age) %&gt;%
+  summarise(p_dogs = mean(pets == "dogs"), n = n()) %&gt;%
+  ggplot(aes(age, p_dogs)) +
+  geom_point(aes(size = n)) +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_blank())
+
+p2 &lt;- tibble(age = age, gini = gini_age) %&gt;%
+  ggplot(aes(age, gini)) +
+  geom_line() +
+  geom_point() +
+  theme_classic()
+
+p1 / p2
+```
+
+---
+
+&lt;img src="images/Religion-Gini-1.png" width="80%" /&gt;
+
+---
+
+### CART with `rpart`
+
+Let's tune `\(c_p\)` for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be AUC.
+
+
+```r
+n_cv &lt;- 5; cp_seq &lt;- seq(0, 0.01, 0.0005)
+
+okcupid3_train_val &lt;- okcupid3_train %&gt;%
+  mutate(val = sample(1:n_cv, n(), replace = TRUE))
+
+get_validation_set_auc &lt;- function(i, .cp) {
+  ok_tr &lt;- okcupid3_train_val %&gt;% filter(val != i) %&gt;% select(-val)
+  ok_val &lt;- okcupid3_train_val %&gt;% filter(val == i) %&gt;% select(-val)
+  mod &lt;- rpart(pets ~ ., data = ok_tr,
+               control = rpart.control(cp = .cp, minbucket = 50))
+  pred &lt;- predict(mod, ok_val)[, 2]
+  roc_obj &lt;- roc(ok_val$pets, pred)
+  as.numeric(auc(roc_obj))
+}
+
+get_cv_auc &lt;- function(.cp) {
+  tibble(cp = rep(.cp, n_cv),
+         auc = map_dbl(1:n_cv, get_validation_set_auc, .cp = .cp))
+}
+```
+
+---
+
+
+```r
+# cv_table &lt;- map_dfr(cp_seq, get_cv_auc)
+cv_table &lt;- read_rds("../data/okcupid_CART_Class_Cp_CV.rds")
+
+cv_table %&gt;%
+  mutate(cp = factor(cp)) %&gt;%
+  ggplot(aes(cp, auc)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+&lt;img src="images/Cp-CV-B-1.png" width="100%" /&gt;
+
+---
+
+Training on the entire training set:
+
+
+```r
+mod_tree_na_class &lt;- rpart(pets ~ ., data = okcupid3_train,
+                           control = rpart.control(cp = 0.001, minbucket = 50))
+```
+
+There's no way to plot this tree nicely...
+
+
+```r
+plot(mod_tree_na_class)
+```
+
+&lt;img src="images/CART-NA2-Class-1.png" width="50%" /&gt;
+
+---
+
+Printing the tree it seems like after splitting observations by religion, those who are Christian, Jewish or Hindu have a 88% of being dogs people, and the rest are then split by Status, Body Type, the length of their 9th Essay, etc...
+
+&lt;img src = "images/CART_class_print.png" style="width: 100%"&gt;
+
+---
+
+### Variables Importance
+
+&lt;img src="images/CART-Class-VarImp-1.png" width="60%" /&gt;
+
+---
+
+### Prediction
+
+
+```r
+pred_tree_na_class &lt;- predict(mod_tree_na_class, okcupid3_valid)
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_na_class[, 2])
+```
+
+```
+## AUC: 0.615
+## ACC: 0.713
+## Dogs: Recall: 0.757
+##       Precision: 0.89
+## Cats: Recall: 0.452
+##       Precision: 0.241
+```
+
+As expected, far from impressive.
+
+---
+
+Let's try using the imputed `NA` data:
+
+
+```r
+mod_tree_imp_class &lt;- rpart(pets ~ ., data = okcupid3_imp_mice_train,
+                            control = rpart.control(cp = 0.001))
+pred_tree_imp_class &lt;- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
+```
+
+```
+## AUC: 0.662
+## ACC: 0.78
+## Dogs: Recall: 0.853
+##       Precision: 0.886
+## Cats: Recall: 0.355
+##       Precision: 0.292
+```
 ---
 
 class: section-slide

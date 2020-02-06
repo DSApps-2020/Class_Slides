@@ -211,7 +211,7 @@ We split the data into training, validation and test sets:
 # valid_idx <- okcupid2 %>% filter(!id %in% test_idx, !id %in% train_idx) %>% pull(id)
 okcupid2 <- okcupid2 %>% select(-id)
 
-idx <- read_rds("../data/okcupid_idx.rda")
+idx <- read_rds("../data/okcupid2_idx.rda")
 train_idx <- idx$train_idx
 valid_idx <- idx$valid_idx
 test_idx <- idx$test_idx
@@ -264,8 +264,8 @@ ggpairs(okcupid2_train %>%
 But don't be ashamed of simply exploring on your own:
 
 ```{r}
-cat_vs_income_boxplot <- function(cat) {
-  ggplot(okcupid2_train, aes({{cat}}, income)) +
+var_vs_income_boxplot <- function(var) {
+  ggplot(okcupid2_train, aes({{var}}, income)) +
   geom_boxplot() +
   facet_wrap(~ sex) +
   theme_classic() +
@@ -277,37 +277,37 @@ cat_vs_income_boxplot <- function(cat) {
 ---
 
 ```{r Body_Type-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(body_type)
+var_vs_income_boxplot(body_type)
 ```
 
 ---
 
 ```{r Sign-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(sign2)
+var_vs_income_boxplot(sign2)
 ```
 
 ---
 
 ```{r Job-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(job3)
+var_vs_income_boxplot(job3)
 ```
 
 ---
 
 ```{r Edu-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(education2)
+var_vs_income_boxplot(education2)
 ```
 
 ---
 
 ```{r Religion-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(religion2)
+var_vs_income_boxplot(religion2)
 ```
 
 ---
 
 ```{r Diet-Income, out.width="100%", fig.asp=0.5}
-cat_vs_income_boxplot(diet2)
+var_vs_income_boxplot(diet2)
 ```
 
 ---
@@ -341,7 +341,6 @@ report_rmse_and_cor <- function(obs, pred) {
   glue("RMSE: {format(RMSE, digits = 3)}
        CORR: {format(CORR, digits = 3)}")
 }
-
 ```
 
 ---
@@ -364,7 +363,7 @@ A more intelligent strategy for imputing missing values would be to *predict* th
 # mice_obj <- mice(okcupid2, m = 1, maxit = 10, seed = 42)
 # okcupid2_imp_mice <- complete(mice_obj)
 
-okcupid2_imp_mice <- read_rds("../data/okcupid_imp_mice.rds")
+okcupid2_imp_mice <- read_rds("../data/okcupid2_imp_mice.rds")
 okcupid2_imp_mice_train <- okcupid2_imp_mice[train_idx, ]
 okcupid2_imp_mice_valid <- okcupid2_imp_mice[valid_idx, ]
 
@@ -769,6 +768,290 @@ class: section-slide
 
 ---
 
+### OKCupid: Predicting Dogs or Cats People
+
+It won't be easy:
+
+```{r}
+okcupid %>% count(pets)
+```
+
+---
+
+We will define cats/dogs people in the following way and stick to non-NA observations:
+
+```{r}
+cats_categories <- c("has cats", "likes cats", "dislikes dogs and has cats",
+                     "dislikes dogs and has cats")
+dogs_categories <- c("has dogs", "likes dogs", "has dogs and dislikes cats",
+                     "likes dogs and dislikes cats")
+okcupid3 <- okcupid %>%
+  mutate(pets = case_when(
+           pets %in% cats_categories ~ "cats",
+           pets %in% dogs_categories ~ "dogs",
+           TRUE ~ NA_character_)) %>%
+  drop_na(pets)
+
+okcupid3 %>% count(pets)
+```
+
+Notice the classes are very unbalanced, with roughly 11 dogs people to every 2 cats people.
+
+```{r, echo=FALSE}
+okcupid3 <- okcupid3 %>%
+  mutate(height_cm = 2.54 * height,
+         religion2 = case_when(
+           str_detect(religion, "agnosticism") | str_detect(religion, "atheism") ~ "atheist",
+           str_detect(religion, "buddhism") ~ "buddhist",
+           str_detect(religion, "christianity") | str_detect(religion, "catholicism") ~ "christian",
+           str_detect(religion, "judaism") ~ "jewish",
+           str_detect(religion, "hinduism") ~ "hindu",
+           str_detect(religion, "islam") ~ "muslim",
+           TRUE ~ NA_character_),
+         education_kind = case_when(
+           str_detect(education, "^dropped") ~ "dropped",
+           str_detect(education, "^graduated") ~ "graduated",
+           str_detect(education, "^working") ~ "working",
+           TRUE ~ "other"),
+         ethnicity2 = ifelse(ethnicity %in% ethnicities_keep, ethnicity, "other"),
+         part_black = str_detect(ethnicity, "black"),
+         part_white = str_detect(ethnicity, "white"),
+         part_asian = str_detect(ethnicity, "asian"),
+         part_hispanic = str_detect(ethnicity, "hispanic"),
+         body_type_not_perfect = body_type %in% not_perfect,
+         diet2 = map_chr(diet, narrow_category),
+         location_sf = location == "san francisco, california",
+         sign_fun = str_detect(sign, "fun"),
+         sign_not_matter = str_detect(sign, "but it does"),
+         sign_matters = str_detect(sign, "matters"),
+         sign2 = str_extract(sign, str_c(signs, collapse = "|")),
+         speaks_spanish = str_detect(speaks, "spanish"),
+         speaks_french = str_detect(speaks, "french"),
+         speaks_german = str_detect(speaks, "german"),
+         speaks_chinese = str_detect(speaks, "chinese"),
+         education2 = case_when(
+           education == "graduated from high school" ~ "high_school",
+           education == "graduated from two-year college" ~ "college",
+           education == "graduated from college/university" ~ "degree1",
+           education == "graduated from masters program" ~ "degree2",
+           education == "graduated from ph.d program" ~ "degree3",
+           education == "working on two-year college" ~ "student0",
+           education == "working on college/university" ~ "student1",
+           education == "working on masters program" ~ "student2",
+           education == "working on ph.d program" ~ "student3",
+           is.na(education) ~ NA_character_,
+           TRUE ~ "other"
+         ),
+         education_academic = education2 %in% c("degree1", "degree2", "degree3", "student2", "student3"),
+         status = ifelse(status == "unknown", NA_character_, status),
+         job2 = map_chr(job, narrow_category, sep = " / "),
+         job3 = case_when(
+           is.na(job2) ~ "other",
+           TRUE ~ job2
+         ),
+         job_underpaid = job2 %in% job_underpaid) %>%
+  mutate_at(vars(essay0:essay9), list("len" = ~log(str_length(.x) + 0.016))) %>%
+  mutate_if(is.character, as.factor) %>%
+  mutate_if(is.logical, as.factor)
+
+predictors <- c("age", "height_cm", "sex", "body_type",
+                "diet2", "drinks", "drugs", "religion2",
+                "education2" ,"education_kind",
+                "ethnicity2", "part_black", "part_white",
+                "part_asian", "part_hispanic", "job3",
+                "orientation", "sign_fun", "sign_not_matter", "sign_matters",
+                "sign2", "speaks_spanish", "speaks_french", "speaks_german",
+                "speaks_chinese", "status",
+                "essay0_len", "essay1_len", "essay2_len", "essay3_len", "essay4_len",
+                "essay5_len", "essay6_len", "essay7_len", "essay8_len", "essay9_len")
+```
+---
+
+As before in the vector `predictors` we have `r length(predictors)` continuous and categorical variables which may or may not be predictive to being a cats/dogs person:
+
+
+```{r}
+okcupid3 <- okcupid3 %>%
+  select(pets, predictors) %>%
+  mutate(id = 1:n())
+
+dim(okcupid3)
+```
+
+And as before we split the data into training, test and validation sets, not shown here:
+
+```{r, message=FALSE, echo=FALSE}
+# test_idx <- sample(1:nrow(okcupid3), 4000, replace = FALSE)
+# train_idx <- okcupid3 %>% filter(!id %in% test_idx) %>% sample_n(10000) %>% pull(id)
+# valid_idx <- okcupid3 %>% filter(!id %in% test_idx, !id %in% train_idx) %>% pull(id)
+okcupid3 <- okcupid3 %>% select(-id)
+
+idx <- read_rds("../data/okcupid3_idx.rda")
+train_idx <- idx$train_idx
+valid_idx <- idx$valid_idx
+test_idx <- idx$test_idx
+
+okcupid3_train <- okcupid3[train_idx, ]
+okcupid3_valid <- okcupid3[valid_idx, ]
+okcupid3_test <- okcupid3[test_idx, ]
+
+glue("train no. of rows: {nrow(okcupid3_train)}
+     validation no. of rows: {nrow(okcupid3_valid)}
+     test no. of rows: {nrow(okcupid3_test)}")
+```
+
+---
+
+Worth exploring relations between predictors and being a cats/dogs person:
+
+```{r Sex-Pets, out.width="80%", fig.asp=0.5}
+var_vs_pets_stackedbar <- function(var) {
+  ggplot(okcupid3_train, aes({{var}}, fill = pets)) +
+  geom_bar(position = "fill") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+}
+
+var_vs_pets_stackedbar(sex)
+```
+
+---
+
+```{r Body-Type-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(body_type)
+```
+
+---
+
+```{r Sign-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(sign2)
+```
+
+---
+
+```{r Job-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(job3)
+```
+
+---
+
+```{r Edu-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(education2)
+```
+
+---
+
+```{r Religion-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(religion2)
+```
+
+---
+
+```{r Diet-Pets, out.width="100%", fig.asp=0.5}
+var_vs_pets_stackedbar(diet2)
+```
+
+---
+
+```{r Essay-Pets, warning=FALSE, message=FALSE, out.width="100%", fig.asp=0.5}
+ggpairs(okcupid3_train %>%
+          select(essay0_len:essay2_len, pets))
+```
+
+---
+
+### Baseline: Logistic Regression
+
+As in `lm`, it is better to impute missing values than to lose these observations:
+
+```{r, message=FALSE}
+# library(mice)
+# mice_obj <- mice(okcupid3, m = 1, maxit = 10, seed = 42)
+# okcupid3_imp_mice <- complete(mice_obj)
+
+okcupid3_imp_mice <- read_rds("../data/okcupid3_imp_mice.rds")
+okcupid3_imp_mice_train <- okcupid3_imp_mice[train_idx, ]
+okcupid3_imp_mice_valid <- okcupid3_imp_mice[valid_idx, ]
+
+mod_glm_mice <- glm(pets ~ ., data = okcupid3_imp_mice_train, family = "binomial")
+pred_glm_mice <- predict(mod_glm_mice, okcupid3_imp_mice_valid, type = "response")
+```
+
+---
+
+Let's plot the ROC curve:
+
+```{r, message=FALSE, warning=FALSE, out.width="50%"}
+library(pROC)
+roc_obj <- roc(okcupid3_valid$pets, pred_glm_mice)
+
+ggroc(roc_obj) +
+  theme_classic() +
+  geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color="darkgrey", linetype="dashed")
+```
+
+---
+
+Choosing a specific cutoff, the proportion of dogs people in the training sample (the "positive" class), 0.84, let's look at the confusion matrix:
+
+```{r}
+cutoff <- mean(okcupid3_train$pets == "dogs")
+pred_class <- ifelse(pred_glm_mice > cutoff, "dogs", "cats")
+true_class <- okcupid3_valid$pets
+
+table(true_class, pred_class)
+```
+
+.insight[
+`r emo::ji("bulb")` What would be the accuracy? Recall (sensitivity, specificity)? Precision (PPV, NPV)?
+]
+
+---
+
+We would like to know the model's AUC, accuracy for a given score cutoff, recall and precision:
+
+```{r, message=FALSE}
+report_accuracy_and_auc <- function(obs, pred, cutoff = mean(okcupid3_train$pets == "dogs")) {
+  roc_obj <- roc(obs, pred)
+  AUC <- as.numeric(auc(roc_obj))
+  res <- coords(roc_obj, x = cutoff,
+                ret = c("accuracy", "recall", "precision", "specificity", "npv"),
+                transpose = TRUE)
+  glue("AUC: {format(AUC, digits = 3)}
+  ACC: {format(res['accuracy'], digits = 3)}
+  Dogs: Recall: {format(res['recall'], digits = 3)}
+        Precision: {format(res['precision'], digits = 3)}
+  Cats: Recall: {format(res['specificity'], digits = 3)}
+        Precision: {format(res['npv'], digits = 3)}")
+}
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_mice)
+```
+
+---
+
+#### Baseline: GLMNET: Penalized Logistic Regression
+
+```{r, message=FALSE}
+okcupid3_imp_mat_train <- model.matrix( ~ ., okcupid3_imp_mice_train[, predictors])
+okcupid3_imp_mat_valid <- model.matrix( ~ ., okcupid3_imp_mice_valid[, predictors])
+
+glmnet_cv <- cv.glmnet(x = okcupid3_imp_mat_train,
+                       y = okcupid3_train$pets, family = "binomial")
+
+best_lambda <- glmnet_cv$lambda.min
+
+mod_glm_glmnet <- glmnet(x = okcupid3_imp_mat_train,
+                         y = okcupid3_train$pets,
+                         family = "binomial", lambda = best_lambda)
+pred_glm_glmnet <- predict(mod_glm_glmnet, okcupid3_imp_mat_valid, type = "response")
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
+```
+
+---
+
 class: section-slide
 
 # End of Detour
@@ -779,6 +1062,192 @@ class: section-slide
 
 # The CART (Classification)
 
+---
+
+### The OG CART
+
+1. Find the the predictor to (binary) split on and the value of the split, by $Gini$ (a.k.a impurity) criterion
+2. For each resulting node if $n_{node} > 20$ go to 1
+3. Once full tree has been grown, perform pruning using the *cost-complexity parameter* $c_p$ and the $Gini_{c_p}$ criterion
+4. Predict the proportion of each class at each terminal node, or most common class
+
+---
+
+### The $Gini$ criterion
+
+- $y$ is the discrete dependent variable with $J$ classes
+- The $Gini_{parent}$ at a parent node is: $\sum_{j=1}^JP(y=j)[1-P(y=j)]=\sum_j p_j(1-p_j)$
+- a continuous predictor $v$ is nominated for splitting the current node with splitting value $l$
+- such that $S_1$ is the set of observations for which $v_i \le l$
+- and $S_2$ is the set of observations for which $v_i > l$
+- $p_{1_j}$ is the (observed) probability of $y$ equals class $j$ in set $S_1$
+
+$Gini_{split} = \frac{\text{#obs node1}}{\text{#obs parent}}Gini_{node1} + \frac{\text{#obs node2}}{\text{#obs parent}}Gini_{node2}=$
+$\frac{\text{#obs node1}}{\text{#obs parent}}\sum_j p_{1_j}(1-p_{1_j}) + \frac{\text{#obs node2}}{\text{#obs parent}}\sum_j p_{2_j}(1-p_{2_j})$
+
+And we find $l$ for which $\Delta G = Gini_{parent} - Gini_{split}$ is greatest.
+
+---
+
+Why Gini?
+
+For $J=2$ classes this means: $p_1(1-p_1)+p_2(1-p_2)=2p_1(1-p_1)$
+
+The more "impure" the node, the higher this metric:
+
+```{r Gini-2-Classes, out.width="45%"}
+p <- seq(0, 1, 0.01)
+plot(p, 2 * p * (1 - p), type = "l")
+```
+
+---
+
+For example if `religion2` is candidate in splitting `pets`:
+
+```{r Religion-Gini0, fig.show="hide", warning=FALSE}
+gini <- function(l, df, v) {
+  pets_above <- df %>% filter({{v}} >= l) %>% pull(pets)
+  pets_below <- df %>% filter({{v}} < l) %>% pull(pets)
+  p_dogs_above <- mean(pets_above == "dogs")
+  gini_above <- 2 * p_dogs_above * (1 - p_dogs_above)
+  p_dogs_below <- mean(pets_below == "dogs")
+  gini_below <- 2 * p_dogs_below * (1 - p_dogs_below)
+  gini_weighted <- (length(pets_above) / nrow(df)) * gini_above +
+    (length(pets_below) / nrow(df)) * gini_below
+  return(gini_weighted)
+}
+
+age <- seq(18,69, 1)
+gini_age <- map_dbl(age, gini, df = okcupid3_train, v = age)
+
+p1 <- okcupid3_train %>%
+  group_by(age) %>%
+  summarise(p_dogs = mean(pets == "dogs"), n = n()) %>%
+  ggplot(aes(age, p_dogs)) +
+  geom_point(aes(size = n)) +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_blank())
+
+p2 <- tibble(age = age, gini = gini_age) %>%
+  ggplot(aes(age, gini)) +
+  geom_line() +
+  geom_point() +
+  theme_classic()
+
+p1 / p2
+```
+
+---
+
+```{r Religion-Gini, ref.label = "Religion-Gini0", echo = FALSE, out.width = "80%", warning=FALSE}
+
+```
+
+---
+
+### CART with `rpart`
+
+Let's tune $c_p$ for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be AUC.
+
+```{r Cp-CV0-B}
+n_cv <- 5; cp_seq <- seq(0, 0.01, 0.0005)
+
+okcupid3_train_val <- okcupid3_train %>%
+  mutate(val = sample(1:n_cv, n(), replace = TRUE))
+
+get_validation_set_auc <- function(i, .cp) {
+  ok_tr <- okcupid3_train_val %>% filter(val != i) %>% select(-val)
+  ok_val <- okcupid3_train_val %>% filter(val == i) %>% select(-val)
+  mod <- rpart(pets ~ ., data = ok_tr,
+               control = rpart.control(cp = .cp, minbucket = 50))
+  pred <- predict(mod, ok_val)[, 2]
+  roc_obj <- roc(ok_val$pets, pred)
+  as.numeric(auc(roc_obj))
+}
+
+get_cv_auc <- function(.cp) {
+  tibble(cp = rep(.cp, n_cv),
+         auc = map_dbl(1:n_cv, get_validation_set_auc, .cp = .cp))
+}
+```
+
+---
+
+```{r Cp-CV-B, out.width = "100%", fig.asp=0.5}
+# cv_table <- map_dfr(cp_seq, get_cv_auc)
+cv_table <- read_rds("../data/okcupid_CART_Class_Cp_CV.rds")
+
+cv_table %>%
+  mutate(cp = factor(cp)) %>%
+  ggplot(aes(cp, auc)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+---
+
+Training on the entire training set:
+
+```{r}
+mod_tree_na_class <- rpart(pets ~ ., data = okcupid3_train,
+                           control = rpart.control(cp = 0.001, minbucket = 50))
+```
+
+There's no way to plot this tree nicely...
+
+```{r CART-NA2-Class, out.width="50%"}
+plot(mod_tree_na_class)
+```
+
+---
+
+Printing the tree it seems like after splitting observations by religion, those who are Christian, Jewish or Hindu have a 88% of being dogs people, and the rest are then split by Status, Body Type, the length of their 9th Essay, etc...
+
+<img src = "images/CART_class_print.png" style="width: 100%">
+
+---
+
+### Variables Importance
+
+```{r, CART-Class-VarImp, echo = FALSE, out.width="60%"}
+enframe(mod_tree_na_class$variable.importance) %>%
+  arrange(value) %>%
+  mutate(variable = as_factor(name)) %>%
+  ggplot(aes(variable, value)) +
+  geom_segment(aes(x = variable, xend = variable,
+                   y = 0, yend = value)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  coord_flip() +
+  labs(x = "", y = "")
+```
+
+---
+
+### Prediction
+
+```{r, message=FALSE}
+pred_tree_na_class <- predict(mod_tree_na_class, okcupid3_valid)
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_na_class[, 2])
+```
+
+As expected, far from impressive.
+
+---
+
+Let's try using the imputed `NA` data:
+
+```{r, message=FALSE}
+mod_tree_imp_class <- rpart(pets ~ ., data = okcupid3_imp_mice_train,
+                            control = rpart.control(cp = 0.001))
+pred_tree_imp_class <- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
+
+report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
+```
 ---
 
 class: section-slide
