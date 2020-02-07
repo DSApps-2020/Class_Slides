@@ -1073,7 +1073,7 @@ ggroc(roc_obj) +
   geom_segment(aes(x = 1, xend = 0, y = 0, yend = 1), color="darkgrey", linetype="dashed")
 ```
 
-&lt;img src="images/unnamed-chunk-24-1.png" width="50%" /&gt;
+&lt;img src="images/GLM-ROC-1.png" width="50%" /&gt;
 
 ---
 
@@ -1155,11 +1155,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.739
-## ACC: 0.672
+## ACC: 0.671
 ## Dogs: Recall: 0.672
-##       Precision: 0.923
-## Cats: Recall: 0.672
-##       Precision: 0.259
+##       Precision: 0.922
+## Cats: Recall: 0.667
+##       Precision: 0.257
 ```
 
 ---
@@ -1473,7 +1473,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 
 ```
 ## RMSE: 0.367
-## CORR: 0.434
+## CORR: 0.429
 ```
 
 ```r
@@ -1483,8 +1483,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.366
-## CORR: 0.438
+## RMSE: 0.367
+## CORR: 0.431
 ```
 
 ---
@@ -1492,6 +1492,87 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 class: section-slide
 
 # Random Forests
+
+---
+
+### Random Forests: The Gist
+
+For `\(i = 1\)` to `\(m\)` do
+- Generate a bootstrap sample of the original data
+- Train an unpruned tree model on this sample
+- For each splot:
+  - Randomly select `\(m_{try}\)` predictors
+  - Select best predictor for split in this subset only
+
+End.
+
+---
+
+What does RF add on top of Bagging?
+
+&lt;img src="images/RF-Trees-1.png" width="80%" /&gt;
+
+---
+
+### RF with `randomForest`
+
+For some reason this implementation of RF won't accept missing values:
+
+
+```r
+library(randomForest)
+
+mod_rf_mice &lt;- randomForest(income ~ ., data = okcupid2_imp_mice_train,
+                       mtry = 10, ntree = 50, importance = TRUE)
+pred_rf_mice &lt;- predict(mod_rf_mice, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
+```
+
+```
+## RMSE: 0.355
+## CORR: 0.487
+```
+
+For variable importance check out the `importance` field of the RF object:
+
+---
+
+&lt;img src="images/RF-VarImp-1.png" width="70%" /&gt;
+
+.insight[
+💡 What is troubling about variable importance?
+]
+---
+
+### Partial Dependency Plots
+
+1. Select a subset `\(X_s\)` of variables (usually 1-2) you wish to know the relation to the dependent variable `\(y\)`
+2. For each possible permutation of `\(X_s\)` run the model on the original data imputing this specific permutation instead of the values of `\(X_s\)`
+3. Average predictions of `\(y\)`
+4. Plot `\(y\)` vs. `\(X_s\)`
+
+---
+
+
+```r
+partial(mod_rf_mice, pred.var = "age",
+        plot = TRUE, plot.engine = "ggplot2") +
+  labs(y = "income") +
+  theme_classic()
+```
+
+&lt;img src = "images/RF-PDP-Age.png" style="width: 50%"&gt;
+
+---
+
+Let's see this for `age` and `height_cm` together (takes some time!):
+
+
+```r
+partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
+```
+
+&lt;img src = "images/RF-PDP-Age-Height.png" style="width: 50%"&gt;
 
 ---
 

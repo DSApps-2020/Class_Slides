@@ -982,7 +982,7 @@ pred_glm_mice <- predict(mod_glm_mice, okcupid3_imp_mice_valid, type = "response
 
 Let's plot the ROC curve:
 
-```{r, message=FALSE, warning=FALSE, out.width="50%"}
+```{r GLM-ROC, message=FALSE, warning=FALSE, out.width="50%"}
 library(pROC)
 roc_obj <- roc(okcupid3_valid$pets, pred_glm_mice)
 
@@ -1275,7 +1275,7 @@ End.
 Why does Bagging work?
 
 ```{r Bagging-Trees, echo=FALSE, out.width="80%", warning=FALSE}
-train_tree <- function(i, .n) {
+train_tree_bag <- function(i, .n) {
   samp <- sample(1:.n, .n, replace = TRUE)
   rpart(income ~ ., data = okcupid2_imp_mice_train[samp, ])
 }
@@ -1284,7 +1284,7 @@ plot_tree <- function(i) {
   prp(mod_trees[[i]])
 }
 
-mod_trees <- map(1:4, train_tree, .n = nrow(okcupid2_train))
+mod_trees <- map(1:4, train_tree_bag, .n = nrow(okcupid2_train))
 
 par(mfrow = c(2,2))
 walk(1:4, plot_tree)
@@ -1358,6 +1358,98 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 class: section-slide
 
 # Random Forests
+
+---
+
+### Random Forests: The Gist
+
+For $i = 1$ to $m$ do
+- Generate a bootstrap sample of the original data
+- Train an unpruned tree model on this sample
+- For each splot:
+  - Randomly select $m_{try}$ predictors
+  - Select best predictor for split in this subset only
+
+End.
+
+---
+
+What does RF add on top of Bagging?
+
+```{r RF-Trees, echo=FALSE, out.width="80%", warning=FALSE}
+train_tree_rf <- function(i, .n) {
+  samp <- sample(1:.n, .n, replace = TRUE)
+  predictors_samp <- sample(predictors, 10, replace = FALSE)
+  rpart(income ~ ., data = okcupid2_imp_mice_train[samp, c("income", predictors_samp)])
+}
+
+mod_trees <- map(1:4, train_tree_rf, .n = nrow(okcupid2_train))
+
+par(mfrow = c(2,2))
+walk(1:4, plot_tree)
+```
+
+---
+
+### RF with `randomForest`
+
+For some reason this implementation of RF won't accept missing values:
+
+```{r, message=FALSE, warning=FALSE}
+library(randomForest)
+
+mod_rf_mice <- randomForest(income ~ ., data = okcupid2_imp_mice_train,
+                       mtry = 10, ntree = 50, importance = TRUE)
+pred_rf_mice <- predict(mod_rf_mice, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
+```
+
+For variable importance check out the `importance` field of the RF object:
+
+---
+
+```{r, RF-VarImp, out.width="70%", echo = FALSE}
+mod_rf_mice$importance %>%
+  as_tibble(rownames = "var") %>% arrange(IncNodePurity) %>%
+  mutate(variable = as_factor(var)) %>%
+  ggplot(aes(variable, IncNodePurity)) +
+  geom_segment(aes(x = variable, xend = variable, y = 0, yend = IncNodePurity)) +
+  geom_point(size = 3) + theme_classic() +
+  coord_flip() + labs(x = "", y = "")
+```
+
+.insight[
+`r emo::ji("bulb")` What is troubling about variable importance?
+]
+---
+
+### Partial Dependency Plots
+
+1. Select a subset $X_s$ of variables (usually 1-2) you wish to know the relation to the dependent variable $y$
+2. For each possible permutation of $X_s$ run the model on the original data imputing this specific permutation instead of the values of $X_s$
+3. Average predictions of $y$
+4. Plot $y$ vs. $X_s$
+
+---
+
+```{r, eval=FALSE}
+partial(mod_rf_mice, pred.var = "age",
+        plot = TRUE, plot.engine = "ggplot2") +
+  labs(y = "income") +
+  theme_classic()
+```
+
+<img src = "images/RF-PDP-Age.png" style="width: 50%">
+
+---
+
+Let's see this for `age` and `height_cm` together (takes some time!):
+
+```{r, eval = FALSE}
+partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
+```
+
+<img src = "images/RF-PDP-Age-Height.png" style="width: 50%">
 
 ---
 
