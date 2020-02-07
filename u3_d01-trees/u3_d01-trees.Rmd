@@ -1248,11 +1248,110 @@ pred_tree_imp_class <- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
 
 report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
 ```
+
 ---
 
 class: section-slide
 
 # Bagged Trees
+
+---
+
+### Bagging: The Gist
+
+For $i = 1$ to $m$ do
+- Generate a bootstrap sample of the original data
+- Train an unpruned tree model on this sample
+
+End.
+
+
+- Predict average through all $m$ trees (or %vote for each class in classification)
+- What you get: better prediction, *OOB* error estimates
+- What you lose: interpretability, speed (but bagging can be paralleled)
+
+---
+
+Why does Bagging work?
+
+```{r Bagging-Trees, echo=FALSE, out.width="80%", warning=FALSE}
+train_tree <- function(i, .n) {
+  samp <- sample(1:.n, .n, replace = TRUE)
+  rpart(income ~ ., data = okcupid2_imp_mice_train[samp, ])
+}
+
+plot_tree <- function(i) {
+  prp(mod_trees[[i]])
+}
+
+mod_trees <- map(1:4, train_tree, .n = nrow(okcupid2_train))
+
+par(mfrow = c(2,2))
+walk(1:4, plot_tree)
+```
+
+---
+
+Which models are likely to benefit from bagging?
+
+```{r, warning=FALSE}
+train_lm <- function(i, .n) {
+  samp <- sample(1:.n, .n, replace = TRUE)
+  lm(income ~ ., data = okcupid2_imp_mice_train[samp, ])
+}
+
+train_tree <- function(i, .n) {
+  samp <- sample(1:.n, .n, replace = TRUE)
+  rpart(income ~ ., data = okcupid2_imp_mice_train[samp, ])
+}
+
+predict_mod <- function(mod) {
+  tibble(pred = predict(mod, okcupid2_imp_mice_valid))
+}
+
+rmse_m_models <- function(m, .preds) {
+  rmse(okcupid2_imp_mice_valid$income, rowMeans(.preds[, 1:m]))
+}
+
+n <- nrow(okcupid2_imp_mice_train)
+m_max <- 50
+
+mod_lms <- map(1:m_max, train_lm, .n = n)
+mod_trees <- map(1:m_max, train_tree, .n = n)
+
+preds_lm <- map_dfc(mod_lms, predict_mod)
+preds_tree <- map_dfc(mod_trees, predict_mod)
+```
+
+---
+
+```{r, Bagging-LM-CART, out.width="100%", fig.asp=0.5}
+rmse_lm <- map_dbl(1:m_max, rmse_m_models, .preds = preds_lm)
+rmse_tree <- map_dbl(1:m_max, rmse_m_models, .preds = preds_tree)
+tibble(m = rep(1:m_max, 2),
+       model = c(rep("lm", m_max), rep("CART", m_max)),
+       RMSE = c(rmse_lm, rmse_tree)) %>%
+  ggplot(aes(m, RMSE, color = model)) +
+  ylim(c(0.34, 0.38)) +
+  geom_line() + geom_point() +
+  theme_classic()
+```
+
+---
+
+### Bagging with `ipred`
+
+```{r}
+library(ipred)
+
+mod_bag_na <- bagging(income ~ ., data = okcupid2_train, nbagg = 50)
+pred_bag_na <- predict(mod_bag_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
+
+mod_bag_mice <- bagging(income ~ ., data = okcupid2_imp_mice_train, nbagg = 50)
+pred_bag_mice <- predict(mod_bag_na, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
+```
 
 ---
 
