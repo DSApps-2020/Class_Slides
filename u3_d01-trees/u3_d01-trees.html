@@ -508,7 +508,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.505
+## CORR: 0.506
 ```
 
 ---
@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002486 0.02238636
-## 2 0.048179174      1 0.8864025 0.8910115 0.02283006
-## 3 0.013140594      2 0.8382233 0.8449056 0.02366658
-## 4 0.010043056      3 0.8250827 0.8347934 0.02382445
-## 5 0.009147817      4 0.8150397 0.8276786 0.02378065
-## 6 0.005634308      5 0.8058919 0.8195011 0.02398377
+## 1 0.113597498      0 1.0000000 1.0002413 0.02238547
+## 2 0.048179174      1 0.8864025 0.8899934 0.02277368
+## 3 0.013140594      2 0.8382233 0.8477735 0.02367110
+## 4 0.010043056      3 0.8250827 0.8376940 0.02387244
+## 5 0.009147817      4 0.8150397 0.8297327 0.02388356
+## 6 0.005634308      5 0.8058919 0.8153767 0.02403128
 ```
 
 ---
@@ -1230,11 +1230,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.739
-## ACC: 0.672
+## ACC: 0.671
 ## Dogs: Recall: 0.672
-##       Precision: 0.923
-## Cats: Recall: 0.672
-##       Precision: 0.259
+##       Precision: 0.922
+## Cats: Recall: 0.667
+##       Precision: 0.257
 ```
 
 ---
@@ -1536,6 +1536,7 @@ tibble(m = rep(1:m_max, 2),
 
 &lt;img src="images/Bagging-LM-CART-1.png" width="100%" /&gt;
 
+
 ---
 
 ### Bagging with `ipred`
@@ -1550,8 +1551,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.365
-## CORR: 0.44
+## RMSE: 0.366
+## CORR: 0.436
 ```
 
 ```r
@@ -1561,8 +1562,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.364
-## CORR: 0.444
+## RMSE: 0.365
+## CORR: 0.44
 ```
 
 ---
@@ -1606,9 +1607,10 @@ pred_rf_mice &lt;- predict(mod_rf_mice, okcupid2_imp_mice_valid)
 report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
 ```
 
+
 ```
-## RMSE: 0.355
-## CORR: 0.488
+## RMSE: 0.354
+## CORR: 0.491
 ```
 
 For variable importance check out the `importance` field of the RF object:

@@ -1381,7 +1381,7 @@ walk(1:4, plot_tree)
 
 Which models are likely to benefit from bagging?
 
-```{r, warning=FALSE}
+```{r, eval=FALSE}
 train_lm <- function(i, .n) {
   samp <- sample(1:.n, .n, replace = TRUE)
   lm(income ~ ., data = okcupid2_imp_mice_train[samp, ])
@@ -1412,7 +1412,7 @@ preds_tree <- map_dfc(mod_trees, predict_mod)
 
 ---
 
-```{r, Bagging-LM-CART, out.width="100%", fig.asp=0.5}
+```{r, Bagging-LM-CART2, eval=FALSE}
 rmse_lm <- map_dbl(1:m_max, rmse_m_models, .preds = preds_lm)
 rmse_tree <- map_dbl(1:m_max, rmse_m_models, .preds = preds_tree)
 tibble(m = rep(1:m_max, 2),
@@ -1423,6 +1423,23 @@ tibble(m = rep(1:m_max, 2),
   geom_line() + geom_point() +
   theme_classic()
 ```
+
+```{r, Bagging-LM-CART, out.width="100%", fig.asp=0.5, echo=FALSE}
+# rmse_lm <- map_dbl(1:m_max, rmse_m_models, .preds = preds_lm)
+# rmse_tree <- map_dbl(1:m_max, rmse_m_models, .preds = preds_tree)
+m_max <- 50
+rmses <- read_rds("../data/bagging_comparison.rda")
+rmse_lm <- rmses$rmse_lm
+rmse_tree <- rmses$rmse_tree
+tibble(m = rep(1:m_max, 2),
+       model = c(rep("lm", m_max), rep("CART", m_max)),
+       RMSE = c(rmse_lm, rmse_tree)) %>%
+  ggplot(aes(m, RMSE, color = model)) +
+  ylim(c(0.34, 0.38)) +
+  geom_line() + geom_point() +
+  theme_classic()
+```
+
 
 ---
 
@@ -1482,11 +1499,21 @@ walk(1:4, plot_tree)
 
 For some reason this implementation of RF won't accept missing values:
 
-```{r, message=FALSE, warning=FALSE}
+```{r, eval=FALSE}
 library(randomForest)
 
 mod_rf_mice <- randomForest(income ~ ., data = okcupid2_imp_mice_train,
                        mtry = 10, ntree = 50, importance = TRUE)
+pred_rf_mice <- predict(mod_rf_mice, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(randomForest)
+
+# mod_rf_mice <- randomForest(income ~ ., data = okcupid2_imp_mice_train,
+#                        mtry = 10, ntree = 50, importance = TRUE)
+mod_rf_mice <- read_rds("../data/mod_rf_mice.rds")
 pred_rf_mice <- predict(mod_rf_mice, okcupid2_imp_mice_valid)
 report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
 ```
