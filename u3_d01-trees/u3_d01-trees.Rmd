@@ -1346,7 +1346,7 @@ class: section-slide
 
 ### Bagging: The Gist
 
-For $i = 1$ to $m$ do
+For $j= 1$ to $m$ do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
 
@@ -1467,7 +1467,7 @@ class: section-slide
 
 ### Random Forests: The Gist
 
-For $i = 1$ to $m$ do
+For $j= 1$ to $m$ do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
 - For each splot:
@@ -1569,7 +1569,121 @@ partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
 
 class: section-slide
 
-# Boosted Trees
+# Gradient Boosted Trees
+
+---
+
+### Boosting: The Gist
+
+Compute the average response $\overline y$, and use this as the initial predicted value for each sample
+
+For $j = 1$ to $m$ do
+- Compute the residual for each observation
+- Sample a fraction of the original data
+- Fit a regression tree of a certain *"interaction depth"* using the residual as response
+- Predict each sample using this tree
+- Update the predicted value of each sample by adding the previous iteration's value to current predicted value X *learning rate* or *shrinkage* parameter
+
+End.
+
+---
+
+What you end up with:
+
+$\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)$
+
+That is, GBT (or GBM) in general is called an additive model.
+
+.insight[
+`r emo::ji("bulb")` Where does "Gradient" come from?
+]
+
+- The added random sampling of the data was added later, this version is called *Stochastic* Gradient Boosting, the default for the parameter often called "bagging fraction" is 0.5
+- The shrinkage $\lambda$ can be turned into $\lambda_j$, a unique weight for each added tree
+- Note the **many** tuning parameters here. Do you know how to tune multiple params?
+- Not so parallel now, eh?
+
+---
+
+### GBT with `gbm`
+
+```{r, message=FALSE}
+library(gbm)
+
+mod_gbm_na <- gbm(income ~ ., data = okcupid2_train,
+                  distribution = "gaussian",
+                  n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_na <- predict(mod_gbm_na, okcupid2_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
+
+mod_gbm_mice <- gbm(income ~ ., data = okcupid2_imp_mice_train,
+                  distribution = "gaussian", n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_mice <- predict(mod_gbm_na, okcupid2_imp_mice_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
+```
+
+For variables importance see the `summary` function:
+
+---
+
+```{r GBM-VarImp, out.width="70%", echo = FALSE}
+importance_mat <- summary(mod_gbm_na, plotit = FALSE)
+
+importance_mat %>%
+  arrange(rel.inf) %>%
+  mutate(variable = fct_reorder(var, rel.inf)) %>%
+  ggplot(aes(variable, rel.inf)) +
+  geom_segment(aes(x = variable, xend = variable, y = 0, yend = rel.inf)) +
+  geom_point(size = 3) + theme_classic() +
+  coord_flip() + labs(x = "", y = "")
+```
+
+
+.insight[
+`r emo::ji("bulb")` Do you see the difference in the profile of importance between RF and GBT?
+]
+---
+
+### GBT with `xgboost`
+
+`xgboost` is faster and has some additional features, e.g. the ability to train with a validation set until it shows no improvement, similar to neural networks.
+
+```{r, message=FALSE}
+library(xgboost)
+
+dtrain <- xgb.DMatrix(data = data.matrix(okcupid2_train[, predictors]),
+                      label = okcupid2_train$income)
+dval <- xgb.DMatrix(data = data.matrix(okcupid2_valid[, predictors]),
+                    label=okcupid2_valid$income)
+watchlist <- list(train=dtrain, test=dval)
+
+mod_xgboost_na <- xgb.train(data = dtrain, watchlist=watchlist,
+                            objective = "reg:squarederror", nrounds = 100,
+                            eta = 0.1, subsample = 0.5,
+                            early_stopping_rounds = 10, verbose = 0)
+pred_xgboost_na <- predict(mod_xgboost_na, dval)
+report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
+```
+
+.warning[
+`r emo::ji("warning")` Note that `xgboost` only accepts numeric input, that is why we use `data.matrix()`. Perhaps the order of the factors could be improved before they are turned into integers.
+]
+
+---
+
+For variables importance see the `xgb.importance` function:
+
+```{r XGBST-VarImp, out.width="70%", echo = FALSE}
+importance_mat <- xgb.importance(model = mod_xgboost_na)
+
+importance_mat %>%
+  arrange(Gain) %>%
+  mutate(variable = as_factor(Feature)) %>%
+  ggplot(aes(variable, Gain)) +
+  geom_segment(aes(x = variable, xend = variable, y = 0, yend = Gain)) +
+  geom_point(size = 3) + theme_classic() +
+  coord_flip() + labs(x = "", y = "")
+```
 
 ---
 

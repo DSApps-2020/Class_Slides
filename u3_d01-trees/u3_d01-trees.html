@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002413 0.02238547
-## 2 0.048179174      1 0.8864025 0.8899934 0.02277368
-## 3 0.013140594      2 0.8382233 0.8477735 0.02367110
-## 4 0.010043056      3 0.8250827 0.8376940 0.02387244
-## 5 0.009147817      4 0.8150397 0.8297327 0.02388356
-## 6 0.005634308      5 0.8058919 0.8153767 0.02403128
+## 1 0.113597498      0 1.0000000 1.0001938 0.02238263
+## 2 0.048179174      1 0.8864025 0.8887858 0.02273467
+## 3 0.013140594      2 0.8382233 0.8434127 0.02360123
+## 4 0.010043056      3 0.8250827 0.8345790 0.02384551
+## 5 0.009147817      4 0.8150397 0.8269856 0.02388817
+## 6 0.005634308      5 0.8058919 0.8166787 0.02397530
 ```
 
 ---
@@ -1230,11 +1230,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.739
-## ACC: 0.671
-## Dogs: Recall: 0.672
+## ACC: 0.673
+## Dogs: Recall: 0.674
 ##       Precision: 0.922
 ## Cats: Recall: 0.667
-##       Precision: 0.257
+##       Precision: 0.259
 ```
 
 ---
@@ -1468,7 +1468,7 @@ class: section-slide
 
 ### Bagging: The Gist
 
-For `\(i = 1\)` to `\(m\)` do
+For `\(j= 1\)` to `\(m\)` do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
 
@@ -1552,7 +1552,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 
 ```
 ## RMSE: 0.366
-## CORR: 0.436
+## CORR: 0.437
 ```
 
 ```r
@@ -1563,7 +1563,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 
 ```
 ## RMSE: 0.365
-## CORR: 0.44
+## CORR: 0.441
 ```
 
 ---
@@ -1576,7 +1576,7 @@ class: section-slide
 
 ### Random Forests: The Gist
 
-For `\(i = 1\)` to `\(m\)` do
+For `\(j= 1\)` to `\(m\)` do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
 - For each splot:
@@ -1658,7 +1658,120 @@ partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
 
 class: section-slide
 
-# Boosted Trees
+# Gradient Boosted Trees
+
+---
+
+### Boosting: The Gist
+
+Compute the average response `\(\overline y\)`, and use this as the initial predicted value for each sample
+
+For `\(j = 1\)` to `\(m\)` do
+- Compute the residual for each observation
+- Sample a fraction of the original data
+- Fit a regression tree of a certain *"interaction depth"* using the residual as response
+- Predict each sample using this tree
+- Update the predicted value of each sample by adding the previous iteration's value to current predicted value X *learning rate* or *shrinkage* parameter
+
+End.
+
+---
+
+What you end up with:
+
+`\(\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)\)`
+
+That is, GBT (or GBM) in general is called an additive model.
+
+.insight[
+💡 Where does "Gradient" come from?
+]
+
+- The added random sampling of the data was added later, this version is called *Stochastic* Gradient Boosting, the default for the parameter often called "bagging fraction" is 0.5
+- The shrinkage `\(\lambda\)` can be turned into `\(\lambda_j\)`, a unique weight for each added tree
+- Note the **many** tuning parameters here. Do you know how to tune multiple params?
+- Not so parallel now, eh?
+
+---
+
+### GBT with `gbm`
+
+
+```r
+library(gbm)
+
+mod_gbm_na &lt;- gbm(income ~ ., data = okcupid2_train,
+                  distribution = "gaussian",
+                  n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_na &lt;- predict(mod_gbm_na, okcupid2_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
+```
+
+```
+## RMSE: 0.351
+## CORR: 0.505
+```
+
+```r
+mod_gbm_mice &lt;- gbm(income ~ ., data = okcupid2_imp_mice_train,
+                  distribution = "gaussian", n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_mice &lt;- predict(mod_gbm_na, okcupid2_imp_mice_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
+```
+
+```
+## RMSE: 0.353
+## CORR: 0.497
+```
+
+For variables importance see the `summary` function:
+
+---
+
+&lt;img src="images/GBM-VarImp-1.png" width="70%" /&gt;
+
+
+.insight[
+💡 Do you see the difference in the profile of importance between RF and GBT?
+]
+---
+
+### GBT with `xgboost`
+
+`xgboost` is faster and has some additional features, e.g. the ability to train with a validation set until it shows no improvement, similar to neural networks.
+
+
+```r
+library(xgboost)
+
+dtrain &lt;- xgb.DMatrix(data = data.matrix(okcupid2_train[, predictors]),
+                      label = okcupid2_train$income)
+dval &lt;- xgb.DMatrix(data = data.matrix(okcupid2_valid[, predictors]),
+                    label=okcupid2_valid$income)
+watchlist &lt;- list(train=dtrain, test=dval)
+
+mod_xgboost_na &lt;- xgb.train(data = dtrain, watchlist=watchlist,
+                            objective = "reg:squarederror", nrounds = 100,
+                            eta = 0.1, subsample = 0.5,
+                            early_stopping_rounds = 10, verbose = 0)
+pred_xgboost_na &lt;- predict(mod_xgboost_na, dval)
+report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
+```
+
+```
+## RMSE: 0.358
+## CORR: 0.477
+```
+
+.warning[
+⚠️ Note that `xgboost` only accepts numeric input, that is why we use `data.matrix()`. Perhaps the order of the factors could be improved before they are turned into integers.
+]
+
+---
+
+For variables importance see the `xgb.importance` function:
+
+&lt;img src="images/XGBST-VarImp-1.png" width="70%" /&gt;
 
 ---
 
