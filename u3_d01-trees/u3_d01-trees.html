@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-07" />
+    <meta name="date" content="2020-02-08" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-07
+### 2020-02-08
 
 ---
 
@@ -61,6 +61,7 @@ class: section-slide
 - Highly interpretable (when tree is not large)
 - Easy to implement
 - Fast? (to predict)
+- Little pre-processing of predictors needed
 - Handle all types of predictors (continuous, categorical)
 - Handle missing data, *predict* missing data
 - Assumption free
@@ -672,12 +673,83 @@ And we choose the smallest pruned tree with the minimum `\(SSE_{c_p}\)`.
 
 ### CART with `rpart`
 
-Let's tune `\(c_p\)` for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be RMSE.
+Growing the full tree .font80percent[(for a numeric `\(y\)` `rpart` will guess this is Regression)]:
 
 
 ```r
 library(rpart)
 
+mod_tree &lt;- rpart(income ~ ., data = okcupid2_train)
+```
+
+Pruning with some `\(c_p\)`:
+
+
+```r
+mod_tree &lt;- prune(mod_tree, cp = 0.05)
+```
+
+.warning[
+⚠️ There is a `\(c_p\)` parameter you can pass to `rpart` while training like so:
+
+`rpart(income ~ ., data = okcupid2_train, control = rpart.control(cp = 0.05))`
+
+But this will only make `rpart` consider this `\(c_p\)` at each split as a minimum criterion *while growing the unpruned tree*. In fact the default of this parameter is 0.01!
+]
+
+---
+
+So, in order to train a true unpruned tree you would need to pass `\(c_p = 0\)`:
+
+
+```r
+mod_tree &lt;- rpart(income ~ ., data = okcupid2_train,
+                  control = rpart.control(cp = 0))
+```
+
+Now. `rpart` by default will perform 10-fold Cross Validation on each split, resulting in this `cptable`:
+
+
+```r
+head(mod_tree$cptable)
+```
+
+```
+##            CP nsplit rel error    xerror       xstd
+## 1 0.113597498      0 1.0000000 1.0002486 0.02238636
+## 2 0.048179174      1 0.8864025 0.8910115 0.02283006
+## 3 0.013140594      2 0.8382233 0.8449056 0.02366658
+## 4 0.010043056      3 0.8250827 0.8347934 0.02382445
+## 5 0.009147817      4 0.8150397 0.8276786 0.02378065
+## 6 0.005634308      5 0.8058919 0.8195011 0.02398377
+```
+
+---
+
+The nature of the `xerror` is unclear from the [docs](https://cran.r-project.org/web/packages/rpart/vignettes/longintro.pdf) (SSE/n ?) except that it is relative to the error in the root node.
+
+You can either use it like so:
+
+
+```r
+best_cp &lt;- mod_tree$cptable[which.min(mod_tree$cptable[,"xerror"]),"CP"]
+mod_tree &lt;- prune(mod_tree, cp = best_cp)
+```
+
+Or you can perfrom CV on your own, passing at each stage a parameter for `rpart` to not perform CV:
+
+
+```r
+mod_tree &lt;- rpart(income ~ ., data = okcupid2_train,
+                  control = rpart.control(cp = 0), xval = 1)
+```
+
+---
+
+Let's tune `\(c_p\)` for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be RMSE.
+
+
+```r
 n_cv &lt;- 5; cp_seq &lt;- seq(0, 0.02, 0.001)
 
 okcupid2_train_val &lt;- okcupid2_train %&gt;%
@@ -687,10 +759,12 @@ get_validation_set_rmse &lt;- function(i, .cp) {
   ok_tr &lt;- okcupid2_train_val %&gt;% filter(val != i) %&gt;% select(-val)
   ok_val &lt;- okcupid2_train_val %&gt;% filter(val == i) %&gt;% select(-val)
   mod &lt;- rpart(income ~ ., data = ok_tr,
-               control = rpart.control(cp = .cp))
+               control = rpart.control(cp = 0, xval = 1))
+  mod &lt;- prune(mod, cp = .cp)
   pred &lt;- predict(mod, ok_val)
   rmse(ok_val$income, pred)
 }
+
 get_cv_rmse &lt;- function(.cp) {
   tibble(cp = rep(.cp, n_cv),
          rmse = map_dbl(1:n_cv, get_validation_set_rmse, .cp = .cp))
@@ -701,8 +775,7 @@ get_cv_rmse &lt;- function(.cp) {
 
 
 ```r
-# cv_table &lt;- map_dfr(cp_seq, get_cv_rmse)
-cv_table &lt;- read_rds("../data/okcupid_CART_Reg_Cp_CV.rds")
+cv_table &lt;- map_dfr(cp_seq, get_cv_rmse)
 
 cv_table %&gt;%
   mutate(cp = factor(cp)) %&gt;%
@@ -713,7 +786,7 @@ cv_table %&gt;%
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
 
-&lt;img src="images/Cp-CV-1.png" width="100%" /&gt;
+&lt;img src="images/Cp-CV2-1.png" width="100%" /&gt;
 
 ---
 
@@ -722,7 +795,8 @@ Training on the entire training set:
 
 ```r
 mod_tree_na &lt;- rpart(income ~ ., data = okcupid2_train,
-                     control = rpart.control(cp = 0.004))
+                     control = rpart.control(cp = 0, xval = 1))
+mod_tree_na &lt;- prune(mod_tree_na, cp = 0.003)
 ```
 
 You can plot the tree using `rpart`, but...
@@ -771,7 +845,7 @@ ggparty(party_obj) +
 
 ---
 
-&lt;img src="images/CART-NA3-1.png" width="100%" /&gt;
+&lt;img src = "images/CART-ggparty.png" style="width: 100%"&gt;
 
 ---
 
@@ -826,8 +900,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_tree_na)
 ```
 
 ```
-## RMSE: 0.366
-## CORR: 0.436
+## RMSE: 0.363
+## CORR: 0.449
 ```
 
 As expected, far from impressive. Let's try using the imputed `NA` data:
@@ -835,15 +909,16 @@ As expected, far from impressive. Let's try using the imputed `NA` data:
 
 ```r
 mod_tree_imp &lt;- rpart(income ~ ., data = okcupid2_imp_mice_train,
-                      control = rpart.control(cp = 0.004))
+                      control = rpart.control(cp = 0, xval = 1))
+mod_tree_imp &lt;- prune(mod_tree_imp, cp = 0.003)
 pred_tree_imp &lt;- predict(mod_tree_imp, okcupid2_imp_mice_valid)
 
 report_rmse_and_cor(okcupid2_valid$income, pred_tree_imp)
 ```
 
 ```
-## RMSE: 0.368
-## CORR: 0.425
+## RMSE: 0.369
+## CORR: 0.424
 ```
 
 ---
@@ -1155,11 +1230,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.739
-## ACC: 0.671
+## ACC: 0.672
 ## Dogs: Recall: 0.672
-##       Precision: 0.922
-## Cats: Recall: 0.667
-##       Precision: 0.257
+##       Precision: 0.923
+## Cats: Recall: 0.672
+##       Precision: 0.259
 ```
 
 ---
@@ -1275,7 +1350,8 @@ get_validation_set_auc &lt;- function(i, .cp) {
   ok_tr &lt;- okcupid3_train_val %&gt;% filter(val != i) %&gt;% select(-val)
   ok_val &lt;- okcupid3_train_val %&gt;% filter(val == i) %&gt;% select(-val)
   mod &lt;- rpart(pets ~ ., data = ok_tr,
-               control = rpart.control(cp = .cp, minbucket = 50))
+               control = rpart.control(cp = 0, xval = 1))
+  mod &lt;- prune(mod, cp = .cp)
   pred &lt;- predict(mod, ok_val)[, 2]
   roc_obj &lt;- roc(ok_val$pets, pred)
   as.numeric(auc(roc_obj))
@@ -1291,8 +1367,7 @@ get_cv_auc &lt;- function(.cp) {
 
 
 ```r
-# cv_table &lt;- map_dfr(cp_seq, get_cv_auc)
-cv_table &lt;- read_rds("../data/okcupid_CART_Class_Cp_CV.rds")
+cv_table &lt;- map_dfr(cp_seq, get_cv_auc)
 
 cv_table %&gt;%
   mutate(cp = factor(cp)) %&gt;%
@@ -1303,7 +1378,7 @@ cv_table %&gt;%
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
 
-&lt;img src="images/Cp-CV-B-1.png" width="100%" /&gt;
+&lt;img src="images/Cp-CV-B2-1.png" width="100%" /&gt;
 
 ---
 
@@ -1312,7 +1387,8 @@ Training on the entire training set:
 
 ```r
 mod_tree_na_class &lt;- rpart(pets ~ ., data = okcupid3_train,
-                           control = rpart.control(cp = 0.001, minbucket = 50))
+                           control = rpart.control(cp = 0, xval = 1))
+mod_tree_na_class &lt;- prune(mod_tree_na_class, cp = 0.0015)
 ```
 
 There's no way to plot this tree nicely...
@@ -1348,12 +1424,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_na_class[, 2])
 ```
 
 ```
-## AUC: 0.615
-## ACC: 0.713
-## Dogs: Recall: 0.757
-##       Precision: 0.89
-## Cats: Recall: 0.452
-##       Precision: 0.241
+## AUC: 0.612
+## ACC: 0.788
+## Dogs: Recall: 0.87
+##       Precision: 0.881
+## Cats: Recall: 0.309
+##       Precision: 0.289
 ```
 
 As expected, far from impressive.
@@ -1365,19 +1441,21 @@ Let's try using the imputed `NA` data:
 
 ```r
 mod_tree_imp_class &lt;- rpart(pets ~ ., data = okcupid3_imp_mice_train,
-                            control = rpart.control(cp = 0.001))
+                            control = rpart.control(cp = 0, xval = 1))
+mod_tree_imp_class &lt;- prune(mod_tree_imp_class, cp = 0.0015)
+
 pred_tree_imp_class &lt;- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
 
 report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
 ```
 
 ```
-## AUC: 0.662
-## ACC: 0.78
-## Dogs: Recall: 0.853
-##       Precision: 0.886
-## Cats: Recall: 0.355
-##       Precision: 0.292
+## AUC: 0.672
+## ACC: 0.748
+## Dogs: Recall: 0.793
+##       Precision: 0.9
+## Cats: Recall: 0.485
+##       Precision: 0.285
 ```
 
 ---
@@ -1472,8 +1550,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.367
-## CORR: 0.429
+## RMSE: 0.365
+## CORR: 0.44
 ```
 
 ```r
@@ -1483,8 +1561,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.367
-## CORR: 0.431
+## RMSE: 0.364
+## CORR: 0.444
 ```
 
 ---
@@ -1530,7 +1608,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
 
 ```
 ## RMSE: 0.355
-## CORR: 0.487
+## CORR: 0.488
 ```
 
 For variable importance check out the `importance` field of the RF object:

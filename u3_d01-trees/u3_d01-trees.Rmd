@@ -55,6 +55,7 @@ class: section-slide
 - Highly interpretable (when tree is not large)
 - Easy to implement
 - Fast? (to predict)
+- Little pre-processing of predictors needed
 - Handle all types of predictors (continuous, categorical)
 - Handle missing data, *predict* missing data
 - Assumption free
@@ -599,11 +600,66 @@ And we choose the smallest pruned tree with the minimum $SSE_{c_p}$.
 
 ### CART with `rpart`
 
+Growing the full tree .font80percent[(for a numeric $y$ `rpart` will guess this is Regression)]:
+
+```{r, message=FALSE, warning=FALSE}
+library(rpart)
+
+mod_tree <- rpart(income ~ ., data = okcupid2_train)
+```
+
+Pruning with some $c_p$:
+
+```{r}
+mod_tree <- prune(mod_tree, cp = 0.05)
+```
+
+.warning[
+`r emo::ji("warning")` There is a $c_p$ parameter you can pass to `rpart` while training like so:
+
+`rpart(income ~ ., data = okcupid2_train, control = rpart.control(cp = 0.05))`
+
+But this will only make `rpart` consider this $c_p$ at each split as a minimum criterion *while growing the unpruned tree*. In fact the default of this parameter is 0.01!
+]
+
+---
+
+So, in order to train a true unpruned tree you would need to pass $c_p = 0$:
+
+```{r}
+mod_tree <- rpart(income ~ ., data = okcupid2_train,
+                  control = rpart.control(cp = 0))
+```
+
+Now. `rpart` by default will perform 10-fold Cross Validation on each split, resulting in this `cptable`:
+
+```{r}
+head(mod_tree$cptable)
+```
+
+---
+
+The nature of the `xerror` is unclear from the [docs](https://cran.r-project.org/web/packages/rpart/vignettes/longintro.pdf) (SSE/n ?) except that it is relative to the error in the root node.
+
+You can either use it like so:
+
+```{r}
+best_cp <- mod_tree$cptable[which.min(mod_tree$cptable[,"xerror"]),"CP"]
+mod_tree <- prune(mod_tree, cp = best_cp)
+```
+
+Or you can perfrom CV on your own, passing at each stage a parameter for `rpart` to not perform CV:
+
+```{r}
+mod_tree <- rpart(income ~ ., data = okcupid2_train,
+                  control = rpart.control(cp = 0), xval = 1)
+```
+
+---
+
 Let's tune $c_p$ for our data using a 5-fold (manual) Cross Validation. The criterion to maximize would be RMSE.
 
 ```{r Cp-CV0}
-library(rpart)
-
 n_cv <- 5; cp_seq <- seq(0, 0.02, 0.001)
 
 okcupid2_train_val <- okcupid2_train %>%
@@ -613,10 +669,12 @@ get_validation_set_rmse <- function(i, .cp) {
   ok_tr <- okcupid2_train_val %>% filter(val != i) %>% select(-val)
   ok_val <- okcupid2_train_val %>% filter(val == i) %>% select(-val)
   mod <- rpart(income ~ ., data = ok_tr,
-               control = rpart.control(cp = .cp))
+               control = rpart.control(cp = 0, xval = 1))
+  mod <- prune(mod, cp = .cp)
   pred <- predict(mod, ok_val)
   rmse(ok_val$income, pred)
 }
+
 get_cv_rmse <- function(.cp) {
   tibble(cp = rep(.cp, n_cv),
          rmse = map_dbl(1:n_cv, get_validation_set_rmse, .cp = .cp))
@@ -625,7 +683,19 @@ get_cv_rmse <- function(.cp) {
 
 ---
 
-```{r Cp-CV, out.width = "100%", fig.asp=0.5}
+```{r Cp-CV1, out.width = "100%", fig.asp=0.5, eval=FALSE}
+cv_table <- map_dfr(cp_seq, get_cv_rmse)
+
+cv_table %>%
+  mutate(cp = factor(cp)) %>%
+  ggplot(aes(cp, rmse)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+```{r Cp-CV2, out.width = "100%", fig.asp=0.5, echo=FALSE}
 # cv_table <- map_dfr(cp_seq, get_cv_rmse)
 cv_table <- read_rds("../data/okcupid_CART_Reg_Cp_CV.rds")
 
@@ -644,7 +714,8 @@ Training on the entire training set:
 
 ```{r}
 mod_tree_na <- rpart(income ~ ., data = okcupid2_train,
-                     control = rpart.control(cp = 0.004))
+                     control = rpart.control(cp = 0, xval = 1))
+mod_tree_na <- prune(mod_tree_na, cp = 0.003)
 ```
 
 You can plot the tree using `rpart`, but...
@@ -658,7 +729,7 @@ text(mod_tree_na, pretty = 1, use.n = TRUE)
 
 The plotting function in the `rpart.plot` package is slightly nicer:
 
-```{r CART-NA2, out.width="100%", message=FALSE, warning=FALSE, fig.asp=0.7}
+```{r CART-NA2, out.width="100%", message=FALSE, warning=FALSE, fig.asp=0.6}
 library(rpart.plot)
 prp(mod_tree_na, type = 5, extra = 1)
 ```
@@ -667,7 +738,7 @@ prp(mod_tree_na, type = 5, extra = 1)
 
 You can go fancy and use `partykit` and/or `ggparty`:
 
-```{r CART-NA3a, out.width="80%", message=FALSE, warning=FALSE, fig.show="hide"}
+```{r CART-NA3, eval=FALSE}
 library(ggparty)
 
 party_obj <- as.party(mod_tree_na)
@@ -686,8 +757,7 @@ ggparty(party_obj) +
 
 ---
 
-```{r CART-NA3, ref.label = "CART-NA3a", echo = FALSE, out.width = "100%", fig.asp=0.8}
-```
+<img src = "images/CART-ggparty.png" style="width: 100%">
 
 ---
 
@@ -744,7 +814,8 @@ As expected, far from impressive. Let's try using the imputed `NA` data:
 
 ```{r}
 mod_tree_imp <- rpart(income ~ ., data = okcupid2_imp_mice_train,
-                      control = rpart.control(cp = 0.004))
+                      control = rpart.control(cp = 0, xval = 1))
+mod_tree_imp <- prune(mod_tree_imp, cp = 0.003)
 pred_tree_imp <- predict(mod_tree_imp, okcupid2_imp_mice_valid)
 
 report_rmse_and_cor(okcupid2_valid$income, pred_tree_imp)
@@ -1160,7 +1231,8 @@ get_validation_set_auc <- function(i, .cp) {
   ok_tr <- okcupid3_train_val %>% filter(val != i) %>% select(-val)
   ok_val <- okcupid3_train_val %>% filter(val == i) %>% select(-val)
   mod <- rpart(pets ~ ., data = ok_tr,
-               control = rpart.control(cp = .cp, minbucket = 50))
+               control = rpart.control(cp = 0, xval = 1))
+  mod <- prune(mod, cp = .cp)
   pred <- predict(mod, ok_val)[, 2]
   roc_obj <- roc(ok_val$pets, pred)
   as.numeric(auc(roc_obj))
@@ -1174,7 +1246,19 @@ get_cv_auc <- function(.cp) {
 
 ---
 
-```{r Cp-CV-B, out.width = "100%", fig.asp=0.5}
+```{r Cp-CV-B1, eval=FALSE}
+cv_table <- map_dfr(cp_seq, get_cv_auc)
+
+cv_table %>%
+  mutate(cp = factor(cp)) %>%
+  ggplot(aes(cp, auc)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+```{r Cp-CV-B2, out.width = "100%", fig.asp=0.5, echo=FALSE}
 # cv_table <- map_dfr(cp_seq, get_cv_auc)
 cv_table <- read_rds("../data/okcupid_CART_Class_Cp_CV.rds")
 
@@ -1193,7 +1277,8 @@ Training on the entire training set:
 
 ```{r}
 mod_tree_na_class <- rpart(pets ~ ., data = okcupid3_train,
-                           control = rpart.control(cp = 0.001, minbucket = 50))
+                           control = rpart.control(cp = 0, xval = 1))
+mod_tree_na_class <- prune(mod_tree_na_class, cp = 0.0015)
 ```
 
 There's no way to plot this tree nicely...
@@ -1243,7 +1328,9 @@ Let's try using the imputed `NA` data:
 
 ```{r, message=FALSE}
 mod_tree_imp_class <- rpart(pets ~ ., data = okcupid3_imp_mice_train,
-                            control = rpart.control(cp = 0.001))
+                            control = rpart.control(cp = 0, xval = 1))
+mod_tree_imp_class <- prune(mod_tree_imp_class, cp = 0.0015)
+
 pred_tree_imp_class <- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
 
 report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
