@@ -508,7 +508,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.506
+## CORR: 0.505
 ```
 
 ---
@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0001938 0.02238263
-## 2 0.048179174      1 0.8864025 0.8887858 0.02273467
-## 3 0.013140594      2 0.8382233 0.8434127 0.02360123
-## 4 0.010043056      3 0.8250827 0.8345790 0.02384551
-## 5 0.009147817      4 0.8150397 0.8269856 0.02388817
-## 6 0.005634308      5 0.8058919 0.8166787 0.02397530
+## 1 0.113597498      0 1.0000000 1.0003629 0.02238584
+## 2 0.048179174      1 0.8864025 0.8899523 0.02282596
+## 3 0.013140594      2 0.8382233 0.8415798 0.02365898
+## 4 0.010043056      3 0.8250827 0.8379808 0.02385357
+## 5 0.009147817      4 0.8150397 0.8306874 0.02405999
+## 6 0.005634308      5 0.8058919 0.8207212 0.02419261
 ```
 
 ---
@@ -933,6 +933,360 @@ tibble(income = okcupid2_valid$income, pred = pred_tree_na) %&gt;%
 ```
 
 &lt;img src="images/Tree-Fit-1.png" width="60%" /&gt;
+
+---
+
+class: section-slide
+
+# The Others
+
+---
+
+&lt;img src = "images/CART-ggparty.png" style="width: 80%"&gt;
+
+Looking at this one might wonder:
+- Predicting a single value for each terminal node? Is that the best we can do?
+- Since when do we just split, how about a statistical test?
+- Many variables repeat in the same path, can we reduce paths to simple rules?
+
+---
+
+### Model Trees
+
+[Quinlan (1992)](https://sci2s.ugr.es/keel/pdf/algorithm/congreso/1992-Quinlan-AI.pdf) and later [Wang and Witten (1997)](https://pdfs.semanticscholar.org/3324/4b59fe506331926b3a33e348209ac456c532.pdf) made a few changes to the beloved CART:
+
+- instead of single values at terminal nodes, M5 trees have *linear models*
+- sort of a piecewise linear regression only the "pieces" can come from many variables
+- can extrapolate to never before seen values (not necessarily good)
+
+---
+
+### Conditional Inference Trees
+
+---
+
+### Rule-Based Trees
+
+---
+
+class: section-slide
+
+# Bagged Trees
+
+---
+
+### Bagging: The Gist
+
+For `\(j= 1\)` to `\(m\)` do
+- Generate a bootstrap sample of the original data
+- Train an unpruned tree model on this sample
+
+End.
+
+
+- Predict average through all `\(m\)` trees (or %vote for each class in classification)
+- What you get: better prediction, *OOB* error estimates
+- What you lose: interpretability, speed (but bagging can be paralleled)
+
+---
+
+Why does Bagging work?
+
+&lt;img src="images/Bagging-Trees-1.png" width="80%" /&gt;
+
+---
+
+Which models are likely to benefit from bagging?
+
+
+```r
+train_lm &lt;- function(i, .n) {
+  samp &lt;- sample(1:.n, .n, replace = TRUE)
+  lm(income ~ ., data = okcupid2_imp_mice_train[samp, ])
+}
+
+train_tree &lt;- function(i, .n) {
+  samp &lt;- sample(1:.n, .n, replace = TRUE)
+  rpart(income ~ ., data = okcupid2_imp_mice_train[samp, ])
+}
+
+predict_mod &lt;- function(mod) {
+  tibble(pred = predict(mod, okcupid2_imp_mice_valid))
+}
+
+rmse_m_models &lt;- function(m, .preds) {
+  rmse(okcupid2_imp_mice_valid$income, rowMeans(.preds[, 1:m]))
+}
+
+n &lt;- nrow(okcupid2_imp_mice_train)
+m_max &lt;- 50
+
+mod_lms &lt;- map(1:m_max, train_lm, .n = n)
+mod_trees &lt;- map(1:m_max, train_tree, .n = n)
+
+preds_lm &lt;- map_dfc(mod_lms, predict_mod)
+preds_tree &lt;- map_dfc(mod_trees, predict_mod)
+```
+
+---
+
+
+```r
+rmse_lm &lt;- map_dbl(1:m_max, rmse_m_models, .preds = preds_lm)
+rmse_tree &lt;- map_dbl(1:m_max, rmse_m_models, .preds = preds_tree)
+tibble(m = rep(1:m_max, 2),
+       model = c(rep("lm", m_max), rep("CART", m_max)),
+       RMSE = c(rmse_lm, rmse_tree)) %&gt;%
+  ggplot(aes(m, RMSE, color = model)) +
+  ylim(c(0.34, 0.38)) +
+  geom_line() + geom_point() +
+  theme_classic()
+```
+
+&lt;img src="images/Bagging-LM-CART-1.png" width="100%" /&gt;
+
+
+---
+
+### Bagging with `ipred`
+
+
+```r
+library(ipred)
+
+mod_bag_na &lt;- bagging(income ~ ., data = okcupid2_train, nbagg = 50)
+pred_bag_na &lt;- predict(mod_bag_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
+```
+
+```
+## RMSE: 0.368
+## CORR: 0.429
+```
+
+```r
+mod_bag_mice &lt;- bagging(income ~ ., data = okcupid2_imp_mice_train, nbagg = 50)
+pred_bag_mice &lt;- predict(mod_bag_na, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
+```
+
+```
+## RMSE: 0.366
+## CORR: 0.435
+```
+
+---
+
+class: section-slide
+
+# Random Forests
+
+---
+
+### Random Forests: The Gist
+
+For `\(j= 1\)` to `\(m\)` do
+- Generate a bootstrap sample of the original data
+- Train an unpruned tree model on this sample
+- For each splot:
+  - Randomly select `\(m_{try}\)` predictors
+  - Select best predictor for split in this subset only
+
+End.
+
+---
+
+What does RF add on top of Bagging?
+
+&lt;img src="images/RF-Trees-1.png" width="80%" /&gt;
+
+---
+
+### RF with `randomForest`
+
+For some reason this implementation of RF won't accept missing values:
+
+
+```r
+library(randomForest)
+
+mod_rf_mice &lt;- randomForest(income ~ ., data = okcupid2_imp_mice_train,
+                       mtry = 10, ntree = 50, importance = TRUE)
+pred_rf_mice &lt;- predict(mod_rf_mice, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
+```
+
+
+```
+## RMSE: 0.354
+## CORR: 0.491
+```
+
+For variable importance check out the `importance` field of the RF object:
+
+---
+
+&lt;img src="images/RF-VarImp-1.png" width="70%" /&gt;
+
+.insight[
+💡 What is troubling about variable importance?
+]
+---
+
+### Partial Dependency Plots
+
+1. Select a subset `\(X_s\)` of variables (usually 1-2) you wish to know the relation to the dependent variable `\(y\)`
+2. For each possible permutation of `\(X_s\)` run the model on the original data imputing this specific permutation instead of the values of `\(X_s\)`
+3. Average predictions of `\(y\)`
+4. Plot `\(y\)` vs. `\(X_s\)`
+
+---
+
+
+```r
+partial(mod_rf_mice, pred.var = "age",
+        plot = TRUE, plot.engine = "ggplot2") +
+  labs(y = "income") +
+  theme_classic()
+```
+
+&lt;img src = "images/RF-PDP-Age.png" style="width: 50%"&gt;
+
+---
+
+Let's see this for `age` and `height_cm` together (takes some time!):
+
+
+```r
+partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
+```
+
+&lt;img src = "images/RF-PDP-Age-Height.png" style="width: 50%"&gt;
+
+---
+
+class: section-slide
+
+# Gradient Boosted Trees
+
+---
+
+### Boosting: The Gist
+
+Compute the average response `\(\overline y\)`, and use this as the initial predicted value for each sample
+
+For `\(j = 1\)` to `\(m\)` do
+- Compute the residual for each observation
+- Sample a fraction of the original data
+- Fit a regression tree of a certain *"interaction depth"* using the residual as response
+- Predict each sample using this tree
+- Update the predicted value of each sample by adding the previous iteration's value to current predicted value X *learning rate* or *shrinkage* parameter
+
+End.
+
+---
+
+What you end up with:
+
+`\(\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)\)`
+
+That is, GBT (or GBM) in general is called an additive model.
+
+.insight[
+💡 Where does "Gradient" come from?
+]
+
+- The added random sampling of the data was added later, this version is called *Stochastic* Gradient Boosting, the default for the parameter often called "bagging fraction" is 0.5
+- The shrinkage `\(\lambda\)` can be turned into `\(\lambda_j\)`, a unique weight for each added tree
+- Note the **many** tuning parameters here. Do you know how to tune multiple params?
+- Not so parallel now, eh?
+
+---
+
+### GBT with `gbm`
+
+
+```r
+library(gbm)
+
+mod_gbm_na &lt;- gbm(income ~ ., data = okcupid2_train,
+                  distribution = "gaussian",
+                  n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_na &lt;- predict(mod_gbm_na, okcupid2_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
+```
+
+```
+## RMSE: 0.351
+## CORR: 0.505
+```
+
+```r
+mod_gbm_mice &lt;- gbm(income ~ ., data = okcupid2_imp_mice_train,
+                  distribution = "gaussian", n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
+pred_gbm_mice &lt;- predict(mod_gbm_na, okcupid2_imp_mice_valid, n.trees = 500)
+report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
+```
+
+```
+## RMSE: 0.352
+## CORR: 0.498
+```
+
+For variables importance see the `summary` function:
+
+---
+
+&lt;img src="images/GBM-VarImp-1.png" width="70%" /&gt;
+
+
+.insight[
+💡 Do you see the difference in the profile of importance between RF and GBT?
+]
+---
+
+### GBT with `xgboost`
+
+`xgboost` is faster and has some additional features, e.g. the ability to train with a validation set until it shows no improvement, similar to neural networks.
+
+
+```r
+library(xgboost)
+
+dtrain &lt;- xgb.DMatrix(data = data.matrix(okcupid2_train[, predictors]),
+                      label = okcupid2_train$income)
+dval &lt;- xgb.DMatrix(data = data.matrix(okcupid2_valid[, predictors]),
+                    label=okcupid2_valid$income)
+watchlist &lt;- list(train=dtrain, test=dval)
+
+mod_xgboost_na &lt;- xgb.train(data = dtrain, watchlist=watchlist,
+                            objective = "reg:squarederror", nrounds = 100,
+                            eta = 0.1, subsample = 0.5,
+                            early_stopping_rounds = 10, verbose = 0)
+pred_xgboost_na &lt;- predict(mod_xgboost_na, dval)
+report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
+```
+
+```
+## RMSE: 0.357
+## CORR: 0.477
+```
+
+.warning[
+⚠️ Note that `xgboost` only accepts numeric input, that is why we use `data.matrix()`. Perhaps the order of the factors could be improved before they are turned into integers.
+]
+
+---
+
+For variables importance see the `xgb.importance` function:
+
+&lt;img src="images/XGBST-VarImp-1.png" width="70%" /&gt;
+
+---
+
+class: section-slide
+
+# The CART (Classification)
 
 ---
 
@@ -1229,12 +1583,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 ```
 
 ```
-## AUC: 0.739
-## ACC: 0.673
-## Dogs: Recall: 0.674
-##       Precision: 0.922
-## Cats: Recall: 0.667
-##       Precision: 0.259
+## AUC: 0.738
+## ACC: 0.672
+## Dogs: Recall: 0.671
+##       Precision: 0.924
+## Cats: Recall: 0.675
+##       Precision: 0.26
 ```
 
 ---
@@ -1242,12 +1596,6 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 class: section-slide
 
 # End of Detour
-
----
-
-class: section-slide
-
-# The CART (Classification)
 
 ---
 
@@ -1457,329 +1805,6 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
 ## Cats: Recall: 0.485
 ##       Precision: 0.285
 ```
-
----
-
-class: section-slide
-
-# Bagged Trees
-
----
-
-### Bagging: The Gist
-
-For `\(j= 1\)` to `\(m\)` do
-- Generate a bootstrap sample of the original data
-- Train an unpruned tree model on this sample
-
-End.
-
-
-- Predict average through all `\(m\)` trees (or %vote for each class in classification)
-- What you get: better prediction, *OOB* error estimates
-- What you lose: interpretability, speed (but bagging can be paralleled)
-
----
-
-Why does Bagging work?
-
-&lt;img src="images/Bagging-Trees-1.png" width="80%" /&gt;
-
----
-
-Which models are likely to benefit from bagging?
-
-
-```r
-train_lm &lt;- function(i, .n) {
-  samp &lt;- sample(1:.n, .n, replace = TRUE)
-  lm(income ~ ., data = okcupid2_imp_mice_train[samp, ])
-}
-
-train_tree &lt;- function(i, .n) {
-  samp &lt;- sample(1:.n, .n, replace = TRUE)
-  rpart(income ~ ., data = okcupid2_imp_mice_train[samp, ])
-}
-
-predict_mod &lt;- function(mod) {
-  tibble(pred = predict(mod, okcupid2_imp_mice_valid))
-}
-
-rmse_m_models &lt;- function(m, .preds) {
-  rmse(okcupid2_imp_mice_valid$income, rowMeans(.preds[, 1:m]))
-}
-
-n &lt;- nrow(okcupid2_imp_mice_train)
-m_max &lt;- 50
-
-mod_lms &lt;- map(1:m_max, train_lm, .n = n)
-mod_trees &lt;- map(1:m_max, train_tree, .n = n)
-
-preds_lm &lt;- map_dfc(mod_lms, predict_mod)
-preds_tree &lt;- map_dfc(mod_trees, predict_mod)
-```
-
----
-
-
-```r
-rmse_lm &lt;- map_dbl(1:m_max, rmse_m_models, .preds = preds_lm)
-rmse_tree &lt;- map_dbl(1:m_max, rmse_m_models, .preds = preds_tree)
-tibble(m = rep(1:m_max, 2),
-       model = c(rep("lm", m_max), rep("CART", m_max)),
-       RMSE = c(rmse_lm, rmse_tree)) %&gt;%
-  ggplot(aes(m, RMSE, color = model)) +
-  ylim(c(0.34, 0.38)) +
-  geom_line() + geom_point() +
-  theme_classic()
-```
-
-&lt;img src="images/Bagging-LM-CART-1.png" width="100%" /&gt;
-
-
----
-
-### Bagging with `ipred`
-
-
-```r
-library(ipred)
-
-mod_bag_na &lt;- bagging(income ~ ., data = okcupid2_train, nbagg = 50)
-pred_bag_na &lt;- predict(mod_bag_na, okcupid2_valid)
-report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
-```
-
-```
-## RMSE: 0.366
-## CORR: 0.437
-```
-
-```r
-mod_bag_mice &lt;- bagging(income ~ ., data = okcupid2_imp_mice_train, nbagg = 50)
-pred_bag_mice &lt;- predict(mod_bag_na, okcupid2_imp_mice_valid)
-report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
-```
-
-```
-## RMSE: 0.365
-## CORR: 0.441
-```
-
----
-
-class: section-slide
-
-# Random Forests
-
----
-
-### Random Forests: The Gist
-
-For `\(j= 1\)` to `\(m\)` do
-- Generate a bootstrap sample of the original data
-- Train an unpruned tree model on this sample
-- For each splot:
-  - Randomly select `\(m_{try}\)` predictors
-  - Select best predictor for split in this subset only
-
-End.
-
----
-
-What does RF add on top of Bagging?
-
-&lt;img src="images/RF-Trees-1.png" width="80%" /&gt;
-
----
-
-### RF with `randomForest`
-
-For some reason this implementation of RF won't accept missing values:
-
-
-```r
-library(randomForest)
-
-mod_rf_mice &lt;- randomForest(income ~ ., data = okcupid2_imp_mice_train,
-                       mtry = 10, ntree = 50, importance = TRUE)
-pred_rf_mice &lt;- predict(mod_rf_mice, okcupid2_imp_mice_valid)
-report_rmse_and_cor(okcupid2_valid$income, pred_rf_mice)
-```
-
-
-```
-## RMSE: 0.354
-## CORR: 0.491
-```
-
-For variable importance check out the `importance` field of the RF object:
-
----
-
-&lt;img src="images/RF-VarImp-1.png" width="70%" /&gt;
-
-.insight[
-💡 What is troubling about variable importance?
-]
----
-
-### Partial Dependency Plots
-
-1. Select a subset `\(X_s\)` of variables (usually 1-2) you wish to know the relation to the dependent variable `\(y\)`
-2. For each possible permutation of `\(X_s\)` run the model on the original data imputing this specific permutation instead of the values of `\(X_s\)`
-3. Average predictions of `\(y\)`
-4. Plot `\(y\)` vs. `\(X_s\)`
-
----
-
-
-```r
-partial(mod_rf_mice, pred.var = "age",
-        plot = TRUE, plot.engine = "ggplot2") +
-  labs(y = "income") +
-  theme_classic()
-```
-
-&lt;img src = "images/RF-PDP-Age.png" style="width: 50%"&gt;
-
----
-
-Let's see this for `age` and `height_cm` together (takes some time!):
-
-
-```r
-partial(mod_rf_mice, pred.var = c("age", "height_cm"), plot = TRUE)
-```
-
-&lt;img src = "images/RF-PDP-Age-Height.png" style="width: 50%"&gt;
-
----
-
-class: section-slide
-
-# Gradient Boosted Trees
-
----
-
-### Boosting: The Gist
-
-Compute the average response `\(\overline y\)`, and use this as the initial predicted value for each sample
-
-For `\(j = 1\)` to `\(m\)` do
-- Compute the residual for each observation
-- Sample a fraction of the original data
-- Fit a regression tree of a certain *"interaction depth"* using the residual as response
-- Predict each sample using this tree
-- Update the predicted value of each sample by adding the previous iteration's value to current predicted value X *learning rate* or *shrinkage* parameter
-
-End.
-
----
-
-What you end up with:
-
-`\(\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)\)`
-
-That is, GBT (or GBM) in general is called an additive model.
-
-.insight[
-💡 Where does "Gradient" come from?
-]
-
-- The added random sampling of the data was added later, this version is called *Stochastic* Gradient Boosting, the default for the parameter often called "bagging fraction" is 0.5
-- The shrinkage `\(\lambda\)` can be turned into `\(\lambda_j\)`, a unique weight for each added tree
-- Note the **many** tuning parameters here. Do you know how to tune multiple params?
-- Not so parallel now, eh?
-
----
-
-### GBT with `gbm`
-
-
-```r
-library(gbm)
-
-mod_gbm_na &lt;- gbm(income ~ ., data = okcupid2_train,
-                  distribution = "gaussian",
-                  n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
-pred_gbm_na &lt;- predict(mod_gbm_na, okcupid2_valid, n.trees = 500)
-report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
-```
-
-```
-## RMSE: 0.351
-## CORR: 0.505
-```
-
-```r
-mod_gbm_mice &lt;- gbm(income ~ ., data = okcupid2_imp_mice_train,
-                  distribution = "gaussian", n.trees = 500, shrinkage = 0.1, bag.fraction = 0.5)
-pred_gbm_mice &lt;- predict(mod_gbm_na, okcupid2_imp_mice_valid, n.trees = 500)
-report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
-```
-
-```
-## RMSE: 0.353
-## CORR: 0.497
-```
-
-For variables importance see the `summary` function:
-
----
-
-&lt;img src="images/GBM-VarImp-1.png" width="70%" /&gt;
-
-
-.insight[
-💡 Do you see the difference in the profile of importance between RF and GBT?
-]
----
-
-### GBT with `xgboost`
-
-`xgboost` is faster and has some additional features, e.g. the ability to train with a validation set until it shows no improvement, similar to neural networks.
-
-
-```r
-library(xgboost)
-
-dtrain &lt;- xgb.DMatrix(data = data.matrix(okcupid2_train[, predictors]),
-                      label = okcupid2_train$income)
-dval &lt;- xgb.DMatrix(data = data.matrix(okcupid2_valid[, predictors]),
-                    label=okcupid2_valid$income)
-watchlist &lt;- list(train=dtrain, test=dval)
-
-mod_xgboost_na &lt;- xgb.train(data = dtrain, watchlist=watchlist,
-                            objective = "reg:squarederror", nrounds = 100,
-                            eta = 0.1, subsample = 0.5,
-                            early_stopping_rounds = 10, verbose = 0)
-pred_xgboost_na &lt;- predict(mod_xgboost_na, dval)
-report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
-```
-
-```
-## RMSE: 0.358
-## CORR: 0.477
-```
-
-.warning[
-⚠️ Note that `xgboost` only accepts numeric input, that is why we use `data.matrix()`. Perhaps the order of the factors could be improved before they are turned into integers.
-]
-
----
-
-For variables importance see the `xgb.importance` function:
-
-&lt;img src="images/XGBST-VarImp-1.png" width="70%" /&gt;
-
----
-
-class: section-slide
-
-# The Others
-
----
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
