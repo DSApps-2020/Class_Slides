@@ -842,12 +842,36 @@ class: section-slide
 <img src = "images/CART-ggparty.png" style="width: 80%">
 
 Looking at this one might wonder:
-- Predicting a single value for each terminal node? Is that the best we can do?
 - Since when do we just split, how about a statistical test?
-- Many variables repeat in the same path, can we reduce paths to simple rules?
+- Predicting a single value for each terminal node? Is that the best we can do?
+- Many variables repeat in the same path, can we compact paths into simple rules?
 
 ---
 
+### Conditional Inference Trees
+
+[Hothorn et. al. (2006)](https://eeecon.uibk.ac.at/~zeileis/papers/Hothorn+Hornik+Zeileis-2006.pdf) perform a statistical hypothesis test for each variable to decide whether it is related to $y$ (including multiple comparisons adjustment).
+
+If no variable passes test - stop. No pruning necessary.
+If a few variable pass - choose the most related, e.g. using a p-value.
+
+```{r, message=FALSE, warning=FALSE}
+library(partykit)
+
+mod_ctree_na <- ctree(income ~ ., data = okcupid2_train, alpha = 0.0001)
+pred_ctree_na <- predict(mod_ctree_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
+```
+
+---
+
+```{r, eval=FALSE}
+plot(mod_ctree_na)
+```
+
+<img src = "images/ctree.png" style="width: 100%">
+
+---
 ### Model Trees
 
 [Quinlan (1992)](https://sci2s.ugr.es/keel/pdf/algorithm/congreso/1992-Quinlan-AI.pdf) and later [Wang and Witten (1997)](https://pdfs.semanticscholar.org/3324/4b59fe506331926b3a33e348209ac456c532.pdf) made a few changes to the beloved CART:
@@ -856,13 +880,66 @@ Looking at this one might wonder:
 - sort of a piecewise linear regression only the "pieces" can come from many variables
 - can extrapolate to never before seen values (not necessarily good)
 
+You can find an implementation in R in the `RWeka` package, function `M5P()`.
+
+[Zeileis et. al. (2008)](https://eeecon.uibk.ac.at/~zeileis/papers/Zeileis+Hothorn+Hornik-2008.pdf) approach is slightly simpler to grasp. It allows you to specify variables for splitting and variables for regression.
+
+See `lmtree()` and `glmtree()` functions in the `partykit` package.
+
 ---
 
-### Conditional Inference Trees
+```{r, eval=FALSE}
+mod_lmtree_na <- lmtree(income ~ age | sex + job3 + education2, data = okcupid2_train)
+
+pred_lmtree_na <- predict(mod_lmtree_na, okcupid2_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lmtree_na)
+
+plot(mod_lmtree_na)
+```
+
+```{r, echo=FALSE}
+# library(partykit)
+
+# mod_lmtree_na <- lmtree(income ~ age | sex + job3 + education2, data = okcupid2_train)
+
+# pred_lmtree_na <- predict(mod_lmtree_na, okcupid2_valid)
+
+pred_lmtree_na <- read_rds("../data/okcupid_pred_lmtree.rds")
+report_rmse_and_cor(okcupid2_valid$income, pred_lmtree_na)
+
+# plot(mod_lmtree_na)
+```
+
+<img src = "images/lmtree.png" style="width: 100%">
 
 ---
 
 ### Rule-Based Trees
+
+[Holmes et. a. (1993)](https://perun.pmf.uns.ac.rs/radovanovic/dmsem/cd/install/Weka/doc/pubs/1999/ajc.pdf) general approach:
+
+1. Build a model tree (e.g. M5)
+2. For each path compute the coverage (= % of relevant observations to that path)
+3. Compact the path with largest coverage into a rule
+4. Remove previous relevant observations and go back to 1 until all observations are accounted are.
+
+```{r, warning=FALSE}
+library(RWeka)
+
+# limiting predictors just for a nice print!
+mod_m5rules_na <- M5Rules(income ~ ., data = okcupid2_train[, c("income", "age", "sex", "education2")])
+pred_m5rules_na <- predict(mod_m5rules_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_m5rules_na)
+```
+
+---
+
+```{r, eval=FALSE}
+print(mod_m5rules_na)
+```
+
+<img src = "images/m5rules.png" style="width: 100%">
 
 ---
 

@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-08" />
+    <meta name="date" content="2020-02-09" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-08
+### 2020-02-09
 
 ---
 
@@ -508,7 +508,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_lm_lasso)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.505
+## CORR: 0.506
 ```
 
 ---
@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0003629 0.02238584
-## 2 0.048179174      1 0.8864025 0.8899523 0.02282596
-## 3 0.013140594      2 0.8382233 0.8415798 0.02365898
-## 4 0.010043056      3 0.8250827 0.8379808 0.02385357
-## 5 0.009147817      4 0.8150397 0.8306874 0.02405999
-## 6 0.005634308      5 0.8058919 0.8207212 0.02419261
+## 1 0.113597498      0 1.0000000 1.0002522 0.02238510
+## 2 0.048179174      1 0.8864025 0.8905350 0.02282679
+## 3 0.013140594      2 0.8382233 0.8454403 0.02367885
+## 4 0.010043056      3 0.8250827 0.8383955 0.02392361
+## 5 0.009147817      4 0.8150397 0.8301138 0.02419424
+## 6 0.005634308      5 0.8058919 0.8242994 0.02431132
 ```
 
 ---
@@ -945,12 +945,43 @@ class: section-slide
 &lt;img src = "images/CART-ggparty.png" style="width: 80%"&gt;
 
 Looking at this one might wonder:
-- Predicting a single value for each terminal node? Is that the best we can do?
 - Since when do we just split, how about a statistical test?
-- Many variables repeat in the same path, can we reduce paths to simple rules?
+- Predicting a single value for each terminal node? Is that the best we can do?
+- Many variables repeat in the same path, can we compact paths into simple rules?
 
 ---
 
+### Conditional Inference Trees
+
+[Hothorn et. al. (2006)](https://eeecon.uibk.ac.at/~zeileis/papers/Hothorn+Hornik+Zeileis-2006.pdf) perform a statistical hypothesis test for each variable to decide whether it is related to `\(y\)` (including multiple comparisons adjustment).
+
+If no variable passes test - stop. No pruning necessary.
+If a few variable pass - choose the most related, e.g. using a p-value.
+
+
+```r
+library(partykit)
+
+mod_ctree_na &lt;- ctree(income ~ ., data = okcupid2_train, alpha = 0.0001)
+pred_ctree_na &lt;- predict(mod_ctree_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
+```
+
+```
+## RMSE: 0.363
+## CORR: 0.449
+```
+
+---
+
+
+```r
+plot(mod_ctree_na)
+```
+
+&lt;img src = "images/ctree.png" style="width: 100%"&gt;
+
+---
 ### Model Trees
 
 [Quinlan (1992)](https://sci2s.ugr.es/keel/pdf/algorithm/congreso/1992-Quinlan-AI.pdf) and later [Wang and Witten (1997)](https://pdfs.semanticscholar.org/3324/4b59fe506331926b3a33e348209ac456c532.pdf) made a few changes to the beloved CART:
@@ -959,13 +990,67 @@ Looking at this one might wonder:
 - sort of a piecewise linear regression only the "pieces" can come from many variables
 - can extrapolate to never before seen values (not necessarily good)
 
+You can find an implementation in R in the `RWeka` package, function `M5P()`.
+
+[Zeileis et. al. (2008)](https://eeecon.uibk.ac.at/~zeileis/papers/Zeileis+Hothorn+Hornik-2008.pdf) approach is slightly simpler to grasp. It allows you to specify variables for splitting and variables for regression.
+
+See `lmtree()` and `glmtree()` functions in the `partykit` package.
+
 ---
 
-### Conditional Inference Trees
+
+```r
+mod_lmtree_na &lt;- lmtree(income ~ age | sex + job3 + education2, data = okcupid2_train)
+
+pred_lmtree_na &lt;- predict(mod_lmtree_na, okcupid2_valid)
+
+report_rmse_and_cor(okcupid2_valid$income, pred_lmtree_na)
+
+plot(mod_lmtree_na)
+```
+
+
+```
+## RMSE: 0.366
+## CORR: 0.437
+```
+
+&lt;img src = "images/lmtree.png" style="width: 100%"&gt;
 
 ---
 
 ### Rule-Based Trees
+
+[Holmes et. a. (1993)](https://perun.pmf.uns.ac.rs/radovanovic/dmsem/cd/install/Weka/doc/pubs/1999/ajc.pdf) general approach:
+
+1. Build a model tree (e.g. M5)
+2. For each path compute the coverage (= % of relevant observations to that path)
+3. Compact the path with largest coverage into a rule
+4. Remove previous relevant observations and go back to 1 until all observations are accounted are.
+
+
+```r
+library(RWeka)
+
+# limiting predictors just for a nice print!
+mod_m5rules_na &lt;- M5Rules(income ~ ., data = okcupid2_train[, c("income", "age", "sex", "education2")])
+pred_m5rules_na &lt;- predict(mod_m5rules_na, okcupid2_valid)
+report_rmse_and_cor(okcupid2_valid$income, pred_m5rules_na)
+```
+
+```
+## RMSE: 0.374
+## CORR: 0.392
+```
+
+---
+
+
+```r
+print(mod_m5rules_na)
+```
+
+&lt;img src = "images/m5rules.png" style="width: 100%"&gt;
 
 ---
 
@@ -1060,8 +1145,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.368
-## CORR: 0.429
+## RMSE: 0.366
+## CORR: 0.438
 ```
 
 ```r
@@ -1071,8 +1156,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.366
-## CORR: 0.435
+## RMSE: 0.364
+## CORR: 0.444
 ```
 
 ---
@@ -1218,7 +1303,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
 
 ```
 ## RMSE: 0.351
-## CORR: 0.505
+## CORR: 0.504
 ```
 
 ```r
@@ -1229,8 +1314,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 ```
 
 ```
-## RMSE: 0.352
-## CORR: 0.498
+## RMSE: 0.353
+## CORR: 0.497
 ```
 
 For variables importance see the `summary` function:
@@ -1268,8 +1353,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.357
-## CORR: 0.477
+## RMSE: 0.358
+## CORR: 0.474
 ```
 
 .warning[
@@ -1583,12 +1668,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 ```
 
 ```
-## AUC: 0.738
+## AUC: 0.739
 ## ACC: 0.672
-## Dogs: Recall: 0.671
-##       Precision: 0.924
-## Cats: Recall: 0.675
-##       Precision: 0.26
+## Dogs: Recall: 0.672
+##       Precision: 0.923
+## Cats: Recall: 0.672
+##       Precision: 0.259
 ```
 
 ---
