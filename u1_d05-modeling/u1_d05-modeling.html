@@ -4,7 +4,7 @@
     <title>Modeling in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-27" />
+    <meta name="date" content="2020-02-10" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-27
+### 2020-02-10
 
 ---
 
@@ -51,7 +51,550 @@ layout: true
 
 class: section-slide
 
-# Modeling
+# The Problem
+
+---
+
+### Inconsistency, Inextensibility
+
+
+```r
+n &lt;- 10000
+x1 &lt;- runif(n)
+x2 &lt;- runif(n)
+t &lt;- 1 + 2 * x1 + 3 * x2
+y &lt;- rbinom(n, 1, 1 / (1 + exp(-t)))
+```
+
+
+```r
+glm(y ~ x1 + x2, family = "binomial")
+```
+
+
+```r
+glmnet(as.matrix(cbind(x1, x2)), as.factor(y), family = "binomial")
+```
+
+
+```r
+randomForest(as.factor(y) ~ x1 + x2)
+```
+
+
+
+```r
+gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
+```
+
+😱
+
+---
+
+class: section-slide
+
+# Detour: A Regression Problem
+
+---
+
+### IPF-Lifts: Predicting Bench Lifting
+
+- Dataset was published as part of the [TidyTuesday](https://github.com/rfordatascience/tidytuesday) intiative
+- Comes from [Open Powerlifting](https://www.openpowerlifting.org/data)
+- [Wikipedia](https://en.wikipedia.org/wiki/Powerlifting): Powerlifting is a strength sport that consists of three attempts at maximal weight on three lifts: squat, bench press, and deadlift
+
+&lt;img src="images/pl_bench.jpg" style="width: 70%" /&gt;
+
+---
+
+The raw data has over 40K rows: for each athlete, for each event, stats about athlete gender, age and weight, and the maximal weight lifted in the 3 types of Powerlifting.
+
+We will be predicting `best3bench_kg` based on a few predictors, no missing values:
+
+
+```r
+library(lubridate)
+
+ipf_lifts &lt;- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-08/ipf_lifts.csv")
+
+ipf_lifts &lt;- ipf_lifts %&gt;%
+  drop_na(best3bench_kg, age) %&gt;%
+  filter(between(age, 18, 100), best3bench_kg &gt; 0, equipment != "Wraps") %&gt;%
+  select(sex, event, equipment, age, division, bodyweight_kg, best3bench_kg, date, meet_name) %&gt;%
+  drop_na() %&gt;%
+  mutate(year = year(date), month = month(date),
+         dayofweek = wday(date)) %&gt;%
+  select(-date) %&gt;%
+  mutate_if(is.character, as.factor)
+
+dim(ipf_lifts)
+```
+
+```
+## [1] 32047    11
+```
+
+---
+
+
+```r
+glimpse(ipf_lifts)
+```
+
+```
+## Observations: 32,047
+## Variables: 11
+## $ sex           &lt;fct&gt; F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, ...
+## $ event         &lt;fct&gt; SBD, SBD, SBD, SBD, SBD, SBD, SBD, SBD, SBD, SBD...
+## $ equipment     &lt;fct&gt; Single-ply, Single-ply, Single-ply, Single-ply, ...
+## $ age           &lt;dbl&gt; 33.5, 34.5, 23.5, 27.5, 37.5, 25.5, 33.5, 26.0, ...
+## $ division      &lt;fct&gt; Open, Open, Open, Open, Open, Open, Open, Open, ...
+## $ bodyweight_kg &lt;dbl&gt; 44, 44, 44, 44, 44, 44, 48, 48, 48, 48, 48, 48, ...
+## $ best3bench_kg &lt;dbl&gt; 60.0, 62.5, 62.5, 60.0, 65.0, 45.0, 62.5, 77.5, ...
+## $ meet_name     &lt;fct&gt; World Powerlifting Championships, World Powerlif...
+## $ year          &lt;dbl&gt; 1989, 1989, 1989, 1989, 1989, 1989, 1989, 1989, ...
+## $ month         &lt;dbl&gt; 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, ...
+## $ dayofweek     &lt;dbl&gt; 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, ...
+```
+
+---
+
+See the dependent variable distribution:
+
+
+```r
+ggplot(ipf_lifts, aes(best3bench_kg)) +
+  geom_histogram(fill = "red", alpha = 0.5) +
+  theme_classic()
+```
+
+&lt;img src="images/Bench-Hist-1.png" width="100%" /&gt;
+
+---
+
+See it vs. say age, facetted by equipment:
+
+
+```r
+ggplot(ipf_lifts, aes(age, best3bench_kg)) +
+  geom_point(color = "red", alpha = 0.5) +
+  facet_wrap(~ equipment) +
+  theme_classic()
+```
+
+&lt;img src="images/Bench-Age-Equipment-1.png" width="100%" /&gt;
+
+---
+
+See it vs. year, by gender:
+
+
+```r
+ggplot(ipf_lifts, aes(factor(year), best3bench_kg, fill = sex)) +
+  geom_boxplot(outlier.alpha = 0.5) +
+  labs(fill = "", x = "", y = "") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+&lt;img src="images/Bench-Year-Gender-1.png" width="100%" /&gt;
+
+---
+
+Maybe add `\(age^2\)` and `\(year^2\)` to make Linear Regression's life easier?
+
+
+```r
+ipf_lifts &lt;- ipf_lifts %&gt;%
+  mutate(age2 = age ^ 2, year2 = year ^2)
+```
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The Present Solution: `caret`
+
+---
+
+### Split Data
+
+
+```r
+library(caret)
+
+train_idx &lt;- createDataPartition(ipf_lifts$best3bench_kg,
+                                 p = 0.6, list = FALSE)
+
+ipf_tr &lt;- ipf_lifts[train_idx, ]
+ipf_te &lt;- ipf_lifts[-train_idx, ]
+
+library(glue)
+glue("train no. of rows: {nrow(ipf_tr)}
+     test no. of rows: {nrow(ipf_te)}")
+```
+
+```
+## train no. of rows: 19230
+## test no. of rows: 12817
+```
+
+Here you might consider some Pre-Processing.
+
+`caret` has some nice documentation [here](https://topepo.github.io/caret/index.html).
+
+---
+
+### Model
+
+Define general methodology, e.g. 10-fold Cross-Validation:
+
+
+```r
+fit_control &lt;- trainControl(method = "cv", number = 5)
+
+ridge_grid &lt;- expand.grid(alpha=0, lambda = 10^seq(-3, 1, length = 50))
+lasso_grid &lt;- expand.grid(alpha=1, lambda = 10^seq(-3, 1, length = 50))
+rf_grid &lt;- expand.grid(splitrule = "variance",
+                       min.node.size = seq(10, 30, 10),
+                       mtry = seq(2, 10, 2))
+
+mod_ridge &lt;- train(best3bench_kg ~ ., data = ipf_tr, method = "glmnet",
+                trControl = fit_control, tuneGrid = ridge_grid,
+                metric = "RMSE")
+
+mod_lasso &lt;- train(best3bench_kg ~ ., data = ipf_tr, method = "glmnet",
+                trControl = fit_control, tuneGrid = lasso_grid,
+                metric = "RMSE")
+
+mod_rf &lt;- train(best3bench_kg ~ ., data = ipf_tr, method = "ranger",
+                trControl = fit_control, tuneGrid = rf_grid,
+                num.trees = 50, metric = "RMSE")
+```
+
+---
+
+### Evaluating Models
+
+
+```r
+mod_ridge
+```
+
+```
+## glmnet 
+## 
+## 19230 samples
+##    12 predictor
+## 
+## No pre-processing
+## Resampling: Cross-Validated (5 fold) 
+## Summary of sample sizes: 15383, 15384, 15384, 15385, 15384 
+## Resampling results across tuning parameters:
+## 
+##   lambda        RMSE      Rsquared   MAE     
+##    0.001000000  26.72342  0.8122544  20.37091
+##    0.001206793  26.72342  0.8122544  20.37091
+##    0.001456348  26.72342  0.8122544  20.37091
+##    0.001757511  26.72342  0.8122544  20.37091
+##    0.002120951  26.72342  0.8122544  20.37091
+##    0.002559548  26.72342  0.8122544  20.37091
+##    0.003088844  26.72342  0.8122544  20.37091
+##    0.003727594  26.72342  0.8122544  20.37091
+##    0.004498433  26.72342  0.8122544  20.37091
+##    0.005428675  26.72342  0.8122544  20.37091
+##    0.006551286  26.72342  0.8122544  20.37091
+##    0.007906043  26.72342  0.8122544  20.37091
+##    0.009540955  26.72342  0.8122544  20.37091
+##    0.011513954  26.72342  0.8122544  20.37091
+##    0.013894955  26.72342  0.8122544  20.37091
+##    0.016768329  26.72342  0.8122544  20.37091
+##    0.020235896  26.72342  0.8122544  20.37091
+##    0.024420531  26.72342  0.8122544  20.37091
+##    0.029470517  26.72342  0.8122544  20.37091
+##    0.035564803  26.72342  0.8122544  20.37091
+##    0.042919343  26.72342  0.8122544  20.37091
+##    0.051794747  26.72342  0.8122544  20.37091
+##    0.062505519  26.72342  0.8122544  20.37091
+##    0.075431201  26.72342  0.8122544  20.37091
+##    0.091029818  26.72342  0.8122544  20.37091
+##    0.109854114  26.72342  0.8122544  20.37091
+##    0.132571137  26.72342  0.8122544  20.37091
+##    0.159985872  26.72342  0.8122544  20.37091
+##    0.193069773  26.72342  0.8122544  20.37091
+##    0.232995181  26.72342  0.8122544  20.37091
+##    0.281176870  26.72342  0.8122544  20.37091
+##    0.339322177  26.72342  0.8122544  20.37091
+##    0.409491506  26.72342  0.8122544  20.37091
+##    0.494171336  26.72342  0.8122544  20.37091
+##    0.596362332  26.72342  0.8122544  20.37091
+##    0.719685673  26.72342  0.8122544  20.37091
+##    0.868511374  26.72342  0.8122544  20.37091
+##    1.048113134  26.72342  0.8122544  20.37091
+##    1.264855217  26.72342  0.8122544  20.37091
+##    1.526417967  26.72342  0.8122544  20.37091
+##    1.842069969  26.72342  0.8122544  20.37091
+##    2.222996483  26.72342  0.8122544  20.37091
+##    2.682695795  26.72342  0.8122544  20.37091
+##    3.237457543  26.72342  0.8122544  20.37091
+##    3.906939937  26.72342  0.8122544  20.37091
+##    4.714866363  26.75873  0.8120671  20.39672
+##    5.689866029  26.85454  0.8116003  20.46764
+##    6.866488450  26.97828  0.8110734  20.56168
+##    8.286427729  27.13943  0.8104665  20.68734
+##   10.000000000  27.34867  0.8097729  20.85189
+## 
+## Tuning parameter 'alpha' was held constant at a value of 0
+## RMSE was used to select the optimal model using the smallest value.
+## The final values used for the model were alpha = 0 and lambda = 3.90694.
+```
+
+---
+
+
+```r
+mod_lasso
+```
+
+```
+## glmnet 
+## 
+## 19230 samples
+##    12 predictor
+## 
+## No pre-processing
+## Resampling: Cross-Validated (5 fold) 
+## Summary of sample sizes: 15385, 15384, 15383, 15383, 15385 
+## Resampling results across tuning parameters:
+## 
+##   lambda        RMSE      Rsquared   MAE     
+##    0.001000000  26.31556  0.8161488  20.11136
+##    0.001206793  26.31556  0.8161488  20.11136
+##    0.001456348  26.31556  0.8161488  20.11136
+##    0.001757511  26.31556  0.8161488  20.11136
+##    0.002120951  26.31556  0.8161488  20.11136
+##    0.002559548  26.31556  0.8161488  20.11136
+##    0.003088844  26.31556  0.8161488  20.11136
+##    0.003727594  26.31556  0.8161488  20.11136
+##    0.004498433  26.31556  0.8161488  20.11136
+##    0.005428675  26.31556  0.8161488  20.11136
+##    0.006551286  26.31556  0.8161488  20.11136
+##    0.007906043  26.31556  0.8161488  20.11136
+##    0.009540955  26.31556  0.8161488  20.11136
+##    0.011513954  26.31556  0.8161488  20.11136
+##    0.013894955  26.31556  0.8161488  20.11136
+##    0.016768329  26.31556  0.8161488  20.11136
+##    0.020235896  26.31561  0.8161480  20.11138
+##    0.024420531  26.31742  0.8161211  20.11280
+##    0.029470517  26.32313  0.8160420  20.11684
+##    0.035564803  26.33262  0.8159114  20.12343
+##    0.042919343  26.34138  0.8157916  20.12858
+##    0.051794747  26.35094  0.8156611  20.13309
+##    0.062505519  26.36976  0.8154019  20.14413
+##    0.075431201  26.39257  0.8150887  20.15915
+##    0.091029818  26.41709  0.8147523  20.17412
+##    0.109854114  26.44630  0.8143511  20.19193
+##    0.132571137  26.48360  0.8138382  20.21658
+##    0.159985872  26.52674  0.8132464  20.24478
+##    0.193069773  26.53967  0.8130857  20.25165
+##    0.232995181  26.54992  0.8129712  20.25618
+##    0.281176870  26.56466  0.8128053  20.26328
+##    0.339322177  26.58419  0.8125896  20.27285
+##    0.409491506  26.61143  0.8122902  20.28818
+##    0.494171336  26.65041  0.8118593  20.31081
+##    0.596362332  26.70428  0.8112642  20.34427
+##    0.719685673  26.78021  0.8104191  20.39162
+##    0.868511374  26.87886  0.8093393  20.45214
+##    1.048113134  26.98900  0.8082241  20.52110
+##    1.264855217  27.13925  0.8067042  20.62129
+##    1.526417967  27.35601  0.8044364  20.77465
+##    1.842069969  27.62586  0.8016948  20.96439
+##    2.222996483  27.99726  0.7978039  21.22964
+##    2.682695795  28.49195  0.7924854  21.58855
+##    3.237457543  29.12608  0.7855375  22.06690
+##    3.906939937  29.96125  0.7758755  22.72088
+##    4.714866363  30.99811  0.7633882  23.57477
+##    5.689866029  32.41731  0.7440978  24.77469
+##    6.866488450  34.06044  0.7202302  26.18268
+##    8.286427729  35.52493  0.7012241  27.45777
+##   10.000000000  37.39886  0.6734424  29.05195
+## 
+## Tuning parameter 'alpha' was held constant at a value of 1
+## RMSE was used to select the optimal model using the smallest value.
+## The final values used for the model were alpha = 1 and lambda = 0.01676833.
+```
+
+---
+
+
+```r
+mod_rf
+```
+
+```
+## Random Forest 
+## 
+## 19230 samples
+##    12 predictor
+## 
+## No pre-processing
+## Resampling: Cross-Validated (5 fold) 
+## Summary of sample sizes: 15384, 15384, 15384, 15384, 15384 
+## Resampling results across tuning parameters:
+## 
+##   min.node.size  mtry  RMSE      Rsquared   MAE     
+##   10              2    44.69730  0.7141381  35.86788
+##   10              4    33.60407  0.7897219  26.28975
+##   10              6    28.70308  0.8178071  22.11564
+##   10              8    25.76442  0.8364468  19.68400
+##   10             10    24.65977  0.8431663  18.76419
+##   20              2    45.67981  0.6712642  36.67677
+##   20              4    33.40518  0.7893096  26.12445
+##   20              6    28.56167  0.8202732  22.04680
+##   20              8    25.79200  0.8372578  19.76190
+##   20             10    24.76650  0.8425054  18.86337
+##   30              2    43.12994  0.7297972  34.39613
+##   30              4    34.44547  0.7760974  26.96413
+##   30              6    28.17933  0.8218705  21.70254
+##   30              8    25.72474  0.8365809  19.66493
+##   30             10    24.62518  0.8441231  18.75074
+## 
+## Tuning parameter 'splitrule' was held constant at a value of variance
+## RMSE was used to select the optimal model using the smallest value.
+## The final values used for the model were mtry = 10, splitrule =
+##  variance and min.node.size = 30.
+```
+
+---
+
+
+```r
+plot(mod_ridge)
+```
+
+&lt;img src="images/Ridge-CV-1.png" width="80%" /&gt;
+
+---
+
+
+```r
+plot(mod_lasso)
+```
+
+&lt;img src="images/Lasso-CV-1.png" width="80%" /&gt;
+
+---
+
+
+```r
+plot(mod_rf)
+```
+
+&lt;img src="images/RF-CV-1.png" width="80%" /&gt;
+
+---
+
+### Comparing Models
+
+
+```r
+resamps &lt;- resamples(list(Ridge = mod_ridge,
+                          Lasso = mod_lasso,
+                          RF = mod_rf))
+summary(resamps)
+```
+
+```
+## 
+## Call:
+## summary.resamples(object = resamps)
+## 
+## Models: Ridge, Lasso, RF 
+## Number of resamples: 5 
+## 
+## MAE 
+##           Min.  1st Qu.   Median     Mean  3rd Qu.     Max. NA's
+## Ridge 19.97674 20.25969 20.27541 20.37091 20.61680 20.72595    0
+## Lasso 19.75270 19.90153 20.07503 20.11136 20.21321 20.61431    0
+## RF    18.43550 18.75085 18.77000 18.75074 18.79755 18.99980    0
+## 
+## RMSE 
+##           Min.  1st Qu.   Median     Mean  3rd Qu.     Max. NA's
+## Ridge 26.27286 26.52166 26.60801 26.72342 26.89584 27.31874    0
+## Lasso 25.83302 25.91268 26.34123 26.31556 26.37043 27.12043    0
+## RF    24.19044 24.67615 24.67851 24.62518 24.78101 24.79977    0
+## 
+## Rsquared 
+##            Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+## Ridge 0.8036382 0.8110569 0.8115893 0.8122544 0.8152085 0.8197790    0
+## Lasso 0.8034611 0.8163897 0.8190225 0.8161488 0.8197300 0.8221408    0
+## RF    0.8355799 0.8445128 0.8454045 0.8441231 0.8462733 0.8488451    0
+```
+
+---
+
+
+```r
+dotplot(resamps, metric = "RMSE")
+```
+
+&lt;img src="images/Caret-RMSE-Comp-1.png" width="100%" /&gt;
+
+---
+
+### Predicting
+
+
+```r
+pred_ridge &lt;- predict(mod_ridge, newdata = ipf_te)
+pred_lasso &lt;- predict(mod_lasso, newdata = ipf_te)
+pred_rf &lt;- predict(mod_rf, newdata = ipf_te)
+
+rmse_ridge &lt;- RMSE(pred_ridge, ipf_te$best3bench_kg)
+rmse_lasso &lt;- RMSE(pred_lasso, ipf_te$best3bench_kg)
+rmse_rf &lt;- RMSE(pred_rf, ipf_te$best3bench_kg)
+
+glue("Test RMSE Ridge: {format(rmse_ridge, digits = 3)}
+     Test RMSE Lassoe: {format(rmse_lasso, digits = 3)}
+     Test RMSE RF: {format(rmse_rf, digits = 3)}")
+```
+
+```
+## Test RMSE Ridge: 26.7
+## Test RMSE Lassoe: 26.2
+## Test RMSE RF: 24.2
+```
+
+---
+
+
+```r
+bind_rows(
+  tibble(method = "Ridge", pred = pred_ridge, true = ipf_te$best3bench_kg),
+  tibble(method = "Lasso", pred = pred_lasso, true = ipf_te$best3bench_kg),
+  tibble(method = "RF", pred = pred_rf, true = ipf_te$best3bench_kg)) %&gt;%
+  ggplot(aes(pred, true)) +
+  geom_point(color = "red", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_wrap(~ method) +
+  theme_bw()
+```
+
+&lt;img src="images/Caret-Pred-vs-True-1.png" width="100%" /&gt;
+
+---
+
+class: section-slide
+
+# The Future Solution: `tidymodels`
+
+---
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>

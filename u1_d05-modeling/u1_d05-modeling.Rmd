@@ -45,4 +45,280 @@ library(tidyverse)
 
 class: section-slide
 
-# Modeling
+# The Problem
+
+---
+
+### Inconsistency, Inextensibility
+
+```{r GLM-Data}
+n <- 10000
+x1 <- runif(n)
+x2 <- runif(n)
+t <- 1 + 2 * x1 + 3 * x2
+y <- rbinom(n, 1, 1 / (1 + exp(-t)))
+```
+
+```{r GLM, eval=FALSE}
+glm(y ~ x1 + x2, family = "binomial")
+```
+
+```{r GLMNET, eval=FALSE}
+glmnet(as.matrix(cbind(x1, x2)), as.factor(y), family = "binomial")
+```
+
+```{r RF, eval=FALSE}
+randomForest(as.factor(y) ~ x1 + x2)
+```
+
+
+```{r GBM, eval=FALSE}
+gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
+```
+
+`r emo::ji("scream")`
+
+---
+
+class: section-slide
+
+# Detour: A Regression Problem
+
+---
+
+### IPF-Lifts: Predicting Bench Lifting
+
+- Dataset was published as part of the [TidyTuesday](https://github.com/rfordatascience/tidytuesday) intiative
+- Comes from [Open Powerlifting](https://www.openpowerlifting.org/data)
+- [Wikipedia](https://en.wikipedia.org/wiki/Powerlifting): Powerlifting is a strength sport that consists of three attempts at maximal weight on three lifts: squat, bench press, and deadlift
+
+<img src="images/pl_bench.jpg" style="width: 70%" />
+
+---
+
+The raw data has over 40K rows: for each athlete, for each event, stats about athlete gender, age and weight, and the maximal weight lifted in the 3 types of Powerlifting.
+
+We will be predicting `best3bench_kg` based on a few predictors, no missing values:
+
+```{r, message=FALSE}
+library(lubridate)
+
+ipf_lifts <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-08/ipf_lifts.csv")
+
+ipf_lifts <- ipf_lifts %>%
+  drop_na(best3bench_kg, age) %>%
+  filter(between(age, 18, 100), best3bench_kg > 0, equipment != "Wraps") %>%
+  select(sex, event, equipment, age, division, bodyweight_kg, best3bench_kg, date, meet_name) %>%
+  drop_na() %>%
+  mutate(year = year(date), month = month(date),
+         dayofweek = wday(date)) %>%
+  select(-date) %>%
+  mutate_if(is.character, as.factor)
+
+dim(ipf_lifts)
+```
+
+---
+
+```{r}
+glimpse(ipf_lifts)
+```
+
+---
+
+See the dependent variable distribution:
+
+```{r Bench-Hist, message=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(ipf_lifts, aes(best3bench_kg)) +
+  geom_histogram(fill = "red", alpha = 0.5) +
+  theme_classic()
+```
+
+---
+
+See it vs. say age, facetted by equipment:
+
+```{r Bench-Age-Equipment, message=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(ipf_lifts, aes(age, best3bench_kg)) +
+  geom_point(color = "red", alpha = 0.5) +
+  facet_wrap(~ equipment) +
+  theme_classic()
+```
+
+---
+
+See it vs. year, by gender:
+
+```{r Bench-Year-Gender, message=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(ipf_lifts, aes(factor(year), best3bench_kg, fill = sex)) +
+  geom_boxplot(outlier.alpha = 0.5) +
+  labs(fill = "", x = "", y = "") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+---
+
+Maybe add $age^2$ and $year^2$ to make Linear Regression's life easier?
+
+```{r}
+ipf_lifts <- ipf_lifts %>%
+  mutate(age2 = age ^ 2, year2 = year ^2)
+```
+
+---
+
+class: section-slide
+
+# End of Detour
+
+---
+
+class: section-slide
+
+# The Present Solution: `caret`
+
+---
+
+### Split Data
+
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+
+train_idx <- createDataPartition(ipf_lifts$best3bench_kg,
+                                 p = 0.6, list = FALSE)
+
+ipf_tr <- ipf_lifts[train_idx, ]
+ipf_te <- ipf_lifts[-train_idx, ]
+
+library(glue)
+glue("train no. of rows: {nrow(ipf_tr)}
+     test no. of rows: {nrow(ipf_te)}")
+```
+
+Here you might consider some Pre-Processing.
+
+`caret` has some nice documentation [here](https://topepo.github.io/caret/index.html).
+
+---
+
+### Model
+
+Define general methodology, e.g. 10-fold Cross-Validation:
+
+```{r, warning=FALSE}
+fit_control <- trainControl(method = "cv", number = 5)
+
+ridge_grid <- expand.grid(alpha=0, lambda = 10^seq(-3, 1, length = 50))
+lasso_grid <- expand.grid(alpha=1, lambda = 10^seq(-3, 1, length = 50))
+rf_grid <- expand.grid(splitrule = "variance",
+                       min.node.size = seq(10, 30, 10),
+                       mtry = seq(2, 10, 2))
+
+mod_ridge <- train(best3bench_kg ~ ., data = ipf_tr, method = "glmnet",
+                trControl = fit_control, tuneGrid = ridge_grid,
+                metric = "RMSE")
+
+mod_lasso <- train(best3bench_kg ~ ., data = ipf_tr, method = "glmnet",
+                trControl = fit_control, tuneGrid = lasso_grid,
+                metric = "RMSE")
+
+mod_rf <- train(best3bench_kg ~ ., data = ipf_tr, method = "ranger",
+                trControl = fit_control, tuneGrid = rf_grid,
+                num.trees = 50, metric = "RMSE")
+```
+
+---
+
+### Evaluating Models
+
+```{r}
+mod_ridge
+```
+
+---
+
+```{r}
+mod_lasso
+```
+
+---
+
+```{r}
+mod_rf
+```
+
+---
+
+```{r Ridge-CV, fig.asp=0.5, out.width="80%"}
+plot(mod_ridge)
+```
+
+---
+
+```{r Lasso-CV, fig.asp=0.5, out.width="80%"}
+plot(mod_lasso)
+```
+
+---
+
+```{r RF-CV, fig.asp=0.5, out.width="80%"}
+plot(mod_rf)
+```
+
+---
+
+### Comparing Models
+
+```{r}
+resamps <- resamples(list(Ridge = mod_ridge,
+                          Lasso = mod_lasso,
+                          RF = mod_rf))
+summary(resamps)
+```
+
+---
+
+```{r Caret-RMSE-Comp, fig.asp=0.5, out.width="100%"}
+dotplot(resamps, metric = "RMSE")
+```
+
+---
+
+### Predicting
+
+```{r}
+pred_ridge <- predict(mod_ridge, newdata = ipf_te)
+pred_lasso <- predict(mod_lasso, newdata = ipf_te)
+pred_rf <- predict(mod_rf, newdata = ipf_te)
+
+rmse_ridge <- RMSE(pred_ridge, ipf_te$best3bench_kg)
+rmse_lasso <- RMSE(pred_lasso, ipf_te$best3bench_kg)
+rmse_rf <- RMSE(pred_rf, ipf_te$best3bench_kg)
+
+glue("Test RMSE Ridge: {format(rmse_ridge, digits = 3)}
+     Test RMSE Lassoe: {format(rmse_lasso, digits = 3)}
+     Test RMSE RF: {format(rmse_rf, digits = 3)}")
+```
+
+---
+
+```{r Caret-Pred-vs-True, message=FALSE, warning=FALSE, fig.asp=0.5, out.width="100%"}
+bind_rows(
+  tibble(method = "Ridge", pred = pred_ridge, true = ipf_te$best3bench_kg),
+  tibble(method = "Lasso", pred = pred_lasso, true = ipf_te$best3bench_kg),
+  tibble(method = "RF", pred = pred_rf, true = ipf_te$best3bench_kg)) %>%
+  ggplot(aes(pred, true)) +
+  geom_point(color = "red", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_wrap(~ method) +
+  theme_bw()
+```
+
+---
+
+class: section-slide
+
+# The Future Solution: `tidymodels`
+
+---
