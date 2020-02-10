@@ -6,11 +6,11 @@ institute: "Stat. and OR Department, TAU"
 date: "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
-    css: "../slides.css"
+    css: "slides.css"
     seal: false
-    chakra: "../libs/remark-latest.min.js"
+    chakra: "libs/remark-latest.min.js"
     includes:
-      in_header: "../header.html"
+      in_header: "header.html"
     nature:
       highlightStyle: github
       highlightLines: true
