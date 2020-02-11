@@ -80,6 +80,10 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ---
 
+### Compare this with `sklearn`
+
+---
+
 class: section-slide
 
 # Detour: A Regression Problem
@@ -196,13 +200,13 @@ glue("train no. of rows: {nrow(ipf_tr)}
      test no. of rows: {nrow(ipf_te)}")
 ```
 
-Here you might consider some Pre-Processing.
+Here you might consider some preprocessing.
 
 `caret` has some nice documentation [here](https://topepo.github.io/caret/index.html).
 
 ---
 
-### Model
+### Tuning and Modeling
 
 Define general methodology, e.g. 10-fold Cross-Validation:
 
@@ -321,4 +325,295 @@ class: section-slide
 
 # The Future Solution: `tidymodels`
 
+#### Inspired by [Julia Silge](https://juliasilge.com/blog/intro-tidymodels/)
+
 ---
+
+### Packages under tidymodels
+
+- `paresnip`: tidy `caret`
+- `dials` and `tune`: specifying and tuning model parameters
+- `rsample`: sampling, data partitioning
+- `recipes` and `embed`: preprocessing and creating model matrices
+- `infer`: tidy statistics
+- `yardstick`: measuring models performance
+- `broom`: convert models output into tidy tibbles
+
+And [more](https://www.tidyverse.org/blog/2018/08/tidymodels-0-0-1/).
+
+.warning[
+`r emo::ji("warning")` All `tidymodels` packages are under development!
+]
+
+---
+
+### Split Data
+
+The `initial_split()` function is from the `rsample` package:
+
+```{r, message=FALSE, warning=FALSE}
+library(tidymodels)
+
+ipf_split_obj <- ipf_lifts %>%
+  initial_split(prop = 0.6, strata = equipment)
+
+ipf_tr <- training(ipf_split_obj)
+ipf_te <- testing(ipf_split_obj)
+
+glue("train no. of rows: {nrow(ipf_tr)}
+     test no. of rows: {nrow(ipf_te)}")
+
+print(ipf_split_obj)
+```
+
+---
+
+### Preprocess .font80percent[(but we're not gonna use it)]
+
+The `recipe()` function is from the `recipes` package. It allows you to specify a python-like pipe you can later apply to any dataset, including all preprocessing steps:
+
+```{r}
+ipf_rec <- recipe(best3bench_kg ~ ., data = ipf_tr)
+ipf_rec
+```
+
+`recipes` contains more preprocessing `step_`s than you imagine:
+
+```{r}
+ipf_rec <-  ipf_rec %>%
+  step_normalize(all_numeric())
+```
+
+---
+
+After you have your `recipe` you need to `prep()` materials...
+
+```{r}
+ipf_rec <- ipf_rec %>% prep(ipf_tr)
+
+ipf_rec
+```
+
+At this point our `recipe` has all necessary `sd` and `mean`s for numeric variables.
+
+---
+
+And then we `bake()`:
+
+```{r}
+ipf_tr2 <- ipf_rec %>% bake(ipf_tr)
+ipf_te2 <- ipf_rec %>% bake(ipf_te)
+
+glue("mean of age in orig training: {format(mean(ipf_tr$age), digits = 3)}, sd: {format(sd(ipf_tr$age), digits = 3)}
+     mean of age in baked training: {format(mean(ipf_tr2$age), digits = 0)}, sd: {format(sd(ipf_tr2$age), digits = 3)}")
+
+glue("mean of age in orig testing: {format(mean(ipf_te$age), digits = 3)}, sd: {format(sd(ipf_te$age), digits = 3)}
+     mean of age in baked testing: {format(mean(ipf_te2$age), digits = 0)}, sd: {format(sd(ipf_te2$age), digits = 3)}")
+```
+
+---
+
+Or you can do it all in a single pipe:
+
+```{r}
+ipf_rec <- recipe(best3bench_kg ~ ., data = ipf_tr) %>%
+  step_normalize(all_numeric()) %>%
+  prep(ipf_tr)
+
+ipf_tr2 <- ipf_rec %>% bake(ipf_tr)
+ipf_te2 <- ipf_rec %>% bake(ipf_te)
+
+glue("mean of age in orig training: {format(mean(ipf_tr$age), digits = 3)}, sd: {format(sd(ipf_tr$age), digits = 3)}
+     mean of age in baked training: {format(mean(ipf_tr2$age), digits = 0)}, sd: {format(sd(ipf_tr2$age), digits = 2)}")
+
+glue("mean of age in orig testing: {format(mean(ipf_te$age), digits = 3)}, sd: {format(sd(ipf_te$age), digits = 3)}
+     mean of age in baked testing: {format(mean(ipf_te2$age), digits = 0)}, sd: {format(sd(ipf_te2$age), digits = 3)}")
+```
+
+---
+
+### Modeling
+
+For now let us use the original `ipf_tr` data.
+
+Functions `linear_reg()` and `set_engine()` are from the `parsnip` package:
+
+```{r}
+mod_ridge_spec <- linear_reg(mixture = 0, penalty = 0.001) %>%
+  set_engine(engine = "glmnet")
+
+mod_ridge_spec
+```
+
+---
+
+```{r}
+mod_ridge <- mod_ridge_spec %>%
+  fit(best3bench_kg ~ ., data = ipf_tr)
+
+mod_ridge
+```
+
+---
+
+In a single pipe:
+
+```{r}
+mod_lasso <- linear_reg(mixture = 1, penalty = 0.001) %>%
+  set_engine(engine = "glmnet") %>%
+  fit(best3bench_kg ~ ., data = ipf_tr)
+
+mod_lasso
+```
+
+---
+
+Can also use `fit_xy()` a-la `sklearn`:
+
+```{r}
+mod_rf <- rand_forest(mode = "regression", mtry = 4, trees = 50, min_n = 30) %>%
+  set_engine("ranger") %>%
+  fit_xy(x = ipf_tr[, -7],
+         y = ipf_tr$best3bench_kg)
+
+mod_rf
+```
+
+---
+
+Notice how easy it is to get the model's results in a tidy way using the `tidy()` function:
+
+```{r}
+tidy(mod_ridge)
+```
+
+---
+
+### Predicting
+
+```{r}
+results_test <- mod_ridge %>%
+  predict(new_data = ipf_te, penalty = 0.001) %>%
+  mutate(
+    truth = ipf_te$best3bench_kg,
+    method = "Ridge"
+  ) %>%
+  bind_rows(mod_lasso %>%
+    predict(new_data = ipf_te) %>%
+    mutate(
+      truth = ipf_te$best3bench_kg,
+      method = "Lasso"
+  )) %>%
+  bind_rows(mod_rf %>%
+    predict(new_data = ipf_te) %>%
+    mutate(
+      truth = ipf_te$best3bench_kg,
+      method = "RF"
+  ))
+
+dim(results_test)
+```
+
+---
+
+### Comparing Models
+
+The package `yardstick` has tons of performance metrics:
+
+```{r}
+results_test %>%
+  group_by(method) %>%
+  yardstick::rmse(truth = truth, estimate = .pred)
+```
+
+---
+
+```{r Tidymodels-Pred-vs-True, message=FALSE, warning=FALSE, fig.asp=0.5, out.width="100%"}
+results_test %>%
+  ggplot(aes(.pred, truth)) +
+  geom_point(color = "red", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_wrap(~ method) +
+  theme_bw()
+```
+
+---
+
+### Tuning
+
+This isn't completely clear to me, but it seems to work:
+
+Define your model spec, using `tune()` from the `tune` package (needs to be installed separately) for a paramter you wish to tune:
+
+```{r, message=FALSE, warning=FALSE}
+library(tune)
+
+mod_rf_spec <- rand_forest(mode = "regression",
+                           mtry = tune("mtry"),
+                           min_n = tune("min_n")) %>%
+  set_engine("ranger")
+```
+
+---
+
+Define the `grid` on which you train your params, with the `dials` package:
+
+```{r}
+rf_grid <- grid_regular(mtry(range(2, 10)), min_n(range(10, 30)),
+                        levels = c(5, 3))
+
+rf_grid
+```
+
+---
+
+Split your data into a few folds for Cross Validation with `vfold_cv()` from the `rsample` package:
+
+```{r}
+cv_splits <- vfold_cv(ipf_tr, v = 5)
+
+cv_splits
+```
+
+---
+
+Now perform cross validation with `tune_grid()` from the `tune` package:
+
+```{r, eval=FALSE}
+tune_res <- tune_grid(recipe(best3bench_kg ~ ., data = ipf_tr),
+                      model = mod_rf_spec,
+                      resamples = cv_splits,
+                      grid = rf_grid,
+                      metrics = metric_set(rmse))
+tune_res
+```
+
+```{r echo=FALSE}
+tune_res <- read_rds("../data/ipf_rfmod_tune.rds")
+tune_res
+```
+
+---
+
+Collect the mean metric across folds:
+
+```{r}
+estimates <- collect_metrics(tune_res)
+
+estimates
+```
+
+---
+
+Choose best paramter:
+
+```{r Tidymodels-RMSE-Comp, fig.asp=0.5, out.width="100%"}
+estimates %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(x = mtry, y = mean, color = min_n)) + 
+  geom_point() + 
+  geom_line() + 
+  labs(y = "Mean RMSE") +
+  theme_classic()
+```
+

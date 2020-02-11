@@ -4,7 +4,7 @@
     <title>Modeling in the Tidyverse</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-10" />
+    <meta name="date" content="2020-02-11" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-10
+### 2020-02-11
 
 ---
 
@@ -88,6 +88,10 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 ```
 
 😱
+
+---
+
+### Compare this with `sklearn`
 
 ---
 
@@ -245,13 +249,13 @@ glue("train no. of rows: {nrow(ipf_tr)}
 ## test no. of rows: 12817
 ```
 
-Here you might consider some Pre-Processing.
+Here you might consider some preprocessing.
 
 `caret` has some nice documentation [here](https://topepo.github.io/caret/index.html).
 
 ---
 
-### Model
+### Tuning and Modeling
 
 Define general methodology, e.g. 10-fold Cross-Validation:
 
@@ -295,60 +299,60 @@ mod_ridge
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (5 fold) 
-## Summary of sample sizes: 15383, 15384, 15384, 15385, 15384 
+## Summary of sample sizes: 15384, 15384, 15384, 15383, 15385 
 ## Resampling results across tuning parameters:
 ## 
 ##   lambda        RMSE      Rsquared   MAE     
-##    0.001000000  26.72342  0.8122544  20.37091
-##    0.001206793  26.72342  0.8122544  20.37091
-##    0.001456348  26.72342  0.8122544  20.37091
-##    0.001757511  26.72342  0.8122544  20.37091
-##    0.002120951  26.72342  0.8122544  20.37091
-##    0.002559548  26.72342  0.8122544  20.37091
-##    0.003088844  26.72342  0.8122544  20.37091
-##    0.003727594  26.72342  0.8122544  20.37091
-##    0.004498433  26.72342  0.8122544  20.37091
-##    0.005428675  26.72342  0.8122544  20.37091
-##    0.006551286  26.72342  0.8122544  20.37091
-##    0.007906043  26.72342  0.8122544  20.37091
-##    0.009540955  26.72342  0.8122544  20.37091
-##    0.011513954  26.72342  0.8122544  20.37091
-##    0.013894955  26.72342  0.8122544  20.37091
-##    0.016768329  26.72342  0.8122544  20.37091
-##    0.020235896  26.72342  0.8122544  20.37091
-##    0.024420531  26.72342  0.8122544  20.37091
-##    0.029470517  26.72342  0.8122544  20.37091
-##    0.035564803  26.72342  0.8122544  20.37091
-##    0.042919343  26.72342  0.8122544  20.37091
-##    0.051794747  26.72342  0.8122544  20.37091
-##    0.062505519  26.72342  0.8122544  20.37091
-##    0.075431201  26.72342  0.8122544  20.37091
-##    0.091029818  26.72342  0.8122544  20.37091
-##    0.109854114  26.72342  0.8122544  20.37091
-##    0.132571137  26.72342  0.8122544  20.37091
-##    0.159985872  26.72342  0.8122544  20.37091
-##    0.193069773  26.72342  0.8122544  20.37091
-##    0.232995181  26.72342  0.8122544  20.37091
-##    0.281176870  26.72342  0.8122544  20.37091
-##    0.339322177  26.72342  0.8122544  20.37091
-##    0.409491506  26.72342  0.8122544  20.37091
-##    0.494171336  26.72342  0.8122544  20.37091
-##    0.596362332  26.72342  0.8122544  20.37091
-##    0.719685673  26.72342  0.8122544  20.37091
-##    0.868511374  26.72342  0.8122544  20.37091
-##    1.048113134  26.72342  0.8122544  20.37091
-##    1.264855217  26.72342  0.8122544  20.37091
-##    1.526417967  26.72342  0.8122544  20.37091
-##    1.842069969  26.72342  0.8122544  20.37091
-##    2.222996483  26.72342  0.8122544  20.37091
-##    2.682695795  26.72342  0.8122544  20.37091
-##    3.237457543  26.72342  0.8122544  20.37091
-##    3.906939937  26.72342  0.8122544  20.37091
-##    4.714866363  26.75873  0.8120671  20.39672
-##    5.689866029  26.85454  0.8116003  20.46764
-##    6.866488450  26.97828  0.8110734  20.56168
-##    8.286427729  27.13943  0.8104665  20.68734
-##   10.000000000  27.34867  0.8097729  20.85189
+##    0.001000000  26.63297  0.8118648  20.42868
+##    0.001206793  26.63297  0.8118648  20.42868
+##    0.001456348  26.63297  0.8118648  20.42868
+##    0.001757511  26.63297  0.8118648  20.42868
+##    0.002120951  26.63297  0.8118648  20.42868
+##    0.002559548  26.63297  0.8118648  20.42868
+##    0.003088844  26.63297  0.8118648  20.42868
+##    0.003727594  26.63297  0.8118648  20.42868
+##    0.004498433  26.63297  0.8118648  20.42868
+##    0.005428675  26.63297  0.8118648  20.42868
+##    0.006551286  26.63297  0.8118648  20.42868
+##    0.007906043  26.63297  0.8118648  20.42868
+##    0.009540955  26.63297  0.8118648  20.42868
+##    0.011513954  26.63297  0.8118648  20.42868
+##    0.013894955  26.63297  0.8118648  20.42868
+##    0.016768329  26.63297  0.8118648  20.42868
+##    0.020235896  26.63297  0.8118648  20.42868
+##    0.024420531  26.63297  0.8118648  20.42868
+##    0.029470517  26.63297  0.8118648  20.42868
+##    0.035564803  26.63297  0.8118648  20.42868
+##    0.042919343  26.63297  0.8118648  20.42868
+##    0.051794747  26.63297  0.8118648  20.42868
+##    0.062505519  26.63297  0.8118648  20.42868
+##    0.075431201  26.63297  0.8118648  20.42868
+##    0.091029818  26.63297  0.8118648  20.42868
+##    0.109854114  26.63297  0.8118648  20.42868
+##    0.132571137  26.63297  0.8118648  20.42868
+##    0.159985872  26.63297  0.8118648  20.42868
+##    0.193069773  26.63297  0.8118648  20.42868
+##    0.232995181  26.63297  0.8118648  20.42868
+##    0.281176870  26.63297  0.8118648  20.42868
+##    0.339322177  26.63297  0.8118648  20.42868
+##    0.409491506  26.63297  0.8118648  20.42868
+##    0.494171336  26.63297  0.8118648  20.42868
+##    0.596362332  26.63297  0.8118648  20.42868
+##    0.719685673  26.63297  0.8118648  20.42868
+##    0.868511374  26.63297  0.8118648  20.42868
+##    1.048113134  26.63297  0.8118648  20.42868
+##    1.264855217  26.63297  0.8118648  20.42868
+##    1.526417967  26.63297  0.8118648  20.42868
+##    1.842069969  26.63297  0.8118648  20.42868
+##    2.222996483  26.63297  0.8118648  20.42868
+##    2.682695795  26.63297  0.8118648  20.42868
+##    3.237457543  26.63297  0.8118648  20.42868
+##    3.906939937  26.63297  0.8118648  20.42868
+##    4.714866363  26.67047  0.8116644  20.45534
+##    5.689866029  26.76599  0.8111984  20.52542
+##    6.866488450  26.88969  0.8106683  20.61935
+##    8.286427729  27.05043  0.8100625  20.74567
+##   10.000000000  27.25934  0.8093675  20.91034
 ## 
 ## Tuning parameter 'alpha' was held constant at a value of 0
 ## RMSE was used to select the optimal model using the smallest value.
@@ -370,60 +374,60 @@ mod_lasso
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (5 fold) 
-## Summary of sample sizes: 15385, 15384, 15383, 15383, 15385 
+## Summary of sample sizes: 15385, 15383, 15385, 15383, 15384 
 ## Resampling results across tuning parameters:
 ## 
 ##   lambda        RMSE      Rsquared   MAE     
-##    0.001000000  26.31556  0.8161488  20.11136
-##    0.001206793  26.31556  0.8161488  20.11136
-##    0.001456348  26.31556  0.8161488  20.11136
-##    0.001757511  26.31556  0.8161488  20.11136
-##    0.002120951  26.31556  0.8161488  20.11136
-##    0.002559548  26.31556  0.8161488  20.11136
-##    0.003088844  26.31556  0.8161488  20.11136
-##    0.003727594  26.31556  0.8161488  20.11136
-##    0.004498433  26.31556  0.8161488  20.11136
-##    0.005428675  26.31556  0.8161488  20.11136
-##    0.006551286  26.31556  0.8161488  20.11136
-##    0.007906043  26.31556  0.8161488  20.11136
-##    0.009540955  26.31556  0.8161488  20.11136
-##    0.011513954  26.31556  0.8161488  20.11136
-##    0.013894955  26.31556  0.8161488  20.11136
-##    0.016768329  26.31556  0.8161488  20.11136
-##    0.020235896  26.31561  0.8161480  20.11138
-##    0.024420531  26.31742  0.8161211  20.11280
-##    0.029470517  26.32313  0.8160420  20.11684
-##    0.035564803  26.33262  0.8159114  20.12343
-##    0.042919343  26.34138  0.8157916  20.12858
-##    0.051794747  26.35094  0.8156611  20.13309
-##    0.062505519  26.36976  0.8154019  20.14413
-##    0.075431201  26.39257  0.8150887  20.15915
-##    0.091029818  26.41709  0.8147523  20.17412
-##    0.109854114  26.44630  0.8143511  20.19193
-##    0.132571137  26.48360  0.8138382  20.21658
-##    0.159985872  26.52674  0.8132464  20.24478
-##    0.193069773  26.53967  0.8130857  20.25165
-##    0.232995181  26.54992  0.8129712  20.25618
-##    0.281176870  26.56466  0.8128053  20.26328
-##    0.339322177  26.58419  0.8125896  20.27285
-##    0.409491506  26.61143  0.8122902  20.28818
-##    0.494171336  26.65041  0.8118593  20.31081
-##    0.596362332  26.70428  0.8112642  20.34427
-##    0.719685673  26.78021  0.8104191  20.39162
-##    0.868511374  26.87886  0.8093393  20.45214
-##    1.048113134  26.98900  0.8082241  20.52110
-##    1.264855217  27.13925  0.8067042  20.62129
-##    1.526417967  27.35601  0.8044364  20.77465
-##    1.842069969  27.62586  0.8016948  20.96439
-##    2.222996483  27.99726  0.7978039  21.22964
-##    2.682695795  28.49195  0.7924854  21.58855
-##    3.237457543  29.12608  0.7855375  22.06690
-##    3.906939937  29.96125  0.7758755  22.72088
-##    4.714866363  30.99811  0.7633882  23.57477
-##    5.689866029  32.41731  0.7440978  24.77469
-##    6.866488450  34.06044  0.7202302  26.18268
-##    8.286427729  35.52493  0.7012241  27.45777
-##   10.000000000  37.39886  0.6734424  29.05195
+##    0.001000000  26.19616  0.8161988  20.11405
+##    0.001206793  26.19616  0.8161988  20.11405
+##    0.001456348  26.19616  0.8161988  20.11405
+##    0.001757511  26.19616  0.8161988  20.11405
+##    0.002120951  26.19616  0.8161988  20.11405
+##    0.002559548  26.19616  0.8161988  20.11405
+##    0.003088844  26.19616  0.8161988  20.11405
+##    0.003727594  26.19616  0.8161988  20.11405
+##    0.004498433  26.19616  0.8161988  20.11405
+##    0.005428675  26.19616  0.8161988  20.11405
+##    0.006551286  26.19616  0.8161988  20.11405
+##    0.007906043  26.19616  0.8161988  20.11405
+##    0.009540955  26.19616  0.8161988  20.11405
+##    0.011513954  26.19616  0.8161988  20.11405
+##    0.013894955  26.19616  0.8161988  20.11405
+##    0.016768329  26.19616  0.8161988  20.11405
+##    0.020235896  26.19625  0.8161971  20.11409
+##    0.024420531  26.19967  0.8161482  20.11649
+##    0.029470517  26.20572  0.8160636  20.12087
+##    0.035564803  26.21340  0.8159566  20.12634
+##    0.042919343  26.22045  0.8158589  20.13083
+##    0.051794747  26.22980  0.8157292  20.13738
+##    0.062505519  26.24735  0.8154846  20.15040
+##    0.075431201  26.26553  0.8152327  20.16402
+##    0.091029818  26.28791  0.8149227  20.18093
+##    0.109854114  26.31976  0.8144804  20.20475
+##    0.132571137  26.36091  0.8139094  20.23587
+##    0.159985872  26.41820  0.8131106  20.27835
+##    0.193069773  26.44388  0.8127666  20.29422
+##    0.232995181  26.45760  0.8126018  20.30167
+##    0.281176870  26.47549  0.8123903  20.31189
+##    0.339322177  26.49619  0.8121569  20.32322
+##    0.409491506  26.52349  0.8118546  20.33923
+##    0.494171336  26.56193  0.8114289  20.36272
+##    0.596362332  26.61620  0.8108242  20.39674
+##    0.719685673  26.68346  0.8101009  20.43790
+##    0.868511374  26.76311  0.8092958  20.48577
+##    1.048113134  26.87093  0.8082155  20.55458
+##    1.264855217  27.02585  0.8066234  20.65916
+##    1.526417967  27.24480  0.8043112  20.81262
+##    1.842069969  27.51468  0.8015514  21.00426
+##    2.222996483  27.88611  0.7976436  21.27263
+##    2.682695795  28.37111  0.7924700  21.62655
+##    3.237457543  28.99631  0.7856717  22.09601
+##    3.906939937  29.83104  0.7760174  22.74653
+##    4.714866363  30.86889  0.7635283  23.57891
+##    5.689866029  32.29186  0.7441407  24.76975
+##    6.866488450  33.90025  0.7210274  26.14316
+##    8.286427729  35.36759  0.7020997  27.41979
+##   10.000000000  37.26477  0.6738627  29.03174
 ## 
 ## Tuning parameter 'alpha' was held constant at a value of 1
 ## RMSE was used to select the optimal model using the smallest value.
@@ -445,30 +449,30 @@ mod_rf
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (5 fold) 
-## Summary of sample sizes: 15384, 15384, 15384, 15384, 15384 
+## Summary of sample sizes: 15383, 15385, 15385, 15384, 15383 
 ## Resampling results across tuning parameters:
 ## 
 ##   min.node.size  mtry  RMSE      Rsquared   MAE     
-##   10              2    44.69730  0.7141381  35.86788
-##   10              4    33.60407  0.7897219  26.28975
-##   10              6    28.70308  0.8178071  22.11564
-##   10              8    25.76442  0.8364468  19.68400
-##   10             10    24.65977  0.8431663  18.76419
-##   20              2    45.67981  0.6712642  36.67677
-##   20              4    33.40518  0.7893096  26.12445
-##   20              6    28.56167  0.8202732  22.04680
-##   20              8    25.79200  0.8372578  19.76190
-##   20             10    24.76650  0.8425054  18.86337
-##   30              2    43.12994  0.7297972  34.39613
-##   30              4    34.44547  0.7760974  26.96413
-##   30              6    28.17933  0.8218705  21.70254
-##   30              8    25.72474  0.8365809  19.66493
-##   30             10    24.62518  0.8441231  18.75074
+##   10              2    44.60016  0.7114699  35.89767
+##   10              4    33.79800  0.7837596  26.55418
+##   10              6    28.44286  0.8176706  22.02408
+##   10              8    25.88144  0.8343231  19.88469
+##   10             10    24.59361  0.8428469  18.80623
+##   20              2    45.04970  0.6964301  36.27286
+##   20              4    33.67873  0.7866649  26.50288
+##   20              6    28.14219  0.8200786  21.73083
+##   20              8    25.66667  0.8362558  19.76510
+##   20             10    24.62317  0.8429091  18.86506
+##   30              2    43.96191  0.7208734  35.37027
+##   30              4    33.56112  0.7853515  26.33570
+##   30              6    28.49929  0.8192954  22.04674
+##   30              8    25.80313  0.8349025  19.83991
+##   30             10    24.65658  0.8431243  18.87086
 ## 
 ## Tuning parameter 'splitrule' was held constant at a value of variance
 ## RMSE was used to select the optimal model using the smallest value.
 ## The final values used for the model were mtry = 10, splitrule =
-##  variance and min.node.size = 30.
+##  variance and min.node.size = 10.
 ```
 
 ---
@@ -520,21 +524,21 @@ summary(resamps)
 ## 
 ## MAE 
 ##           Min.  1st Qu.   Median     Mean  3rd Qu.     Max. NA's
-## Ridge 19.97674 20.25969 20.27541 20.37091 20.61680 20.72595    0
-## Lasso 19.75270 19.90153 20.07503 20.11136 20.21321 20.61431    0
-## RF    18.43550 18.75085 18.77000 18.75074 18.79755 18.99980    0
+## Ridge 19.95601 20.32132 20.40683 20.42868 20.65936 20.79987    0
+## Lasso 19.67291 20.14205 20.20904 20.11405 20.23313 20.31312    0
+## RF    18.59458 18.64932 18.69610 18.80623 18.80038 19.29077    0
 ## 
 ## RMSE 
 ##           Min.  1st Qu.   Median     Mean  3rd Qu.     Max. NA's
-## Ridge 26.27286 26.52166 26.60801 26.72342 26.89584 27.31874    0
-## Lasso 25.83302 25.91268 26.34123 26.31556 26.37043 27.12043    0
-## RF    24.19044 24.67615 24.67851 24.62518 24.78101 24.79977    0
+## Ridge 26.10511 26.51198 26.61238 26.63297 26.95190 26.98348    0
+## Lasso 25.58059 26.27182 26.32154 26.19616 26.39673 26.41010    0
+## RF    24.37312 24.41544 24.49353 24.59361 24.51213 25.17380    0
 ## 
 ## Rsquared 
 ##            Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
-## Ridge 0.8036382 0.8110569 0.8115893 0.8122544 0.8152085 0.8197790    0
-## Lasso 0.8034611 0.8163897 0.8190225 0.8161488 0.8197300 0.8221408    0
-## RF    0.8355799 0.8445128 0.8454045 0.8441231 0.8462733 0.8488451    0
+## Ridge 0.8027713 0.8035941 0.8154973 0.8118648 0.8159366 0.8215248    0
+## Lasso 0.8091948 0.8135122 0.8176171 0.8161988 0.8178583 0.8228114    0
+## RF    0.8369466 0.8370510 0.8456703 0.8428469 0.8466729 0.8478936    0
 ```
 
 ---
@@ -566,9 +570,9 @@ glue("Test RMSE Ridge: {format(rmse_ridge, digits = 3)}
 ```
 
 ```
-## Test RMSE Ridge: 26.7
-## Test RMSE Lassoe: 26.2
-## Test RMSE RF: 24.2
+## Test RMSE Ridge: 26.8
+## Test RMSE Lassoe: 26.3
+## Test RMSE RF: 24.4
 ```
 
 ---
@@ -594,7 +598,704 @@ class: section-slide
 
 # The Future Solution: `tidymodels`
 
+#### Inspired by [Julia Silge](https://juliasilge.com/blog/intro-tidymodels/)
+
 ---
+
+### Packages under tidymodels
+
+- `paresnip`: tidy `caret`
+- `dials` and `tune`: specifying and tuning model parameters
+- `rsample`: sampling, data partitioning
+- `recipes` and `embed`: preprocessing and creating model matrices
+- `infer`: tidy statistics
+- `yardstick`: measuring models performance
+- `broom`: convert models output into tidy tibbles
+
+And [more](https://www.tidyverse.org/blog/2018/08/tidymodels-0-0-1/).
+
+.warning[
+⚠️ All `tidymodels` packages are under development!
+]
+
+---
+
+### Split Data
+
+The `initial_split()` function is from the `rsample` package:
+
+
+```r
+library(tidymodels)
+
+ipf_split_obj &lt;- ipf_lifts %&gt;%
+  initial_split(prop = 0.6, strata = equipment)
+
+ipf_tr &lt;- training(ipf_split_obj)
+ipf_te &lt;- testing(ipf_split_obj)
+
+glue("train no. of rows: {nrow(ipf_tr)}
+     test no. of rows: {nrow(ipf_te)}")
+```
+
+```
+## train no. of rows: 19229
+## test no. of rows: 12818
+```
+
+```r
+print(ipf_split_obj)
+```
+
+```
+## &lt;19229/12818/32047&gt;
+```
+
+---
+
+### Preprocess .font80percent[(but we're not gonna use it)]
+
+The `recipe()` function is from the `recipes` package. It allows you to specify a python-like pipe you can later apply to any dataset, including all preprocessing steps:
+
+
+```r
+ipf_rec &lt;- recipe(best3bench_kg ~ ., data = ipf_tr)
+ipf_rec
+```
+
+```
+## Data Recipe
+## 
+## Inputs:
+## 
+##       role #variables
+##    outcome          1
+##  predictor         12
+```
+
+`recipes` contains more preprocessing `step_`s than you imagine:
+
+
+```r
+ipf_rec &lt;-  ipf_rec %&gt;%
+  step_normalize(all_numeric())
+```
+
+---
+
+After you have your `recipe` you need to `prep()` materials...
+
+
+```r
+ipf_rec &lt;- ipf_rec %&gt;% prep(ipf_tr)
+
+ipf_rec
+```
+
+```
+## Data Recipe
+## 
+## Inputs:
+## 
+##       role #variables
+##    outcome          1
+##  predictor         12
+## 
+## Training data contained 19229 data points and no missing data.
+## 
+## Operations:
+## 
+## Centering and scaling for age, bodyweight_kg, year, month, ... [trained]
+```
+
+At this point our `recipe` has all necessary `sd` and `mean`s for numeric variables.
+
+---
+
+And then we `bake()`:
+
+
+```r
+ipf_tr2 &lt;- ipf_rec %&gt;% bake(ipf_tr)
+ipf_te2 &lt;- ipf_rec %&gt;% bake(ipf_te)
+
+glue("mean of age in orig training: {format(mean(ipf_tr$age), digits = 3)}, sd: {format(sd(ipf_tr$age), digits = 3)}
+     mean of age in baked training: {format(mean(ipf_tr2$age), digits = 0)}, sd: {format(sd(ipf_tr2$age), digits = 3)}")
+```
+
+```
+## mean of age in orig training: 36.6, sd: 14.2
+## mean of age in baked training: -0, sd: 1
+```
+
+```r
+glue("mean of age in orig testing: {format(mean(ipf_te$age), digits = 3)}, sd: {format(sd(ipf_te$age), digits = 3)}
+     mean of age in baked testing: {format(mean(ipf_te2$age), digits = 0)}, sd: {format(sd(ipf_te2$age), digits = 3)}")
+```
+
+```
+## mean of age in orig testing: 36.7, sd: 14.3
+## mean of age in baked testing: 0, sd: 1.01
+```
+
+---
+
+Or you can do it all in a single pipe:
+
+
+```r
+ipf_rec &lt;- recipe(best3bench_kg ~ ., data = ipf_tr) %&gt;%
+  step_normalize(all_numeric()) %&gt;%
+  prep(ipf_tr)
+
+ipf_tr2 &lt;- ipf_rec %&gt;% bake(ipf_tr)
+ipf_te2 &lt;- ipf_rec %&gt;% bake(ipf_te)
+
+glue("mean of age in orig training: {format(mean(ipf_tr$age), digits = 3)}, sd: {format(sd(ipf_tr$age), digits = 3)}
+     mean of age in baked training: {format(mean(ipf_tr2$age), digits = 0)}, sd: {format(sd(ipf_tr2$age), digits = 2)}")
+```
+
+```
+## mean of age in orig training: 36.6, sd: 14.2
+## mean of age in baked training: -0, sd: 1
+```
+
+```r
+glue("mean of age in orig testing: {format(mean(ipf_te$age), digits = 3)}, sd: {format(sd(ipf_te$age), digits = 3)}
+     mean of age in baked testing: {format(mean(ipf_te2$age), digits = 0)}, sd: {format(sd(ipf_te2$age), digits = 3)}")
+```
+
+```
+## mean of age in orig testing: 36.7, sd: 14.3
+## mean of age in baked testing: 0, sd: 1.01
+```
+
+---
+
+### Modeling
+
+For now let us use the original `ipf_tr` data.
+
+Functions `linear_reg()` and `set_engine()` are from the `parsnip` package:
+
+
+```r
+mod_ridge_spec &lt;- linear_reg(mixture = 0, penalty = 0.001) %&gt;%
+  set_engine(engine = "glmnet")
+
+mod_ridge_spec
+```
+
+```
+## Linear Regression Model Specification (regression)
+## 
+## Main Arguments:
+##   penalty = 0.001
+##   mixture = 0
+## 
+## Computational engine: glmnet
+```
+
+---
+
+
+```r
+mod_ridge &lt;- mod_ridge_spec %&gt;%
+  fit(best3bench_kg ~ ., data = ipf_tr)
+
+mod_ridge
+```
+
+```
+## parsnip model object
+## 
+## Fit in:  61ms
+## Call:  glmnet::glmnet(x = as.matrix(x), y = y, family = "gaussian",      alpha = ~0) 
+## 
+##     Df    %Dev Lambda
+## 1   51 0.00000  43200
+## 2   51 0.00392  39360
+## 3   51 0.00430  35870
+## 4   51 0.00472  32680
+## 5   51 0.00518  29780
+## 6   51 0.00568  27130
+## 7   51 0.00623  24720
+## 8   51 0.00684  22520
+## 9   51 0.00750  20520
+## 10  51 0.00822  18700
+## 11  51 0.00902  17040
+## 12  51 0.00989  15530
+## 13  51 0.01084  14150
+## 14  51 0.01189  12890
+## 15  51 0.01303  11740
+## 16  51 0.01428  10700
+## 17  51 0.01565   9751
+## 18  51 0.01715   8884
+## 19  51 0.01879   8095
+## 20  51 0.02059   7376
+## 21  51 0.02255   6721
+## 22  51 0.02469   6124
+## 23  51 0.02703   5580
+## 24  51 0.02959   5084
+## 25  51 0.03238   4632
+## 26  51 0.03542   4221
+## 27  51 0.03874   3846
+## 28  51 0.04235   3504
+## 29  51 0.04629   3193
+## 30  51 0.05057   2909
+## 31  51 0.05522   2651
+## 32  51 0.06027   2415
+## 33  51 0.06575   2201
+## 34  51 0.07170   2005
+## 35  51 0.07813   1827
+## 36  51 0.08509   1665
+## 37  51 0.09260   1517
+## 38  51 0.10070   1382
+## 39  51 0.10940   1259
+## 40  51 0.11880   1147
+## 41  51 0.12880   1046
+## 42  51 0.13960    953
+## 43  51 0.15110    868
+## 44  51 0.16340    791
+## 45  51 0.17640    721
+## 46  51 0.19020    657
+## 47  51 0.20480    598
+## 48  51 0.22020    545
+## 49  51 0.23640    497
+## 50  51 0.25340    453
+## 51  51 0.27110    412
+## 52  51 0.28960    376
+## 53  51 0.30870    342
+## 54  51 0.32830    312
+## 55  51 0.34860    284
+## 56  51 0.36920    259
+## 57  51 0.39030    236
+## 58  51 0.41160    215
+## 59  51 0.43310    196
+## 60  51 0.45460    178
+## 61  51 0.47600    163
+## 62  51 0.49730    148
+## 63  51 0.51830    135
+## 64  51 0.53880    123
+## 65  51 0.55890    112
+## 66  51 0.57830    102
+## 67  51 0.59700     93
+## 68  51 0.61500     85
+## 69  51 0.63210     77
+## 70  51 0.64820     70
+## 71  51 0.66350     64
+## 72  51 0.67780     58
+## 73  51 0.69110     53
+## 74  51 0.70340     49
+## 75  51 0.71480     44
+## 76  51 0.72520     40
+## 77  51 0.73470     37
+## 78  51 0.74340     33
+## 79  51 0.75120     30
+## 80  51 0.75830     28
+## 81  51 0.76470     25
+## 82  51 0.77030     23
+## 83  51 0.77540     21
+## 84  51 0.77990     19
+## 85  51 0.78390     17
+## 86  51 0.78740     16
+## 87  51 0.79050     14
+## 88  51 0.79330     13
+## 89  51 0.79570     12
+## 90  51 0.79780     11
+## 91  51 0.79970     10
+## 92  51 0.80130      9
+## 93  51 0.80280      8
+## 94  51 0.80400      8
+## 95  51 0.80510      7
+## 96  51 0.80610      6
+## 97  51 0.80690      6
+## 98  51 0.80770      5
+## 99  51 0.80840      5
+## 100 51 0.80890      4
+```
+
+---
+
+In a single pipe:
+
+
+```r
+mod_lasso &lt;- linear_reg(mixture = 1, penalty = 0.001) %&gt;%
+  set_engine(engine = "glmnet") %&gt;%
+  fit(best3bench_kg ~ ., data = ipf_tr)
+
+mod_lasso
+```
+
+```
+## parsnip model object
+## 
+## Fit in:  61ms
+## Call:  glmnet::glmnet(x = as.matrix(x), y = y, family = "gaussian",      alpha = ~1) 
+## 
+##    Df    %Dev Lambda
+## 1   0 0.00000 43.200
+## 2   1 0.08424 39.360
+## 3   2 0.16000 35.870
+## 4   2 0.24020 32.680
+## 5   2 0.30680 29.780
+## 6   2 0.36200 27.130
+## 7   2 0.40790 24.720
+## 8   2 0.44600 22.520
+## 9   2 0.47760 20.520
+## 10  2 0.50380 18.700
+## 11  2 0.52560 17.040
+## 12  2 0.54370 15.530
+## 13  2 0.55870 14.150
+## 14  2 0.57120 12.890
+## 15  4 0.58630 11.740
+## 16  4 0.60790 10.700
+## 17  6 0.62950  9.751
+## 18  6 0.64870  8.884
+## 19  6 0.66460  8.095
+## 20  7 0.67890  7.376
+## 21  7 0.69160  6.721
+## 22  8 0.70490  6.124
+## 23  8 0.72010  5.580
+## 24  8 0.73260  5.084
+## 25  9 0.74310  4.632
+## 26  9 0.75180  4.221
+## 27 10 0.75930  3.846
+## 28 12 0.76630  3.504
+## 29 13 0.77270  3.193
+## 30 13 0.77800  2.909
+## 31 13 0.78250  2.651
+## 32 14 0.78640  2.415
+## 33 15 0.78990  2.201
+## 34 16 0.79290  2.005
+## 35 17 0.79550  1.827
+## 36 17 0.79770  1.665
+## 37 19 0.79960  1.517
+## 38 19 0.80140  1.382
+## 39 19 0.80280  1.259
+## 40 19 0.80400  1.147
+## 41 20 0.80500  1.046
+## 42 20 0.80590  0.953
+## 43 22 0.80660  0.868
+## 44 23 0.80730  0.791
+## 45 23 0.80790  0.721
+## 46 24 0.80840  0.657
+## 47 28 0.80890  0.598
+## 48 28 0.80930  0.545
+## 49 28 0.80970  0.497
+## 50 29 0.81000  0.453
+## 51 29 0.81030  0.412
+## 52 29 0.81050  0.376
+## 53 30 0.81070  0.342
+## 54 31 0.81090  0.312
+## 55 32 0.81110  0.284
+## 56 35 0.81120  0.259
+## 57 36 0.81130  0.236
+## 58 37 0.81140  0.215
+## 59 37 0.81150  0.196
+## 60 38 0.81160  0.178
+## 61 39 0.81210  0.163
+## 62 41 0.81260  0.148
+## 63 40 0.81300  0.135
+## 64 42 0.81330  0.123
+## 65 42 0.81360  0.112
+## 66 43 0.81380  0.102
+## 67 45 0.81400  0.093
+## 68 45 0.81420  0.085
+## 69 47 0.81440  0.077
+## 70 48 0.81450  0.070
+## 71 49 0.81470  0.064
+## 72 49 0.81490  0.058
+## 73 48 0.81500  0.053
+## 74 49 0.81510  0.049
+## 75 49 0.81520  0.044
+## 76 50 0.81520  0.040
+## 77 50 0.81530  0.037
+## 78 50 0.81540  0.033
+## 79 49 0.81540  0.030
+## 80 48 0.81550  0.028
+## 81 49 0.81550  0.025
+## 82 49 0.81550  0.023
+```
+
+---
+
+Can also use `fit_xy()` a-la `sklearn`:
+
+
+```r
+mod_rf &lt;- rand_forest(mode = "regression", mtry = 4, trees = 50, min_n = 30) %&gt;%
+  set_engine("ranger") %&gt;%
+  fit_xy(x = ipf_tr[, -7],
+         y = ipf_tr$best3bench_kg)
+
+mod_rf
+```
+
+```
+## parsnip model object
+## 
+## Fit in:  830msRanger result
+## 
+## Call:
+##  ranger::ranger(formula = formula, data = data, mtry = ~4, num.trees = ~50,      min.node.size = ~30, num.threads = 1, verbose = FALSE, seed = sample.int(10^5,          1)) 
+## 
+## Type:                             Regression 
+## Number of trees:                  50 
+## Sample size:                      19229 
+## Number of independent variables:  12 
+## Mtry:                             4 
+## Target node size:                 30 
+## Variable importance mode:         none 
+## Splitrule:                        variance 
+## OOB prediction error (MSE):       572.0641 
+## R squared (OOB):                  0.8479196
+```
+
+---
+
+Notice how easy it is to get the model's results in a tidy way using the `tidy()` function:
+
+
+```r
+tidy(mod_ridge)
+```
+
+```
+## # A tibble: 5,200 x 5
+##    term                 step  estimate lambda dev.ratio
+##    &lt;chr&gt;               &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+##  1 (Intercept)             1  1.49e+ 2 43201.  2.55e-36
+##  2 sexM                    1  8.48e-35 43201.  2.55e-36
+##  3 eventSB                 1 -8.95e-36 43201.  2.55e-36
+##  4 eventSBD                1 -2.44e-35 43201.  2.55e-36
+##  5 equipmentSingle-ply     1  2.95e-35 43201.  2.55e-36
+##  6 age                     1 -5.36e-37 43201.  2.55e-36
+##  7 divisionJuniors         1 -5.15e-36 43201.  2.55e-36
+##  8 divisionLight           1 -1.99e-35 43201.  2.55e-36
+##  9 divisionMasters 1       1 -6.28e-37 43201.  2.55e-36
+## 10 divisionMasters 2       1 -1.51e-35 43201.  2.55e-36
+## # ... with 5,190 more rows
+```
+
+---
+
+### Predicting
+
+
+```r
+results_test &lt;- mod_ridge %&gt;%
+  predict(new_data = ipf_te, penalty = 0.001) %&gt;%
+  mutate(
+    truth = ipf_te$best3bench_kg,
+    method = "Ridge"
+  ) %&gt;%
+  bind_rows(mod_lasso %&gt;%
+    predict(new_data = ipf_te) %&gt;%
+    mutate(
+      truth = ipf_te$best3bench_kg,
+      method = "Lasso"
+  )) %&gt;%
+  bind_rows(mod_rf %&gt;%
+    predict(new_data = ipf_te) %&gt;%
+    mutate(
+      truth = ipf_te$best3bench_kg,
+      method = "RF"
+  ))
+
+dim(results_test)
+```
+
+```
+## [1] 38454     3
+```
+
+---
+
+### Comparing Models
+
+The package `yardstick` has tons of performance metrics:
+
+
+```r
+results_test %&gt;%
+  group_by(method) %&gt;%
+  yardstick::rmse(truth = truth, estimate = .pred)
+```
+
+```
+## # A tibble: 3 x 4
+##   method .metric .estimator .estimate
+##   &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+## 1 Lasso  rmse    standard        26.0
+## 2 RF     rmse    standard        23.4
+## 3 Ridge  rmse    standard        26.4
+```
+
+---
+
+
+```r
+results_test %&gt;%
+  ggplot(aes(.pred, truth)) +
+  geom_point(color = "red", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_wrap(~ method) +
+  theme_bw()
+```
+
+&lt;img src="images/Tidymodels-Pred-vs-True-1.png" width="100%" /&gt;
+
+---
+
+### Tuning
+
+This isn't completely clear to me, but it seems to work:
+
+Define your model spec, using `tune()` from the `tune` package (needs to be installed separately) for a paramter you wish to tune:
+
+
+```r
+library(tune)
+
+mod_rf_spec &lt;- rand_forest(mode = "regression",
+                           mtry = tune("mtry"),
+                           min_n = tune("min_n")) %&gt;%
+  set_engine("ranger")
+```
+
+---
+
+Define the `grid` on which you train your params, with the `dials` package:
+
+
+```r
+rf_grid &lt;- grid_regular(mtry(range(2, 10)), min_n(range(10, 30)),
+                        levels = c(5, 3))
+
+rf_grid
+```
+
+```
+## # A tibble: 15 x 2
+##     mtry min_n
+##    &lt;int&gt; &lt;int&gt;
+##  1     2    10
+##  2     4    10
+##  3     6    10
+##  4     8    10
+##  5    10    10
+##  6     2    20
+##  7     4    20
+##  8     6    20
+##  9     8    20
+## 10    10    20
+## 11     2    30
+## 12     4    30
+## 13     6    30
+## 14     8    30
+## 15    10    30
+```
+
+---
+
+Split your data into a few folds for Cross Validation with `vfold_cv()` from the `rsample` package:
+
+
+```r
+cv_splits &lt;- vfold_cv(ipf_tr, v = 5)
+
+cv_splits
+```
+
+```
+## #  5-fold cross-validation 
+## # A tibble: 5 x 2
+##   splits               id   
+##   &lt;named list&gt;         &lt;chr&gt;
+## 1 &lt;split [15.4K/3.8K]&gt; Fold1
+## 2 &lt;split [15.4K/3.8K]&gt; Fold2
+## 3 &lt;split [15.4K/3.8K]&gt; Fold3
+## 4 &lt;split [15.4K/3.8K]&gt; Fold4
+## 5 &lt;split [15.4K/3.8K]&gt; Fold5
+```
+
+---
+
+Now perform cross validation with `tune_grid()` from the `tune` package:
+
+
+```r
+tune_res &lt;- tune_grid(recipe(best3bench_kg ~ ., data = ipf_tr),
+                      model = mod_rf_spec,
+                      resamples = cv_splits,
+                      grid = rf_grid,
+                      metrics = metric_set(rmse))
+tune_res
+```
+
+
+```
+## #  5-fold cross-validation 
+## # A tibble: 5 x 4
+##   splits               id    .metrics          .notes          
+## * &lt;list&gt;               &lt;chr&gt; &lt;list&gt;            &lt;list&gt;          
+## 1 &lt;split [15.4K/3.8K]&gt; Fold1 &lt;tibble [15 x 5]&gt; &lt;tibble [0 x 1]&gt;
+## 2 &lt;split [15.4K/3.8K]&gt; Fold2 &lt;tibble [15 x 5]&gt; &lt;tibble [0 x 1]&gt;
+## 3 &lt;split [15.4K/3.8K]&gt; Fold3 &lt;tibble [15 x 5]&gt; &lt;tibble [0 x 1]&gt;
+## 4 &lt;split [15.4K/3.8K]&gt; Fold4 &lt;tibble [15 x 5]&gt; &lt;tibble [0 x 1]&gt;
+## 5 &lt;split [15.4K/3.8K]&gt; Fold5 &lt;tibble [15 x 5]&gt; &lt;tibble [0 x 1]&gt;
+```
+
+---
+
+Collect the mean metric across folds:
+
+
+```r
+estimates &lt;- collect_metrics(tune_res)
+
+estimates
+```
+
+```
+## # A tibble: 15 x 7
+##     mtry min_n .metric .estimator  mean     n std_err
+##    &lt;int&gt; &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
+##  1     2    10 rmse    standard    24.7     5   0.197
+##  2     2    20 rmse    standard    24.7     5   0.190
+##  3     2    30 rmse    standard    24.8     5   0.192
+##  4     4    10 rmse    standard    23.7     5   0.186
+##  5     4    20 rmse    standard    23.6     5   0.192
+##  6     4    30 rmse    standard    23.5     5   0.181
+##  7     6    10 rmse    standard    23.9     5   0.191
+##  8     6    20 rmse    standard    23.7     5   0.186
+##  9     6    30 rmse    standard    23.6     5   0.186
+## 10     8    10 rmse    standard    24.0     5   0.203
+## 11     8    20 rmse    standard    23.7     5   0.185
+## 12     8    30 rmse    standard    23.6     5   0.185
+## 13    10    10 rmse    standard    24.1     5   0.206
+## 14    10    20 rmse    standard    23.8     5   0.181
+## 15    10    30 rmse    standard    23.7     5   0.183
+```
+
+---
+
+Choose best paramter:
+
+
+```r
+estimates %&gt;%
+  mutate(min_n = factor(min_n)) %&gt;%
+  ggplot(aes(x = mtry, y = mean, color = min_n)) + 
+  geom_point() + 
+  geom_line() + 
+  labs(y = "Mean RMSE") +
+  theme_classic()
+```
+
+&lt;img src="images/Tidymodels-RMSE-Comp-1.png" width="100%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
