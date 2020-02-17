@@ -118,7 +118,7 @@ But let's look at simple gradient descent:
 
 ### Show me that it's working
 
-```{python LR-Sim-Ideal0, out.width = "50%", fig.show = "hide"}
+```{python LR-Sim-Ideal0, fig.show = "hide"}
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -154,7 +154,7 @@ plot_sim(False)
 
 ---
 
-```{python LR-Sim-Ideal, ref.label = "LR-Sim-Ideal0", echo = FALSE, out.width = "50%"}
+```{python LR-Sim-Ideal, ref.label = "LR-Sim-Ideal0", echo = FALSE, out.width = "70%"}
 
 ```
 
@@ -195,7 +195,7 @@ plot_sim()
 
 ---
 
-Let's do 10 more:
+Let's do 50 more:
 
 ```{python LR-Sim-Guess10, out.width = "50%"}
 for i in range(10):
@@ -204,6 +204,53 @@ for i in range(10):
   beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
 
 plot_sim()
+```
+
+---
+
+Similarly we can actually plot our descent in $-l(\beta)$ in the $\beta$ space:
+
+```{python}
+alpha = 0.001
+beta_hat = np.array([-2.5, -2.5])
+betas = [beta_hat]
+for i in range(50):
+  l_minus = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
+  print(l_minus)
+  z = np.dot(X, beta_hat)
+  p = 1 / (1 + np.exp(-z))
+  beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+  betas.append(beta_hat)
+```
+
+---
+
+```{python LR-Descent0, fig.show="hide"}
+betas_arr = np.array(betas)
+m = 10
+beta1 = np.linspace(-3.0, 3.0, m)
+beta2 = np.linspace(-3.0, 3.0, m)
+B1, B2 = np.meshgrid(beta1, beta2)
+L = np.zeros((m, m))
+for i in range(m):
+  for j in range(m):
+    beta_hat = np.array([beta1[i], beta2[j]])
+    L[i, j] = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
+fig, ax = plt.subplots(1,1)
+cp = ax.contourf(B1, B2, L)
+cb = fig.colorbar(cp)
+ax.set_title('-l(beta) Gradient Descent')
+ax.set_xlabel('beta1')
+ax.set_ylabel('beta2')
+ax.plot(betas_arr[:, 0], betas_arr[:, 1], marker='x', color ='white')
+ax.plot([beta[0]], [beta[1]], marker='x', color='red', markersize=20, markeredgewidth=5)
+plt.show()
+```
+
+---
+
+```{python LR-Descent, ref.label = "LR-Descent0", echo=FALSE, out.width="70%"}
+
 ```
 
 ---

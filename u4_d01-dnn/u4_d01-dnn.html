@@ -161,7 +161,7 @@ plot_sim(False)
 
 ---
 
-&lt;img src="images/LR-Sim-Ideal-1.png" width="50%" /&gt;
+&lt;img src="images/LR-Sim-Ideal-1.png" width="70%" /&gt;
 
 ---
 `sklearn` should solve this easily:
@@ -187,7 +187,7 @@ lr.coef_
 ```
 
 ```
-## array([[0.97871325, 2.02555781]])
+## array([[0.98944246, 1.73282415]])
 ```
 
 ---
@@ -222,7 +222,7 @@ plot_sim()
 
 ---
 
-Let's do 10 more:
+Let's do 50 more:
 
 
 ```python
@@ -235,6 +235,106 @@ plot_sim()
 ```
 
 &lt;img src="images/LR-Sim-Guess10-1.png" width="50%" /&gt;
+
+---
+
+Similarly we can actually plot our descent in `\(-l(\beta)\)` in the `\(\beta\)` space:
+
+
+```python
+alpha = 0.001
+beta_hat = np.array([-2.5, -2.5])
+betas = [beta_hat]
+for i in range(50):
+  l_minus = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
+  print(l_minus)
+  z = np.dot(X, beta_hat)
+  p = 1 / (1 + np.exp(-z))
+  beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+  betas.append(beta_hat)
+```
+
+```
+## 2521.5015837025085
+## 2133.2521181505963
+## 1767.6713098982254
+## 1434.5017241974474
+## 1147.196485574928
+## 920.2675658939154
+## 760.7732791411141
+## 660.2259966704901
+## 599.731010157399
+## 562.5778844573445
+## 538.6321878424669
+## 522.423426091901
+## 510.98497924956865
+## 502.63580965659344
+## 496.3738279425602
+## 491.572857181722
+## 487.8251786273523
+## 484.8557826876819
+## 482.4734947232794
+## 480.54194008909724
+## 478.9616472000983
+## 477.658650250548
+## 476.57701871680024
+## 475.67383391544627
+## 474.91573333763733
+## 474.2764846795432
+## 473.7352514356552
+## 473.27533241230185
+## 472.8832319941066
+## 472.54796510525455
+## 472.2605312413052
+## 472.0135119918367
+## 471.80075991227386
+## 471.6171557606209
+## 471.45841744989093
+## 471.3209485112923
+## 471.2017170216344
+## 471.0981582202347
+## 471.0080956931455
+## 470.9296772172653
+## 470.8613222586089
+## 470.8016787945555
+## 470.74958764037126
+## 470.7040528491634
+## 470.66421705295284
+## 470.6293408433305
+## 470.5987854698369
+## 470.5719982749274
+## 470.54850039533244
+## 470.52787634754634
+```
+
+---
+
+
+```python
+betas_arr = np.array(betas)
+m = 10
+beta1 = np.linspace(-3.0, 3.0, m)
+beta2 = np.linspace(-3.0, 3.0, m)
+B1, B2 = np.meshgrid(beta1, beta2)
+L = np.zeros((m, m))
+for i in range(m):
+  for j in range(m):
+    beta_hat = np.array([beta1[i], beta2[j]])
+    L[i, j] = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
+fig, ax = plt.subplots(1,1)
+cp = ax.contourf(B1, B2, L)
+cb = fig.colorbar(cp)
+ax.set_title('-l(beta) Gradient Descent')
+ax.set_xlabel('beta1')
+ax.set_ylabel('beta2')
+ax.plot(betas_arr[:, 0], betas_arr[:, 1], marker='x', color ='white')
+ax.plot([beta[0]], [beta[1]], marker='x', color='red', markersize=20, markeredgewidth=5)
+plt.show()
+```
+
+---
+
+&lt;img src="images/LR-Descent-1.png" width="70%" /&gt;
 
 ---
 
