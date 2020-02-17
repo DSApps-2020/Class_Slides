@@ -1,0 +1,213 @@
+---
+title: "Understanding Deep Neural Networks"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+## Understanding Deep Neural Networks
+
+### Applications of Data Science - Class 14
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+class: section-slide
+
+# Logistic Regression as *we* know it
+
+---
+
+### LR as GLM
+
+- We observe $y_1, ..., y_n$ binary outcomes, therefore we say $Y_i \sim Bernoulli(p_i)$ and $P(Y_i) = p_i^{y_i}(1-p_i)^{1-y_i}$
+- We have $X_{n\text{x}(q + 1)}$ matrix of $q$ predictors for each observation + a $\vec{1}$ column for the intercept, let each row be $x_i$
+- We wish to estimate a vector of weights for each of the $q+1$ predictors $\beta_{(q+1)\text{x}1}$, such that some function of $x_i\beta$ explains $E(Y_i)=P(Y_i=1)=p_i$
+- We choose some *link function* $g$ and model *this* transformation of $E(Y_i)$
+- Typically for this case $g$ is the logit function: $logit(p_i) = log(\frac{p_i}{1-p_i})=x_i\beta$
+
+---
+
+- And so we can write:
+
+$E(Y_i)= P(Y_i=1|x_i;\beta) = p_i = g^{-1}(x_i\beta) = \frac{1}{1+e^{-x_i\beta}}$
+
+- Also note that now we can write:
+
+$P(Y_i|X;\beta) =  [g^{-1}(x_i\beta)]^{y_i}[1- g^{-1}(x_i\beta)]^{1-y_i} = (\frac{1}{1+e^{-x_i\beta}})^{y_i}(\frac{e^{-x_i\beta}}{1+e^{-x_i\beta}})^{1-y_i}$
+
+- Once we get our estimate $\hat\beta$:
+1. We could "explain" $Y_i$, the size and direction of each component of $\hat\beta$ indicating the contribution of that predictor to the *log-odds* of $Y_i$ being $1$
+2. We could "predict" probability of new observation $x_i$ having $Y_i=1$ by fitting a probability $\hat p_i=\frac{1}{1+e^{-x_i\hat\beta}}$, where typically if $\hat p_i > 0.5$, or $x_i\hat\beta > 0$, we predict $Y_i=1$
+
+---
+
+### How to fit the model? MLE
+
+Under the standard Maximum Likelihood approach we assume $Y_i$ are also *independent* and so their joint "likelihood" is:
+
+$L(\beta|X, y) = \prod_{i = 1}^n{P(Y_i|X;\beta)} = \prod_{i = 1}^n[g^{-1}(x_i\beta)]^{y_i}[1- g^{-1}(x_i\beta)]^{1-y_i}$
+
+The $\hat\beta$ we choose is the vector maximizing $L(\beta|X, y)$, only we take the log-likelihood which is easier to differentiate:
+
+$l(\beta|X, y)=\sum_{i=1}^n\ln{P(Y_i|X;\beta)}=$
+$\sum_{i=1}^n y_i\ln[g^{-1}(x_i\beta)] + (1-y_i)\ln[1- g^{-1}(x_i\beta)]=$
+$\sum_{i=1}^n \ln[1- g^{-1}(x_i\beta)] + y_i\ln[\frac{g^{-1}(x_i\beta)}{1- g^{-1}(x_i\beta)}]=$
+$\sum_{i=1}^n -\ln[1+ e^{x_i\beta}] + y_ix_i\beta$
+
+---
+
+### Life is like a box of chocolates
+
+Differentiate:
+
+$\frac{\partial l(\beta|X, y)}{\partial \beta_j} = \sum_{i=1}^n-\frac{1}{1+e^{x_i\beta}}e^{x_i\beta}x_{ij} + y_ix_{ij}=\sum_{i=1}^n x_{ij}(y_i-g^{-1}(x_i\beta))$
+
+Or in matrix notation:
+
+$\frac{\partial l(\beta|X, y)}{\partial \beta}=X^T(y - g^{-1}(X\beta))$
+
+We would like to equate this with $\vec0$ and get $\hat\beta$ but there's no closed solution...
+
+At which point usually the Newton-Raphson method comes to the rescue.
+
+But let's look at simple gradient descent:
+
+---
+
+### Gradient De(A)scent
+
+- Instead of maximizing log-likelihood, let's minimize minus log-likelihood $-l(\beta)$
+- We'll start with an initial guess $\hat\beta_{t=0}$
+- The partial derivatives vector of $-l(\beta)$ at point $\hat\beta_t$ (a.k.a the *gradient* $-\nabla l(\hat\beta_t)$) points to the direction of where $-l(\beta)$ has its steepest descent
+- We'll go a small $alpha$ step down that direction: $\hat\beta_{t+1}=\hat\beta_t -\alpha \cdot[-\nabla l(\hat\beta_t)]$
+- We do this for $I$ iterations or until some stopping rule indicating $\hat\beta$ has converged
+
+---
+
+### Show me that it's working
+
+```{python LR-Sim-Ideal0, out.width = "50%", fig.show = "hide"}
+import numpy as np
+import matplotlib.pyplot as plt
+
+n = 1000
+q = 2
+X = np.random.normal(size = n * q).reshape((n, q))
+# X_with_intercept = np.hstack((np.ones(n).reshape((n, 1)), X))
+beta = np.arange(1, q + 1) # [1, 2]
+z = np.dot(X, beta)
+p = 1 / (1 + np.exp(-z))
+y = np.random.binomial(1, p, size = n)
+
+
+X1 = np.linspace(-4, 4) # for plotting
+
+def plot_sim(plot_beta_hat=True):
+  plt.clf()
+  plt.scatter(X[:, 0], X[:, 1], c = y)
+  plt.plot(X1, -X1 * beta[0]/beta[1], linestyle = '--', color = 'red')
+  if plot_beta_hat:
+    plt.plot(X1, -X1 * beta_hat[0]/beta_hat[1], linestyle = '--')
+  plt.xlabel('X1')
+  plt.ylabel('X2')
+  if plot_beta_hat:
+    title = 'Guess: %.2f * X1 + %.2f * X2 = 0' % (beta_hat[0], beta_hat[1])
+  else:
+    title = 'Ideal: 1 * X1 + 2 * X2 = 0'
+  plt.title(title)
+  plt.show()
+
+plot_sim(False)
+```
+
+---
+
+```{python LR-Sim-Ideal, ref.label = "LR-Sim-Ideal0", echo = FALSE, out.width = "50%"}
+
+```
+
+---
+`sklearn` should solve this easily:
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(penalty='none', fit_intercept=False, max_iter=100)
+lr.fit(X, y)
+lr.coef_
+```
+
+---
+
+With Gradient Descent let's start with initial guess
+
+```{python LR-Sim-Guess, out.width = "50%"}
+beta_hat = np.ones(q) # [1, 1]
+
+plot_sim()
+```
+
+---
+
+Let's do 1 iteration:
+
+```{python LR-Sim-Guess1, out.width = "50%"}
+alpha = 0.01
+
+z = np.dot(X, beta_hat)
+p = 1 / (1 + np.exp(-z))
+beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+
+plot_sim()
+```
+
+---
+
+Let's do 10 more:
+
+```{python LR-Sim-Guess10, out.width = "50%"}
+for i in range(10):
+  z = np.dot(X, beta_hat)
+  p = 1 / (1 + np.exp(-z))
+  beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+
+plot_sim()
+```
+
+---
+
+class: section-slide
+
+# Logistic Regression as Neural Network
