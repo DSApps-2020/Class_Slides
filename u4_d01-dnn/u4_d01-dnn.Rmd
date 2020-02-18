@@ -1,5 +1,5 @@
 ---
-title: "Understanding Deep Neural Networks"
+title: "Demystifying Deep Neural Networks"
 subtitle: "Applications of Data Science"
 author: "Giora Simchoni"
 institute: "Stat. and OR Department, TAU"
@@ -24,7 +24,7 @@ class: logo-slide
 
 class: title-slide
 
-## Understanding Deep Neural Networks
+### Demystifying Deep Neural Networks
 
 ### Applications of Data Science - Class 14
 
@@ -81,8 +81,11 @@ $L(\beta|X, y) = \prod_{i = 1}^n{P(Y_i|X;\beta)} = \prod_{i = 1}^n[g^{-1}(x_i\be
 
 The $\hat\beta$ we choose is the vector maximizing $L(\beta|X, y)$, only we take the log-likelihood which is easier to differentiate:
 
-$l(\beta|X, y)=\sum_{i=1}^n\ln{P(Y_i|X;\beta)}=$
-$\sum_{i=1}^n y_i\ln[g^{-1}(x_i\beta)] + (1-y_i)\ln[1- g^{-1}(x_i\beta)]=$
+$l(\beta|X, y)=\sum_{i=1}^n\ln{P(Y_i|X;\beta)} =$
+$\sum_{i=1}^n y_i\ln[g^{-1}(x_i\beta)] + (1-y_i)\ln[1- g^{-1}(x_i\beta)] =$
+
+This looks Ok but let us improve a bit just for easier differentiation:
+
 $\sum_{i=1}^n \ln[1- g^{-1}(x_i\beta)] + y_i\ln[\frac{g^{-1}(x_i\beta)}{1- g^{-1}(x_i\beta)}]=$
 $\sum_{i=1}^n -\ln[1+ e^{x_i\beta}] + y_ix_i\beta$
 
@@ -127,8 +130,7 @@ q = 2
 X = np.random.normal(size = n * q).reshape((n, q))
 # X_with_intercept = np.hstack((np.ones(n).reshape((n, 1)), X))
 beta = np.arange(1, q + 1) # [1, 2]
-z = np.dot(X, beta)
-p = 1 / (1 + np.exp(-z))
+p = 1 / (1 + np.exp(-np.dot(X, beta)))
 y = np.random.binomial(1, p, size = n)
 
 
@@ -186,9 +188,9 @@ Let's do 1 iteration:
 ```{python LR-Sim-Guess1, out.width = "50%"}
 alpha = 0.01
 
-z = np.dot(X, beta_hat)
-p = 1 / (1 + np.exp(-z))
-beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+p_hat = 1 / (1 + np.exp(-np.dot(X, beta_hat)))
+grad = -np.dot(X.T, (y - p_hat))
+beta_hat = beta_hat - alpha * grad
 
 plot_sim()
 ```
@@ -199,31 +201,45 @@ Let's do 50 more:
 
 ```{python LR-Sim-Guess10, out.width = "50%"}
 for i in range(10):
-  z = np.dot(X, beta_hat)
-  p = 1 / (1 + np.exp(-z))
-  beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+  p_hat = 1 / (1 + np.exp(-np.dot(X, beta_hat)))
+  grad = -np.dot(X.T, (y - p_hat))
+  beta_hat = beta_hat - alpha * grad
 
 plot_sim()
 ```
 
 ---
 
-Similarly we can actually plot our descent in $-l(\beta)$ in the $\beta$ space:
+We didn't need to compute $-l(\beta)$ but let's:
 
-```{python}
+```{python LR-Loss0, fig.show="hide"}
 alpha = 0.001
 beta_hat = np.array([-2.5, -2.5])
 betas = [beta_hat]
+ls = []
 for i in range(50):
-  l_minus = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
-  print(l_minus)
-  z = np.dot(X, beta_hat)
-  p = 1 / (1 + np.exp(-z))
-  beta_hat = beta_hat - alpha * (-np.dot(X.T, (y - p)))
+  p_hat = 1 / (1 + np.exp(-np.dot(X, beta_hat)))
+  l_minus = -np.sum(y * np.log(p_hat) + (1 - y) * np.log(1 - p_hat))
+  ls.append(l_minus)
+  grad = -np.dot(X.T, (y - p_hat))
+  beta_hat = beta_hat - alpha * grad
   betas.append(beta_hat)
+
+plt.plot(range(50), ls)
+plt.xlabel("Iteration")
+plt.ylabel("-l(beta)")
+plt.show()
 ```
 
 ---
+
+```{python LR-Loss, ref.label = "LR-Loss0", echo=FALSE, out.width="70%"}
+
+```
+
+---
+
+Even fancier, visualize the actual Gradient Descent in the $\beta$ space:
 
 ```{python LR-Descent0, fig.show="hide"}
 betas_arr = np.array(betas)
@@ -235,7 +251,8 @@ L = np.zeros((m, m))
 for i in range(m):
   for j in range(m):
     beta_hat = np.array([beta1[i], beta2[j]])
-    L[i, j] = np.sum(np.log(1 + np.exp(np.dot(X, beta_hat)))) - np.dot(y.T, np.dot(X, beta_hat))
+    p_hat = 1 / (1 + np.exp(-np.dot(X, beta_hat)))
+    L[i, j] = -np.sum(y * np.log(p_hat) + (1 - y) * np.log(1 - p_hat))
 fig, ax = plt.subplots(1,1)
 cp = ax.contourf(B1, B2, L)
 cb = fig.colorbar(cp)
@@ -258,3 +275,196 @@ plt.show()
 class: section-slide
 
 # Logistic Regression as Neural Network
+
+---
+
+### Call me by my name
+
+1. Call our $-l(\beta)$ "Cross Entropy"
+2. Call $g^{-1}(X\beta)$ the "Sigmoid Function"
+3. Call computing $\hat p_i$ and $-l(\hat\beta)$ a "Forward Propagation" or "Feed Forward" step
+4. Call the diffrentiation of $-l(\hat\beta)$ part a "Backward Propagation" step
+5. Call our $\beta$ vector $W_{(q+1)\text{x}1}$, a weight matrix
+6. Draw a diagram with circles and arrows, call these "Neurons", say something about the brain
+
+And you have a Neural Network*.
+
+.font80percent[*Ok, We'll add some stuff later]
+
+---
+
+### Cross Entropy
+
+For discrete probability distributions $P(X)$ and $Q(X)$ with the same support $x \in \mathcal X$ Cross Entropy could be seen as a metric of the "distance" between distributions:
+
+$H(P, Q) = -E_P[\log(Q)] = -\sum _{x\in {\mathcal{X}}}P(X=x)\log[Q(X=x)]$
+
+In case $X$ has two categories, and $p_1=P(X=x_1)$, $p_2=1-p_1$ and same for $q_1,q_2$:
+
+$H(P, Q) = -[p_1\log(q_1) + (1-p_1)\log(1-q_1)]$
+
+If we let $p_1=y_i$ and $q_1=\hat p_i=g^{-1}(x_i\hat\beta)$ we get:
+
+$H(y_i, \hat p_i) = -[y_i\log(\hat p_i) + (1-y_i)\log(1-\hat p_i)] =$
+$-[y_i\ln[g^{-1}(x_i\hat\beta)] + (1-y_i)\ln[1- g^{-1}(x_i\hat\beta)]]$
+
+Which is exactly the contribution of the $i\text{th}$ observation to $-l(\hat\beta)$.
+
+---
+
+### Sigmoid Function
+
+If $g(p)$ is the logit function, its inverse would be the sigmoid function:
+
+$g(p) = logit(p) = \log(\frac{p}{1-p}); \space\space g^{-1}(z) = sigmoid(z) =\frac{1}{1+e^{-z}}$
+
+So: $g^{-1}(g(p)) = sigmoid(logit(p)) = p$
+
+```{python Sigmoid, out.width="50%", echo=FALSE}
+plt.clf()
+plt.plot(X1, 1 / (1 + np.exp(-X1)))
+plt.show()
+```
+
+---
+
+### Forward/Backward Propagation
+
+Recall that each iteration of Gradient Descent included:
+
+1. Forward step: Calculating the loss $-l(\hat\beta)$
+2. Backward step: Calculate the gradient $-\nabla l(\hat\beta_t)$
+3. Gradient Descent: $\hat\beta_{t+1}=\hat\beta_t -\alpha \cdot[-\nabla l(\hat\beta_t)]$
+
+```{python, eval=FALSE}
+# forward step
+p_hat = 1 / (1 + np.exp(-np.dot(X, beta_hat)))
+l_minus = -np.sum(y * np.log(p_hat) + (1 - y) * np.log(1 - p_hat))
+# backward step
+grad = -np.dot(X.T, (y - p_hat))
+# descent
+beta_hat = beta_hat - alpha * grad
+```
+
+Why "Forward", why "Backward"?...
+
+---
+
+### Reminder: Chain Rule
+
+In our case differentiating $l(\beta)$ analytically was... manageable.
+
+As the NN architecture becomes more complex there is need to generalize this, and break down the derivative into (backward) steps.
+
+Recall that according to the Chain Rule, if $y = y(x) = f(g(h(x)))$ then:
+
+$y'(x)=f'(g(h(x)) \cdot g'(h(x)) \cdot h'(x)$
+
+Or if you prefer, if $z = z(x); \space u = u(z); \space y = y(u)$ then:
+
+$\frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dz} \cdot \frac{dz}{dx}$
+
+---
+
+Let's re-write $-l(\beta)$ as a composite function:
+
+- Multiplying $\beta$ by $x_i$ will be $z_i = z(\beta) = x_i\beta$
+- Applying the sigmoid $g^{-1}$ will be $p_i = g^{-1}(z_i) = \frac{1}{1 + e^{-z_i}}$
+- Calculating the (minus) Cross Entropy will be: $l_i = l(p_i) = y_i\ln(p_i) + (1-p_i)\ln(1 - p_i)$
+- So one element of $-l(\beta)$ will be: $l_i(p_i(z_i(\beta)))$
+
+Hence, Forward.
+
+Now $-l(\beta)$ is the sum of (minus) cross entropies: $-l(\beta) = -\sum_i l_i(p_i(z_i(\beta)))$
+
+And we could differentiate using the chain rule like so:
+
+$-\frac{\partial l(\beta)}{\partial \beta_j} = -\sum_i\frac{\partial l_i}{\partial p_i} \cdot \frac{\partial p_i}{\partial z_i} \cdot \frac{\partial z_i}{\partial \beta_j}$
+
+Hence, Backward.
+
+---
+
+Each of these is simpler to calculate:
+
+$\frac{\partial l_i}{\partial p_i}= \frac{y_i - p_i}{p_i(1-p_i)}$
+
+$\frac{\partial p_i}{\partial z_i} = p_i(1-p_i)$
+
+$\frac{\partial z_i}{\partial \beta_j}=x_{ij}$
+
+And so:
+
+$-\frac{\partial l(\beta)}{\partial \beta_j} = - \sum_i \frac{y_i - p_i}{p_i(1-p_i)} \cdot p_i(1-p_i) \cdot x_{ij}$
+
+Which is excatly what we got analytically but now we can write our Gradient Descent iteration as a list of forward/backward steps:
+
+---
+
+```{python, eval=FALSE}
+def forward(X, y, beta_hat):
+  z = np.dot(X, beta_hat)
+  p_hat = 1 / (1 + np.exp(-z))
+  l = y * np.log(p_hat) + (1 - y) * np.log(1 - p_hat)
+  l_minus = -np.sum(l)
+  return p_hat, l_minus
+
+def backward(X, y, p_hat):
+  dldz = y - p_hat
+  dzdb = X.T
+  grad = -np.dot(dzdb, dldz)
+  return grad
+
+def gradient_descent(alpha, beta_hat, grad):
+  return beta_hat - alpha * grad
+
+def optimize(X, y, alpha, beta_hat):
+  p_hat, l = forward(X, y, beta_hat)
+  grad = backward(X, y, p_hat)
+  beta_hat = gradient_descent(alpha, beta_hat, grad)
+  return l, beta_hat
+
+def lr_nn(X, y, epochs):
+  beta_hat = np.array([-2.5, -2.5])
+  alpha = 0.001
+  for i in range(epochs):
+    l, beta_hat = optimize(X, y, alpha, beta_hat)
+  return l, beta_hat
+```
+
+---
+
+### Put it in a Neural Network Diagram
+
+Binary Logistic Regression, is in fact a single neuron firing a sigmoid probability-like number between 0 and 1, for each sample:
+
+<img src="images/lr_nn.png" style="width: 80%" />
+
+---
+
+### Is that it?
+
+1. No `r emo::ji("happy")`
+2. > The knee-jerk response from statisticians was "What's the big deal? A neural network is just another nonlinear model, not too different from many other generalizations of linear models". While this may be true, neural networks brought a new energy to the field. They could be scaled up and generalized in a variety of ways... and innovative learning algorithms for massive data sets."
+
+.font80percent[(*Computer Age Statistical Inference* by Bradley Efron & Trevor Hastie, p. 352)]
+
+---
+
+class: section-slide
+
+# Add Classes
+
+---
+
+class: section-slide
+
+# Add Hidden Layers
+
+---
+
+class: section-slide
+
+# Deep Neural Networks
+
+---
