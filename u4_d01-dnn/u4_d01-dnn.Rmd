@@ -285,7 +285,8 @@ class: section-slide
 3. Call computing $\hat p_i$ and $-l(\hat\beta)$ a "Forward Propagation" or "Feed Forward" step
 4. Call the differentiation of $-l(\hat\beta)$ a "Backward Propagation" step
 5. Call our $\beta$ vector $W_{(q+1)\text{x}1}$, a weight matrix
-6. Draw a diagram with circles and arrows, call these "Neurons", say something about the brain
+6. Add *Stochastic* Gradient Descent
+7. Draw a diagram with circles and arrows, call these "Neurons", say something about the brain
 
 And you have a Neural Network*.
 
@@ -401,7 +402,7 @@ Which is excatly what we got analytically but now we can write our Gradient Desc
 
 ---
 
-```{python, eval=FALSE}
+```{python}
 def forward(X, y, beta_hat):
   z = np.dot(X, beta_hat)
   p_hat = 1 / (1 + np.exp(-z))
@@ -434,11 +435,108 @@ def lr_nn(X, y, epochs):
 
 ---
 
+### Stochastic Gradient Descent
+
+```{python, eval=FALSE}
+def lr_nn(X, y, epochs):
+  beta_hat = np.random.rand(X.shape[1])
+  alpha = 0.001
+  batch_size = 100
+  n = X.shape[0]
+  steps = int(n / batch_size)
+  for i in range(epochs):
+    print('epoch %d:' % i)
+    permute = np.random.permutation(n)
+    X_perm = X[permute, :]
+    y_perm = y[permute]
+    for j in range(steps):
+      start = j * batch_size
+      l, beta_hat = optimize(X_perm[start:start + batch_size, :],
+                            y_perm[start:start + batch_size],
+                            alpha, beta_hat)
+      print('Trained on %d/%d, loss = %d' % (start + batch_size, n, l))
+  return l, beta_hat
+
+l, beta_hat = lr_nn(X, y, 10)
+```
+
+---
+
+```{python, echo=FALSE}
+def lr_nn(X, y, batch_size, epochs):
+  beta_hat = np.random.rand(X.shape[1])
+  alpha = 0.001
+  n = X.shape[0]
+  steps = int(n / batch_size)
+  for i in range(epochs):
+    print('epoch %d/%d:' % (i, epochs))
+    permute = np.random.permutation(n)
+    X_perm = X[permute, :]
+    y_perm = y[permute]
+    for j in range(steps):
+      start = j * batch_size
+      end = start + batch_size
+      l, beta_hat = optimize(X_perm[start:end, :],
+                            y_perm[start:end],
+                            alpha, beta_hat)
+      print('  %d/%d, loss = %d' % (end, n, l))
+  return l, beta_hat
+
+l, beta_hat = lr_nn(X, y, batch_size=100, epochs=50)
+```
+
+---
+
 ### Put it in a Neural Network Diagram
 
 Binary Logistic Regression, is in fact a single neuron firing a sigmoid probability-like number between 0 and 1, for each sample:
 
 <img src="images/lr_nn.png" style="width: 80%" />
+
+---
+
+### LR as NN in `Keras`
+
+```{python, eval=FALSE}
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import SGD
+
+model = Sequential()
+model.add(Dense(1, input_shape=(X.shape[1], ),
+  activation='sigmoid', use_bias=False))
+sgd = SGD(lr=0.1)
+model.compile(loss='binary_crossentropy', optimizer=sgd)
+model.fit(X, y, batch_size = 100, epochs = 50)
+
+# Once tensorflow will have a build for python 3.8...
+
+# Epoch 1/50
+# 1000/1000 [==============================] - 0s 43us/step - loss: 1.0820
+# Epoch 2/50
+# 1000/1000 [==============================] - 0s 9us/step - loss: 0.8610
+# Epoch 3/50
+# 1000/1000 [==============================] - 0s 10us/step - loss: 0.7155
+# Epoch 4/50
+# 1000/1000 [==============================] - 0s 12us/step - loss: 0.6256
+# Epoch 5/50
+# 1000/1000 [==============================] - 0s 9us/step - loss: 0.5699
+# Epoch 6/50
+# 1000/1000 [==============================] - 0s 11us/step - loss: 0.5338
+# Epoch 7/50
+# 1000/1000 [==============================] - 0s 10us/step - loss: 0.5091
+# Epoch 8/50
+
+```
+
+---
+
+```{python, eval=FALSE}
+model.get_weights()
+
+# [array([[1.0341057],
+#        [1.9897821]], dtype=float32)]
+```
 
 ---
 
@@ -457,9 +555,101 @@ class: section-slide
 
 ---
 
+### $C$ Neurons for $C$ Classes
+
+Alternatively, we could:
+- fit a $\beta$ vector for each class (or let's start talking about $W$)
+- have $C$ neurons for $C$ classes
+- where the output layer is the *Softmax Function*, to make sure the fitted $\hat p$ sum up to 1:
+
+$\hat p_c = \text{softmax}(c,W_{C\text{x}(q+1)}, x_i)=\frac{e^{w_c'x_i}}{\sum_{c=1}^{C} e^{w_c'x_i}}$
+
+.insight[
+`r emo::ji("bulb")` This would be equivalent to *multinomial logistic regression*!
+]
+
+---
+
+So the architecture for 2 classes would be:
+
+<img src="images/lr_nn_2neurons.png" style="width: 80%" />
+
+---
+
+And in `Keras` we would do:
+
+```{python, eval=FALSE}
+from keras.utils import to_categorical
+
+y_categorical = to_categorical(y)
+model = Sequential()
+model.add(Dense(2, input_shape=(X.shape[1], ),
+  activation='softmax', use_bias=False))
+sgd = SGD(lr=0.1)
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size = 100, epochs = 50)
+
+# Epoch 1/50
+# 1000/1000 [==============================] - 0s 34us/step - loss: 0.5485
+# Epoch 2/50
+# 1000/1000 [==============================] - 0s 9us/step - loss: 0.4942
+# Epoch 3/50
+# 1000/1000 [==============================] - 0s 12us/step - loss: 0.4643
+# Epoch 4/50
+# 1000/1000 [==============================] - 0s 10us/step - loss: 0.4476
+# Epoch 5/50
+# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4381
+# Epoch 6/50
+# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4326
+# Epoch 7/50
+# 1000/1000 [==============================] - 0s 10us/step - loss: 0.4293
+# Epoch 8/50
+# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4273
+```
+
+---
+
+```{python, eval=FALSE}
+model.get_weights()
+
+# [array([[-0.60904866,  0.4795451 ],
+#        [-0.61813617,  1.4820436 ]], dtype=float32)]
+```
+
+See that it makes sense:
+
+```{python, eval=FALSE}
+W = model.get_weights()
+Z = np.dot(X, W)
+Z_exp = np.exp(Z)
+Z_exp_sum = Z_exp.sum(axis=1)[:, None]
+p_hat = Z_exp / Z_exp_sum
+
+p_hat[:10, :]
+```
+
+```{python, echo=FALSE}
+W = np.array([[-0.60904866,  0.4795451 ],
+              [-0.61813617,  1.4820436 ]])
+Z = np.dot(X, W)
+Z_exp = np.exp(Z)
+Z_exp_sum = Z_exp.sum(axis=1)[:, None]
+p_hat = Z_exp / Z_exp_sum
+
+p_hat[:10, :]
+```
+
+---
+
 class: section-slide
 
 # Add Hidden Layers
+
+---
+
+class: section-slide
+
+# Add Regularization
 
 ---
 
