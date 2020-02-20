@@ -507,7 +507,7 @@ model.add(Dense(1, input_shape=(X.shape[1], ),
   activation='sigmoid', use_bias=False))
 sgd = SGD(lr=0.1)
 model.compile(loss='binary_crossentropy', optimizer=sgd)
-model.fit(X, y, batch_size = 100, epochs = 50)
+model.fit(X, y, batch_size=100, epochs=50)
 
 # Once tensorflow will have a build for python 3.8...
 
@@ -531,11 +531,30 @@ model.fit(X, y, batch_size = 100, epochs = 50)
 
 ---
 
-```{python, eval=FALSE}
-model.get_weights()
+See that it makes sense:
 
-# [array([[1.0341057],
-#        [1.9897821]], dtype=float32)]
+```{python, eval=FALSE}
+beta_hat = model.get_weights() # Note Keras gives a list of weights!
+
+# [array([[1.0378177],
+#        [1.9981958]], dtype=float32)]
+
+pred = model.predict_proba(X)
+
+# array([[0.06305372],
+#        [0.15950003],
+#        [0.08662305],
+#        [0.1727513 ],
+#        [0.28716186]]...
+
+# See that it makes sense
+pred_manual = 1/(1+np.exp(-np.dot(X, beta_hat[0])))
+
+# array([[0.06305372],
+#        [0.15950003],
+#        [0.08662305],
+#        [0.1727513 ],
+#        [0.28716186]]...
 ```
 
 ---
@@ -562,7 +581,9 @@ Alternatively, we could:
 - have $C$ neurons for $C$ classes
 - where the output layer is the *Softmax Function*, to make sure the fitted $\hat p$ sum up to 1:
 
-$\hat p_c = \text{softmax}(c,W_{C\text{x}(q+1)}, x_i)=\frac{e^{w_c'x_i}}{\sum_{c=1}^{C} e^{w_c'x_i}}$
+$\hat p_{i;c} = \text{softmax}(c,W_{(q+1)\text{x}C}, x_i)=\frac{e^{x_iw_c}}{\sum_{c=1}^{C} e^{x_iw_c}}$
+
+Where $x_i$ is the $i$th row of $X$ as before and $w_c$ is the $c$th row of $W^T$ (or $c$th column of $W$)
 
 .insight[
 `r emo::ji("bulb")` This would be equivalent to *multinomial logistic regression*!
@@ -587,7 +608,7 @@ model.add(Dense(2, input_shape=(X.shape[1], ),
   activation='softmax', use_bias=False))
 sgd = SGD(lr=0.1)
 model.compile(loss='categorical_crossentropy', optimizer=sgd)
-model.fit(X, y_categorical, batch_size = 100, epochs = 50)
+model.fit(X, y_categorical, batch_size=100, epochs=50)
 
 # Epoch 1/50
 # 1000/1000 [==============================] - 0s 34us/step - loss: 0.5485
@@ -609,34 +630,32 @@ model.fit(X, y_categorical, batch_size = 100, epochs = 50)
 
 ---
 
-```{python, eval=FALSE}
-model.get_weights()
-
-# [array([[-0.60904866,  0.4795451 ],
-#        [-0.61813617,  1.4820436 ]], dtype=float32)]
-```
-
 See that it makes sense:
 
 ```{python, eval=FALSE}
 W = model.get_weights()
-Z = np.dot(X, W)
+
+# [array([[-0.14954337,  0.9368226 ],
+#        [-1.6922047 ,  0.40227336]], dtype=float32)]
+
+pred = model.predict_proba(X)
+
+# array([[0.9441268 , 0.05587323],
+#        [0.8506812 , 0.14931884],
+#        [0.9219005 , 0.07809943],
+#        [0.83749175, 0.16250822],
+#        [0.7218378 , 0.27816215]...
+
+Z = np.dot(X, W[0])
 Z_exp = np.exp(Z)
 Z_exp_sum = Z_exp.sum(axis=1)[:, None]
-p_hat = Z_exp / Z_exp_sum
+pred_manual = Z_exp / Z_exp_sum
 
-p_hat[:10, :]
-```
-
-```{python, echo=FALSE}
-W = np.array([[-0.60904866,  0.4795451 ],
-              [-0.61813617,  1.4820436 ]])
-Z = np.dot(X, W)
-Z_exp = np.exp(Z)
-Z_exp_sum = Z_exp.sum(axis=1)[:, None]
-p_hat = Z_exp / Z_exp_sum
-
-p_hat[:10, :]
+# array([[0.9441268 , 0.05587323],
+#        [0.8506812 , 0.14931884],
+#        [0.9219005 , 0.07809943],
+#        [0.83749175, 0.16250822],
+#        [0.7218378 , 0.27816215]...
 ```
 
 ---
@@ -644,6 +663,130 @@ p_hat[:10, :]
 class: section-slide
 
 # Add Hidden Layers
+
+---
+
+### Don't Panic.
+
+<img src="images/lr_nn_morelayers.png" style="width: 80%" />
+
+.font80percent[
+Where $g()$ is some non-linear *activation function*, e.g. sigmoid (but not often used).
+]
+
+---
+- Notice we are not in Logistic Regression land anymore
+- I have re-instated the bias terms
+- I'm calling `model.summary()` to see no. of params
+
+```{python, eval=FALSE}
+model = Sequential()
+model.add(Dense(4, input_shape=(X.shape[1], ), activation='sigmoid'))
+model.add(Dense(2, activation='softmax'))
+sgd = SGD(lr=0.1)
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
+
+model.summary()
+# Model: "sequential_1"
+# _________________________________________________________________
+# Layer (type)                 Output Shape              Param #
+# =================================================================
+# dense_1 (Dense)              (None, 4)                 12
+# _________________________________________________________________
+# dense_2 (Dense)              (None, 2)                 10
+# =================================================================
+# Total params: 22
+# Trainable params: 22
+# Non-trainable params: 0
+# _________________________________________________________________
+```
+
+---
+
+See that it makes sense:
+
+```{python, eval=FALSE}
+W1, b1, W2, b2 = model.get_weights()
+
+W1.shape # (2, 4)
+b1.shape # (4,)
+W2.shape # (4, 2)
+b2.shape # (2,)
+
+W1 = np.vstack([b1, W1])
+W2 = np.vstack([b2, W2])
+
+W1.shape # (3, 4)
+W2.shape # (5, 2)
+
+# Get X ready with an intercept column
+Xb = np.hstack((np.ones(n).reshape((n, 1)), X))
+Xb.shape # (1000, 3)
+
+pred = model.predict_proba(X)
+
+# array([[0.90093774, 0.09906219],
+#        [0.8220466 , 0.17795345],
+#        [0.8905323 , 0.10946769],
+#        [0.8115638 , 0.18843625],
+#        [0.7119013 , 0.2880987 ]]...
+```
+
+---
+
+```{python, eval=FALSE}
+Z = 1/(1+np.exp(-np.dot(Xb, W1)))
+Zb = np.hstack((np.ones(n).reshape((n, 1)), Z))
+Z2_exp = np.exp(np.dot(Zb, W2))
+Z2_exp_sum = Z2_exp.sum(axis=1)[:, None]
+pred_manual = Z2_exp / Z2_exp_sum
+
+# array([[0.90093774, 0.09906219],
+#        [0.8220466 , 0.17795345],
+#        [0.8905323 , 0.10946769],
+#        [0.8115638 , 0.18843625],
+#        [0.7119013 , 0.2880987 ]]...
+```
+
+---
+
+### Activation Functions: Tanh
+
+$g(z)=\tanh(z)=\frac{e^z-e^{-z}}{e^z+e^{-z}}$
+
+```{python Tanh, out.width="40%"}
+plt.clf()
+plt.plot(X1, (np.exp(X1) - np.exp(-X1)) / (np.exp(X1) + np.exp(-X1)))
+plt.show()
+```
+
+---
+
+### Activation Functions: ReLU
+
+$g(z)=\text{ReLU}(z)=max(z,0)$
+
+```{python ReLU, out.width="40%"}
+plt.clf()
+plt.plot(X1, np.maximum(X1, 0))
+plt.show()
+```
+
+---
+
+### Activation Functions: Leaky ReLU
+
+$$g(z)=\text{LReLU}(z)=\begin{cases}
+z \ge 0 & z\\
+z<0 & \alpha z
+\end{cases}$$
+ 
+```{python LeakyReLU, out.width="40%"}
+plt.clf()
+plt.plot(X1, np.where(X1 > 0, X1, X1 * 0.01))
+plt.show()
+```
 
 ---
 
