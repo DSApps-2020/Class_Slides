@@ -796,6 +796,89 @@ class: section-slide
 
 ---
 
+### L1/L2 Regularization
+
+You might have noticed neural networks intice you to add more and more params.
+
+Therefore, NN are infamous for overfitting the training data, and some kind of regulariztion is a must.
+
+Instead of minimizing some loss $L$ (e.g. Cross Entropy) we add a penalty to the weights: $\min_W{L(y, f(X; W)] + P(W)}$
+
+Where $P(W)$ would typically be:
+- $P_{L_2}(W)=\lambda \sum_{ijk}(W^{(k)}_{ij})^2$
+- $P_{L_1}(W)=\lambda \sum_{ijk}|W^{(k)}_{ij}|$
+- or both (a.k.a Elastic Net, but not quite): $P_{L1L2}(W) = \lambda_1 \sum_{ijk}(W^{(k)}_{ij})^2 + \lambda_2 \sum_{ijk}|W^{(k)}_{ij}|$
+
+---
+
+L1/L2 Regularization in `Keras`:
+
+```{python, eval=FALSE}
+from keras import regularizers
+
+model = Sequential()
+model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu',
+  kernel_regularizer=regularizers.l1(0.01),
+  bias_regularizer=regularizers.l2(0.01)))
+model.add(Dense(2, activation='softmax',
+  kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01)))
+sgd = SGD(lr=0.1)
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
+```
+
+---
+
+### Dropout
+
+How to take neurons with a grain of salt?
+
+During each epoch, individual neurons are either "dropped out" of the net with probability $1-p$ (i.e. their weight is zero) or kept with probability $p$, so that a reduced network is left.
+
+<img src="images/dropout.png" style="width: 60%" />
+
+.warning[
+`r emo::ji("warning")` During prediction no Dropout is performed, but neurons output is scaled by $p$ to make it identical to their expected outputs at training time.
+]
+
+---
+
+Dropout in `Keras` (the `rate` parameter is the "fraction of the input units to drop"):
+
+```{python, eval=FALSE}
+from keras.layers import Dropout
+
+model = Sequential()
+model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(2, activation='softmax'))
+sgd = SGD(lr=0.1)
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
+```
+
+---
+
+### Early Stopping
+
+Since NN are trained iteratively and are particularly useful on large datasets it is common to monitor the model performance using an additional validation set, or some of the training set. If you see no improvement in the model's performance (e.g. decrease in loss) for a few epochs - stop training.
+
+```{python, eval=FALSE}
+from keras.callbacks import EarlyStopping
+
+model = Sequential()
+model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(2, activation='softmax'))
+sgd = SGD(lr=0.1)
+callbacks = [EarlyStopping(monitor='val_loss', patience=5)]
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size=100, epochs=50,
+  validation_split=0.2, callbacks=callbacks)
+```
+
+---
+
 class: section-slide
 
 # Deep Neural Networks
