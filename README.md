@@ -1,6 +1,6 @@
 <img src="DSApps_logo_small.jpg" align="right" />
 
-# DSApps @ TAU 2020 Course Repo
+# DSApps @ TAU 2020: Course Repo
 
 ### Welcome!
 
