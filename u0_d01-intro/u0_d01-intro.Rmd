@@ -4,13 +4,14 @@ subtitle: "Applications of Data Science"
 author: "Giora Simchoni"
 institute: "Stat. and OR Department, TAU"
 date: "`r Sys.Date()`"
+output_dir: "images"
 output:
   xaringan::moon_reader:
-    css: "slides.css"
+    css: "../slides.css"
     seal: false
-    chakra: "libs/remark-latest.min.js"
+    chakra: "../libs/remark-latest.min.js"
     includes:
-      in_header: "header.html"
+      in_header: "../header.html"
     nature:
       highlightStyle: github
       highlightLines: true
@@ -112,7 +113,7 @@ library(tidyverse)
 
 # Grade
 
-- 4-6 home assignments (10% each)
+- 4-7 home assignments (10% each)
   - Miss one or have your lowest grade dismissed
   - Submitted via Github, more on that later
 - One final project (100% - (n_assignments - 1) * 10%)
