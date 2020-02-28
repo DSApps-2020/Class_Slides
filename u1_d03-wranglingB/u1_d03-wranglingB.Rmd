@@ -697,7 +697,7 @@ tabl <- "
 | `map_chr()`      | `map2_chr()`      |   `pmap_chr()` |`vector`| `character` |
 | `map_int()`      | `map2_int()`      |   `pmap_int()` |`vector`| `integer` |
 | `map_dbl()`      | `map2_dbl()`      |   `pmap_dbl()` |`vector`| `double` |
-| `map_df()` | `map2_df()`      |    `pmap_df()` | `tibble` | `?` |
+| `map_dfr()` | `map2_dfr()`      |    `pmap_dfr()` | `tibble` | `?` |
 "
 cat(tabl)
 ```
@@ -771,16 +771,17 @@ okcupid <- okcupid %>%
 
 ```{r Example2A}
 is_above_average_height <- function(sex, height_cm) {
-  ifelse(sex == "m", height_cm > 180, height_cm > 165)
+  if (sex == "m") height_cm > 180 else height_cm > 165
 }
 
 okcupid <- okcupid %>%
   mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height))
 
-okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
+okcupid %>% select(sex, height_cm, is_tall) %>%
+  group_by(sex) %>% sample_n(3)
 ```
 
-.font80percent[Girl, I dare you to do this in base R.]
+.font80percent[This specific example might not be *that* bad with `ifelse()`, what will you do with 5 variables?]
 
 ---
 
@@ -788,14 +789,14 @@ okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
 
 ```{r Example2B}
 is_above_average_height <- function(sex, height_cm, men_avg, women_avg) {
-  ifelse(sex == "m", height_cm > men_avg, height_cm > women_avg)
+  if(sex == "m") height_cm > men_avg else height_cm > women_avg
 }
 
 okcupid <- okcupid %>%
   mutate(is_tall = map2_lgl(sex, height_cm, is_above_average_height,
                             men_avg = 180, women_avg = 165))
 
-okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
+okcupid %>% select(sex, height_cm, is_tall) %>% group_by(sex) %>% sample_n(3)
 ```
 
 ---
@@ -805,7 +806,7 @@ okcupid %>% select(sex, height_cm, is_tall) %>% sample_n(4)
 ```{r Example2C}
 okcupid <- okcupid %>%
   mutate(is_tall = map2_lgl(sex, height_cm,
-                            function(x, y) ifelse(x == "m", y > 180, y > 165)))
+                            function(x, y) if(x == "m") y > 180 else y > 165))
 ```
 
 Heck, you can even:
@@ -813,7 +814,7 @@ Heck, you can even:
 ```{r Example2D}
 okcupid <- okcupid %>%
   mutate(is_tall = map2_lgl(sex, height_cm,
-                            ~ifelse(.x == "m", .y > 180, .y > 165)))
+                            ~{if(.x == "m") .y > 180 else .y > 165}))
 ```
 
 .insight[
