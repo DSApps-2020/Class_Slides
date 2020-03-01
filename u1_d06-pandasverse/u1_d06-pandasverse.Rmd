@@ -332,7 +332,73 @@ class: section-slide
 
 ---
 
-### Pandas: not `data.frame`, `DataFrame`
+### `Series`, `DataFrames`
+
+A `Pandas` `Series` is a vector of data, a column.
+
+```{python}
+import pandas as pd
+
+s = pd.Series([1,3,5,np.nan,6,8])
+print(s)
+```
+
+---
+
+A `DataFrame` is a data table, always indexed.
+
+Creating one from a random numpy 2D array (notice the index isn't specified, automatically becomes zero based counter):
+
+```{python}
+df = pd.DataFrame(np.random.randn(6,4), columns = ['A', 'B', 'C', 'D'])
+print(df)
+```
+
+---
+
+Creating a DataFrame from a very varied dictionary where each key is a column (also see `pd.from_dict()`).
+
+```{python}
+df2 = pd.DataFrame({'A' : 1.,
+                    'B' : pd.Timestamp('20130102'),
+                    'C' : pd.Series(1, index = list(range(4)),
+                            dtype = 'float32'),
+                    'D' : np.array(np.arange(4), dtype = 'int32'),
+                    'E' : pd.Categorical(
+                            ["test", "train", "test", "train"]
+                          ),
+                    'F' : 'foo' })
+print(df2)
+```
+
+---
+
+### `read_csv()`
+
+```{python}
+okcupid = pd.read_csv("../data/okcupid.csv.zip")
+```
+
+```{python}
+okcupid.shape
+okcupid.columns
+```
+
+---
+
+### `info()`, `describe()`, `head()` and `tail()`
+
+```{python}
+okcupid.describe()
+```
+
+```{python}
+okcupid.head(3)
+```
+
+---
+
+### Not `data.frame`, `DataFrame`
 
 ```{r, results="asis", echo=FALSE}
 tab <- "| `dplyr`	| `pandas` |
@@ -354,29 +420,6 @@ cat(tab)
 
 ---
 
-### Read in the data
-
-```{python}
-import pandas as pd
-
-okcupid = pd.read_csv("../data/okcupid.csv.zip")
-```
-
-```{python}
-okcupid.shape
-okcupid.columns
-```
-
----
-
-### `info()` and `describe()`
-
-```{python}
-okcupid.describe()
-```
-
----
-
 ### `assign()`
 
 Add a column `height_cm`, the `height` in centimeters:
@@ -395,7 +438,7 @@ okcupid['height_cm'] = okcupid['height'] * 2.54
 
 ---
 
-## `query()` and `filter()`
+### `query()` and `filter()`
 
 Query only women, filter only age and height:
 
@@ -489,6 +532,36 @@ okcupid.groupby('body_type').size()
 ---
 
 ### `loc`, `iloc` and `at`
+
+`loc` is for selection by name:
+
+```{python}
+okcupid.loc[:3, ['sex', 'height_cm']]
+```
+
+The first element to `loc` slices the index by name. The reason that ":3" works is that our index is numeric. If it were for example `['a', 'b', 'c', ...]` it would not have worked.
+
+`loc` can also accept boolean indexing:
+
+```{python, eval=FALSE}
+okcupid.loc[okcupid['sex'] == 'm', 'height_cm']
+```
+
+---
+
+`iloc` is for selection by integers on the index or column indices
+
+```{python}
+okcupid.iloc[:3, 1:3]
+```
+
+This would have worked also if the index was `['a', 'b', 'c', ...]`.
+
+Finally `at` is for accessing a specific value fast:
+
+```{python}
+okcupid.at[1989, 'body_type']
+```
 
 ---
 
