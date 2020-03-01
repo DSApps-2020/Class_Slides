@@ -26,7 +26,7 @@ class: title-slide
 
 ## Network Models
 
-### Applications of Data Science - Class 10
+### Applications of Data Science - Class 11
 
 ### Giora Simchoni
 

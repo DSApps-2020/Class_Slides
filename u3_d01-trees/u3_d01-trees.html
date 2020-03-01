@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-02-09" />
+    <meta name="date" content="2020-03-01" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -23,14 +23,14 @@ class: title-slide
 
 ## The Trees
 
-### Applications of Data Science - Class 11
+### Applications of Data Science - Class 12
 
 ### Giora Simchoni
 
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-02-09
+### 2020-03-01
 
 ---
 
@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002522 0.02238510
-## 2 0.048179174      1 0.8864025 0.8905350 0.02282679
-## 3 0.013140594      2 0.8382233 0.8454403 0.02367885
-## 4 0.010043056      3 0.8250827 0.8383955 0.02392361
-## 5 0.009147817      4 0.8150397 0.8301138 0.02419424
-## 6 0.005634308      5 0.8058919 0.8242994 0.02431132
+## 1 0.113597498      0 1.0000000 1.0005314 0.02239107
+## 2 0.048179174      1 0.8864025 0.8887768 0.02270631
+## 3 0.013140594      2 0.8382233 0.8416209 0.02353824
+## 4 0.010043056      3 0.8250827 0.8320991 0.02362029
+## 5 0.009147817      4 0.8150397 0.8254387 0.02379713
+## 6 0.005634308      5 0.8058919 0.8169666 0.02389871
 ```
 
 ---
@@ -968,8 +968,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
 ```
 
 ```
-## RMSE: 0.363
-## CORR: 0.449
+## RMSE: 0.362
+## CORR: 0.454
 ```
 
 ---
@@ -1145,8 +1145,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.366
-## CORR: 0.438
+## RMSE: 0.367
+## CORR: 0.433
 ```
 
 ```r
@@ -1156,8 +1156,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.364
-## CORR: 0.444
+## RMSE: 0.365
+## CORR: 0.438
 ```
 
 ---
@@ -1302,8 +1302,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
 ```
 
 ```
-## RMSE: 0.351
-## CORR: 0.504
+## RMSE: 0.35
+## CORR: 0.507
 ```
 
 ```r
@@ -1314,8 +1314,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 ```
 
 ```
-## RMSE: 0.353
-## CORR: 0.497
+## RMSE: 0.352
+## CORR: 0.5
 ```
 
 For variables importance see the `summary` function:
@@ -1353,8 +1353,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.358
-## CORR: 0.474
+## RMSE: 0.355
+## CORR: 0.489
 ```
 
 .warning[
@@ -1669,11 +1669,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.739
-## ACC: 0.672
+## ACC: 0.671
 ## Dogs: Recall: 0.672
-##       Precision: 0.923
-## Cats: Recall: 0.672
-##       Precision: 0.259
+##       Precision: 0.922
+## Cats: Recall: 0.667
+##       Precision: 0.257
 ```
 
 ---

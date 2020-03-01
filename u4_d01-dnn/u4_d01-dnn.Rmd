@@ -26,7 +26,7 @@ class: title-slide
 
 ### Demystifying Deep Neural Networks
 
-### Applications of Data Science - Class 15
+### Applications of Data Science - Class 16
 
 ### Giora Simchoni
 

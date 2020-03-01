@@ -26,7 +26,7 @@ class: title-slide
 
 ## NetworkX
 
-### Applications of Data Science - Class 7
+### Applications of Data Science - Class 8
 
 ### Giora Simchoni
 

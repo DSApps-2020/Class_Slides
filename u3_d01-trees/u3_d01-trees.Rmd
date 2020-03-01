@@ -26,7 +26,7 @@ class: title-slide
 
 ## The Trees
 
-### Applications of Data Science - Class 11
+### Applications of Data Science - Class 12
 
 ### Giora Simchoni
 
