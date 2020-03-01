@@ -51,9 +51,809 @@ layout: true
 
 class: section-slide
 
-# `numpy`: Your best friend
+# `Numpy`: Your best friend
 
 ---
+
+### Python was not made for Data Science
+
+
+```python
+mean([1, 2, 3, 4, 5])
+```
+
+&lt;pre style="color: red;"&gt;&lt;code&gt;## Error in py_call_impl(callable, dots$args, dots$keywords): NameError: name
+'mean' is not defined
+##
+## Detailed traceback:
+## File "&lt;string&gt;", line 1, in &lt;module&gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+Enter `Numpy` to the rescue:
+
+
+```python
+import numpy as np
+
+np.mean(np.array([1, 2, 3, 4, 5]))
+```
+
+```
+## 3.0
+```
+
+```python
+np.array([1, 2, 3, 4, 5]).mean()
+```
+
+```
+## 3.0
+```
+
+---
+
+### `Numpy` Arrays
+
+Create with a list:
+
+
+```python
+a = np.array([1, 2, 3])
+print(type(a))
+```
+
+```
+## &lt;class 'numpy.ndarray'&gt;
+```
+
+```python
+print(a.shape)
+```
+
+```
+## (3,)
+```
+
+.warning[
+⚠️ Index is zero based!
+]
+
+
+```python
+print(a[0])
+```
+
+```
+## 1
+```
+
+---
+
+Create a 2D array:
+
+
+```python
+b = np.array([[1,2,3],[4,5,6]])
+print(b)
+```
+
+```
+## [[1 2 3]
+##  [4 5 6]]
+```
+
+```python
+print(b.shape)
+```
+
+```
+## (2, 3)
+```
+
+---
+
+Many ways to create "typical" arrays:
+
+
+```python
+# create an array of all zeros
+# (the parameter is a tuple specifying the array shape)
+a = np.zeros((2,2))
+
+# create an array of all ones
+b = np.ones((1,2))
+
+# create a constant array
+c = np.full((2,2), 7)
+
+# create a 2x2 identity matrix
+d = np.eye(2)
+
+# create an array filled with random U(0, 1) values
+e = np.random.random((2,2))
+
+# create a sequence from 2 to 15, not including
+np.arange(2, 15)
+
+# create sequence of 11 numbers between 0 and 1 including
+np.linspace(0, 1, 11)
+```
+
+---
+
+And every array has a `reshape()` method:
+
+
+```python
+np.arange(0.1, 1, step=0.1).reshape(3, 3)
+```
+
+```
+## array([[0.1, 0.2, 0.3],
+##        [0.4, 0.5, 0.6],
+##        [0.7, 0.8, 0.9]])
+```
+
+---
+
+### `Numpy` Math
+
+Elementwise multiplication:
+
+
+```python
+x = np.array([[1,2],[3,4]], dtype=np.float64)
+y = np.array([[5,6],[7,8]], dtype=np.float64)
+print(x * 2)
+```
+
+```
+## [[2. 4.]
+##  [6. 8.]]
+```
+
+Elementwise sum:
+
+```python
+print(x + y)
+```
+
+```
+## [[ 6.  8.]
+##  [10. 12.]]
+```
+
+Same:
+
+
+```python
+print(np.add(x, y))
+```
+
+---
+
+You get the idea:
+
+
+```python
+print(x - y)
+print(np.subtract(x, y))
+
+print(x * y)
+print(np.multiply(x, y))
+
+print(x / y)
+print(np.divide(x, y))
+
+print(np.sqrt(x))
+```
+
+---
+
+Vector/Matrix multiplication:
+
+
+```python
+print(x.dot(y))
+```
+
+```
+## [[19. 22.]
+##  [43. 50.]]
+```
+
+```python
+print(np.dot(x, y))
+```
+
+```
+## [[19. 22.]
+##  [43. 50.]]
+```
+
+```python
+v = np.array([9,10])
+w = np.array([11, 12])
+
+print(v.dot(w))
+```
+
+```
+## 219
+```
+
+```python
+print(np.dot(v, w))
+```
+
+```
+## 219
+```
+
+---
+
+Transpose
+
+
+```python
+x = np.array([[1,2],[3,4]])
+print(x.T)
+```
+
+```
+## [[1 3]
+##  [2 4]]
+```
+
+Sum, mean, std, median, quantile, min, max...:
+
+
+```python
+print(np.sum(x))  # Compute sum of all elements
+```
+
+```
+## 10
+```
+
+```python
+print(np.sum(x, axis=0))  # Compute sum of each column
+```
+
+```
+## [4 6]
+```
+
+```python
+print(np.std([1,2,3])) # possible, in case you were wondering
+```
+
+```
+## 0.816496580927726
+```
+
+---
+
+### `Numpy` Indexing and Slicing
+
+Similar to R but there are some things worth noticing:
+
+
+```python
+a = np.array([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
+print(a)
+```
+
+```
+## [[ 1  2  3  4]
+##  [ 5  6  7  8]
+##  [ 9 10 11 12]]
+```
+
+
+```python
+# use slicing to pull out the subarray consisting of the first 2 rows
+# and columns 1 and 2; b of shape (2, 2)
+b = a[:2, 1:3]
+print(b)
+```
+
+```
+## [[2 3]
+##  [6 7]]
+```
+
+---
+
+
+```python
+# a slice of an array is a view into the same data, so modifying it
+# will modify the original array.
+print(a[0, 1])
+```
+
+```
+## 2
+```
+
+```python
+b[0, 0] = 77
+print(a[0, 1])
+```
+
+```
+## 77
+```
+
+---
+
+Very convenient, R does not have these features without external packages:
+
+
+```python
+# index "from last place"
+a[-2:]
+```
+
+```
+## array([[ 5,  6,  7,  8],
+##        [ 9, 10, 11, 12]])
+```
+
+
+```python
+# reverse an array
+a = np.arange(5)
+print(a[::-1])
+```
+
+```
+## [4 3 2 1 0]
+```
+
+---
+
+Working with boolean masks like in R:
+
+
+```python
+print(a[a &gt; 2])
+```
+
+```
+## [3 4]
+```
+
+```python
+print(a[np.where(a &gt; 2)])
+```
+
+```
+## [3 4]
+```
+
+```python
+print(a[np.argmin(a)])
+```
+
+```
+## 0
+```
+
+---
+
+class: section-slide
+
+# `Scipy`: Scientific Computing and Stats
+
+---
+
+### Many modules, let's focus on:
+
+* **`sparse`**: Sparse Matrices manipulation
+* **`ndimage`**: Images manipulation (though see `scikit-image` and `opencv`)
+* **`stats`**: Statistics (though see `statsmodels`)
+
+---
+
+### `sparse`
+
+
+```python
+from scipy.sparse import csr_matrix
+
+row = np.array([0, 0, 1, 2, 2, 2])
+col = np.array([0, 2, 2, 0, 1, 2])
+data = np.array([1, 2, 3, 4, 5, 6])
+sparse_a = csr_matrix((data, (row, col)), shape=(3, 3))
+
+print(sparse_a.toarray())
+```
+
+```
+## [[1 0 2]
+##  [0 0 3]
+##  [4 5 6]]
+```
+
+---
+
+### `ndimage`
+
+
+```python
+from scipy import ndimage
+from scipy import misc
+import matplotlib.pyplot as plt
+
+face = misc.face(gray=True)
+blurred_face = ndimage.gaussian_filter(face, sigma=10)
+
+print(face.shape)
+```
+
+```
+## (768, 1024)
+```
+
+```python
+print(face[:5, :5])
+```
+
+```
+## [[114 130 145 147 147]
+##  [ 83 104 123 130 134]
+##  [ 68  88 109 116 120]
+##  [ 78  94 109 116 121]
+##  [ 99 109 119 128 138]]
+```
+
+---
+
+
+```python
+plt.subplot(121)
+plt.imshow(face, cmap=plt.cm.gray)
+plt.subplot(122)
+plt.imshow(blurred_face, cmap=plt.cm.gray)
+plt.show()
+```
+
+&lt;img src="images/Face-1.png" width="100%" /&gt;
+
+---
+
+### `stats`
+
+
+```python
+from scipy import stats
+
+rvs1 = stats.norm.rvs(loc=5,scale=10,size=500)
+rvs2 = stats.norm.rvs(loc=5,scale=10,size=500)
+
+stats.ttest_ind(rvs1,rvs2)
+```
+
+```
+## Ttest_indResult(statistic=-0.3769336019051376, pvalue=0.7063030797624332)
+```
+
+---
+
+class: section-slide
+
+# `Pandas`: Data, Data, Data
+
+---
+
+### Pandas: not `data.frame`, `DataFrame`
+
+| `dplyr`	| `pandas` |
+|------------------|
+|`mutate` | `assign`|
+|`select` | `filter`|
+|`rename` | `rename`|
+|`filter` | `query`|
+|`arrange` | `sort_values`|
+|`group_by` | `groupby`|
+|`summarize` | `agg`|
+
+.insight[
+💡 Thare *are* Pandas dialects, don't go translating your pipes verbatim.
+]
+
+---
+
+### Read in the data
+
+
+```python
+import pandas as pd
+
+okcupid = pd.read_csv("../data/okcupid.csv.zip")
+```
+
+
+```python
+okcupid.shape
+```
+
+```
+## (59946, 31)
+```
+
+```python
+okcupid.columns
+```
+
+```
+## Index(['age', 'body_type', 'diet', 'drinks', 'drugs', 'education', 'essay0',
+##        'essay1', 'essay2', 'essay3', 'essay4', 'essay5', 'essay6', 'essay7',
+##        'essay8', 'essay9', 'ethnicity', 'height', 'income', 'job',
+##        'last_online', 'location', 'offspring', 'orientation', 'pets',
+##        'religion', 'sex', 'sign', 'smokes', 'speaks', 'status'],
+##       dtype='object')
+```
+
+---
+
+### `info()` and `describe()`
+
+
+```python
+okcupid.describe()
+```
+
+```
+##                 age        height          income
+## count  59946.000000  59943.000000    59946.000000
+## mean      32.340290     68.295281    20033.222534
+## std        9.452779      3.994803    97346.192104
+## min       18.000000      1.000000       -1.000000
+## 25%       26.000000     66.000000       -1.000000
+## 50%       30.000000     68.000000       -1.000000
+## 75%       37.000000     71.000000       -1.000000
+## max      110.000000     95.000000  1000000.000000
+```
+
+---
+
+### `assign()`
+
+Add a column `height_cm`, the `height` in centimeters:
+
+
+```python
+okcupid = okcupid.assign(height_cm = okcupid['height'] * 2.54)
+
+okcupid = okcupid.assign(height_cm = lambda x: x.height * 2.54)
+```
+
+If you don't need a pipe just do:
+
+
+```python
+okcupid['height_cm'] = okcupid['height'] * 2.54
+```
+
+---
+
+## `query()` and `filter()`
+
+Query only women, filter only age and height:
+
+
+```python
+okcupid \
+  .query('sex == "f"') \
+  .filter(['age', 'height']) \
+  .head(5)
+```
+
+```
+##     age  height
+## 6    32    65.0
+## 7    31    65.0
+## 8    24    67.0
+## 13   30    66.0
+## 14   29    62.0
+```
+
+Again, without a pipe:
+
+
+```python
+okcupid[okcupid['sex'] == "f"][['age', 'height']]
+```
+
+---
+
+Same but income over 100K, and select all essay questions:
+
+
+```python
+okcupid \
+  .query('sex == "f" and income &gt; 100000') \
+  .filter(okcupid.columns[okcupid.columns.str.startswith('essay')])
+```
+
+```
+##                                                   essay0  ...                                             essay9
+## 48     i love it here, except when it's hotter than a...  ...  if you dare to think you can make me laugh. no...
+## 188    i'm silly. i'm analytical. i'm fond of short s...  ...  you want to contact me. (did i mention i'm ver...
+## 301    welcome... i am one genuine, straight forward,...  ...                                       you feel me.
+## 337    purebred cali girl! born and raised in nor cal...  ...  you are a fellow chameleon...&lt;br /&gt;\nyou have ...
+## 402    i wasn't like every other kid, you know, who d...  ...  you think you can handle one of us... and has ...
+## ...                                                  ...  ...                                                ...
+## 59326  i am a forensic psychologist, mother, sister a...  ...                                                NaN
+## 59395                                                NaN  ...                                                NaN
+## 59789  i'm a fun loving woman, romantic, faithful, ea...  ...                                                NaN
+## 59818  hello, i am usually pretty shy and sometimes a...  ...  you are patient and calm, possibly in the medi...
+## 59819  this is a pretty good read. admittedly windy. ...  ...  you like the sound of a hoosier who has lived ...
+## 
+## [208 rows x 10 columns]
+```
+
+---
+
+### `agg()`
+
+Find the average height of women
+
+
+```python
+okcupid \
+  .query('sex == "f"') \
+  .filter(['height_cm']) \
+  .agg('mean')
+```
+
+```
+## height_cm    165.363837
+## dtype: float64
+```
+
+Notice we got a `pd.Series`, the `Pandas` equivelent for a vector. We could use the `.values` attribute to pull the `Numpy` array behind the Series:
+
+
+```python
+okcupid \
+  .query('sex == "f"') \
+  .filter(['height_cm']) \
+  .agg('mean').values
+```
+
+```
+## array([165.36383729])
+```
+
+---
+
+### `groupby()`
+
+But why settle for women only?
+
+
+```python
+okcupid \
+  .groupby('sex')['height_cm'] \
+  .agg('mean')
+```
+
+```
+## sex
+## f    165.363837
+## m    178.926471
+## Name: height_cm, dtype: float64
+```
+
+And you might want to consider `rename()`ing sex!
+
+
+```python
+okcupid \
+  .groupby('sex')['height_cm'] \
+  .agg('mean') \
+  .rename_axis(index = {'sex': 'gender'})
+```
+
+```
+## gender
+## f    165.363837
+## m    178.926471
+## Name: height_cm, dtype: float64
+```
+
+---
+
+Group by multiple variables, get more summaries, arrange by descending average height:
+
+
+```python
+okcupid \
+  .groupby(['sex', 'status'])['height_cm'] \
+  .agg(['mean', 'median', 'count']) \
+  .sort_values('median', ascending=False)
+```
+
+```
+##                           mean  median  count
+## sex status                                   
+## m   available       179.445012  180.34   1209
+##     married         179.454629  180.34    175
+##     seeing someone  179.257926  177.80   1061
+##     single          178.894660  177.80  33376
+##     unknown         177.376667  176.53      6
+## f   available       166.381616  166.37    656
+##     married         165.871407  165.10    135
+##     seeing someone  165.431745  165.10   1003
+##     single          165.328643  165.10  22318
+##     unknown         160.655000  158.75      4
+```
+
+---
+
+### Pro tip: `size()`
+
+When all you want is, well, `size`:
+
+
+```python
+okcupid.groupby('body_type').size()
+```
+
+```
+## body_type
+## a little extra     2629
+## athletic          11819
+## average           14652
+## curvy              3924
+## fit               12711
+## full figured       1009
+## jacked              421
+## overweight          444
+## rather not say      198
+## skinny             1777
+## thin               4711
+## used up             355
+## dtype: int64
+```
+
+---
+
+### `loc`, `iloc` and `at`
+
+---
+
+class: section-slide
+
+# `seaborn`: Visualization
+
+---
+
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set()
+g = sns.scatterplot('age', 'height_cm', hue='sex', data = okcupid)
+plt.show()
+```
+
+&lt;img src="images/Seaborn-Scatterplot-1.png" width="672" /&gt;
+
+---
+
+
+```python
+g = sns.relplot('age', 'height_cm',
+  hue = 'sex', kind = 'scatter', col='sex', data = okcupid)
+plt.show()
+```
+
+&lt;img src="images/Seaborn-Relplot-1.png" width="100%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
