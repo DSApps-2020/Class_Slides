@@ -82,6 +82,20 @@ gbm(y ~ x1 + x2, data = data.frame(x1 = x1, x2 = x2, y = y))
 
 ### Compare this with `sklearn`
 
+```{python, eval=FALSE}
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier,
+  GradientBoostingClassifier
+
+LogisticRegression(penalty='none').fit(X, y)
+
+LogisticRegression(penalty='l2', C=0.001).fit(X, y)
+
+RandomForestClassifier(n_estimators=100).fit(X, y)
+
+GradientBoostingClassifier(n_estimators=100).fit(X, y)
+```
+
 ---
 
 class: section-slide
@@ -623,3 +637,180 @@ estimates %>%
   theme_classic()
 ```
 
+---
+
+class: section-slide
+
+# `infer`: Tidy Statistics
+
+---
+
+### Statistical Q1
+
+Is there a relation between men and women and the type of equipment they use in 2019? Assume observations are independent.
+
+```{r}
+sex_vs_equipment <- ipf_lifts %>%
+  filter(year == 2019) %>%
+  select(sex, equipment) %>%
+  table()
+
+sex_vs_equipment
+```
+
+```{r}
+prop.table(sex_vs_equipment, margin = 1)
+```
+
+---
+
+### Statistical Q2
+
+Is there a difference between men and women age in 2019? Assume observations are independent.
+
+```{r}
+ipf_lifts %>%
+  filter(year == 2019) %>%
+  group_by(sex) %>% summarise(avg = mean(age), sd = sd(age), n = n())
+```
+
+---
+
+### Same Problem!
+
+Varied interface, varied output.
+
+```{r}
+prop.test(sex_vs_equipment[,1], rowSums(sex_vs_equipment))
+```
+
+---
+
+```{r}
+t.test(age ~ sex, data = ipf_lifts %>% filter(year == 2019))
+```
+
+---
+
+### The `generics::tidy()` Approach
+
+(Also available when you load several other packages, like `broom` and `yardstick`)
+
+```{r}
+tidy(prop.test(sex_vs_equipment[,1], rowSums(sex_vs_equipment)))
+```
+
+```{r}
+tidy(t.test(age ~ sex, data = ipf_lifts %>% filter(year == 2019)))
+```
+
+---
+
+### The `infer` Approach
+
+> infer implements an expressive grammar to perform statistical inference that coheres with the tidyverse design framework
+
+4 main verbs for a typical flow:
+
+* `specify()` - dependent/independent variables, formula
+* `hypothesize()` - declare the null hypothesis
+* `generate()` - generate data reflecting the null hypothesis (the permutation/bootstrap approach)
+* `calculate()` - calculate a distribution of statistics from the generated data, from which you can extract conclusion based on a p-value for example
+
+---
+
+### `infer` Diff in Proportions Test
+
+Get the observed statistic (here manually in order to not confuse you, there *is* a way via `infer`):
+
+```{r}
+#    equipment
+# sex Raw Single-ply
+#   F 678        186
+#   M 854        287
+p_F <- sex_vs_equipment[1, 1] / (sum(sex_vs_equipment[1, ]))
+p_M <- sex_vs_equipment[2, 1] / (sum(sex_vs_equipment[2, ]))
+obs_diff <- p_F - p_M
+obs_diff
+```
+
+---
+
+Get distribution of the difference in proportions under null hypothesis
+
+```{r}
+diff_null_perm <- ipf_lifts %>%
+  filter(year == 2019) %>%
+  specify(equipment ~ sex, success = "Raw") %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 200, type = "permute") %>%
+  calculate(stat = "diff in props", order = c("F", "M"))
+
+diff_null_perm
+```
+
+---
+
+Visualize the permuted difference null distribution and the p-value
+
+```{r Diff-in-Props-Null, out.width="50%"}
+visualize(diff_null_perm) +
+  shade_p_value(obs_stat = obs_diff, direction = "two_sided")
+```
+
+---
+
+Get the actual p-value:
+
+```{r}
+diff_null_perm %>% 
+  get_p_value(obs_stat = obs_diff, direction = "two_sided")
+```
+
+---
+
+### `infer` t Test (independent samples)
+
+Get the observed statistic (here via `infer`):
+
+```{r}
+obs_t <- ipf_lifts %>%
+  filter(year == 2019) %>%
+  specify(age ~ sex) %>%
+  calculate(stat = "t", order = c("F", "M"))
+obs_t
+```
+
+
+---
+
+Get distribution of the t statistic under null hypothesis
+
+```{r}
+t_null_perm <- ipf_lifts %>%
+  filter(year == 2019) %>%
+  specify(age ~ sex) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 100, type = "permute") %>%
+  calculate(stat = "t", order = c("F", "M"))
+
+t_null_perm
+```
+
+---
+
+Visualize the permuted t statistic null distribution and the two-sided p-value
+
+```{r T-Null, out.width="50%"}
+visualize(t_null_perm) +
+  shade_p_value(obs_stat = obs_t, direction = "two_sided")
+```
+
+---
+
+Get the actual p-value:
+
+```{r}
+t_null_perm %>% 
+  get_p_value(obs_stat = obs_t, direction = "two_sided")
+```
