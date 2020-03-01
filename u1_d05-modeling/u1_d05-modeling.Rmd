@@ -305,6 +305,12 @@ glue("Test RMSE Ridge: {format(rmse_ridge, digits = 3)}
      Test RMSE RF: {format(rmse_rf, digits = 3)}")
 ```
 
+.warning[
+`r emo::ji("warning")` Is using a "regular" regression model the natural approach for these data?
+
+Ask yourself what is this model good for, if at all `r emo::ji("surprise")`
+]
+
 ---
 
 ```{r Caret-Pred-vs-True, message=FALSE, warning=FALSE, fig.asp=0.5, out.width="100%"}
