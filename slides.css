@@ -180,3 +180,7 @@ div.my-footer a {
   margin-top: 12px;
   margin-bottom: 12px;
 }
+
+.no_shadow img {
+  box-shadow: 0px 0px 0px 0px #CCC;
+}

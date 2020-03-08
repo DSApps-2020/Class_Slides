@@ -127,14 +127,44 @@ library(tidyverse)
 # Finally, what we’ll learn
 
 - Part I: Data Wrangling + Viz in the Tidyverse (R) and in pandas (Python)
-- Part II: Intro to Network Analysis
-- Part III: More Predictive Modeling
-- Part IV: Deep Learning – beyond the basics. Or maybe not, up to you.
-- Part V: Building a DS Project
+- Part II: Intro to Network Analysis (Python)
+- Part III: More Predictive Modeling (R)
+- Part IV: Deep Learning – beyond the basics. Or maybe not, up to you. (Python)
+- Part V: Building a DS Project (R and a bit of Python)
 
 ---
 class: center, middle
 # Don't Panic.
+
+---
+
+## RStudio Cloud and Binder Demo
+
+<div class = "no_shadow">
+  <p align="center">
+    <img class = "no_shadow" src="images/demo.jpg"/>
+  </p>
+<div/>
+
+---
+
+## Git Demo
+
+<div class = "no_shadow">
+  <p align="center">
+    <img class = "no_shadow" src="images/demo.jpg"/>
+  </p>
+</div>
+
+---
+
+## Docker Demo
+
+<div class = "no_shadow">
+  <p align="center">
+    <img class = "no_shadow" src="images/demo.jpg"/>
+  </p>
+</div>
 
 ---
 
@@ -144,4 +174,4 @@ class: center, middle
   <img src="images/nadia.gif"/>
 </p>
 
-Go to: [TODO]
+Go to: http://bit.ly/dsapps2020_tidy
