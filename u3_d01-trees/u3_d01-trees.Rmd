@@ -1794,3 +1794,9 @@ pred_tree_imp_class <- predict(mod_tree_imp_class, okcupid3_imp_mice_valid)
 
 report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
 ```
+
+---
+
+# Are you impressed?
+
+Me neither. To be continued.
