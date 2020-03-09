@@ -75,7 +75,7 @@ library(tidyverse)
 
 ## Or:
 
-- You have the latest R (3.6.1) and latest RStudio IDE (1.2) and you are able to install packages with `install.packages(“package_name”)`
+- You have the latest R (3.6.3) and latest RStudio IDE (1.2) and you are able to install packages with `install.packages(“package_name”)`
 - You have Python (at least 3.6), Jupyter, and you are able to install packages with `pip install`. Consider working with Anaconda/PyCharm.
 
 ---
