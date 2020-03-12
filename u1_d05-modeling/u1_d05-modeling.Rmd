@@ -192,6 +192,13 @@ class: section-slide
 
 ---
 
+# WARNING
+
+.warning[
+`r emo::ji("bulb")` What you're about to see is not a good modeling/prediction flow. This is just an intro to tidy modeling. Some of the issues with how things are done here will be raised, some will have to wait till later in the course.
+]
+---
+
 class: section-slide
 
 # The Present Solution: `caret`
