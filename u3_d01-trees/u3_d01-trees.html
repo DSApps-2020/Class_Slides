@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-08" />
+    <meta name="date" content="2020-03-13" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-08
+### 2020-03-13
 
 ---
 
@@ -716,12 +716,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002024 0.02238396
-## 2 0.048179174      1 0.8864025 0.8900504 0.02279720
-## 3 0.013140594      2 0.8382233 0.8454922 0.02365217
-## 4 0.010043056      3 0.8250827 0.8386863 0.02385442
-## 5 0.009147817      4 0.8150397 0.8287480 0.02381317
-## 6 0.005634308      5 0.8058919 0.8175814 0.02399742
+## 1 0.113597498      0 1.0000000 1.0002177 0.02238436
+## 2 0.048179174      1 0.8864025 0.8900272 0.02275590
+## 3 0.013140594      2 0.8382233 0.8475651 0.02370686
+## 4 0.010043056      3 0.8250827 0.8375276 0.02384637
+## 5 0.009147817      4 0.8150397 0.8295442 0.02396390
+## 6 0.005634308      5 0.8058919 0.8209636 0.02397684
 ```
 
 ---
@@ -968,8 +968,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
 ```
 
 ```
-## RMSE: 0.361
-## CORR: 0.457
+## RMSE: 0.364
+## CORR: 0.447
 ```
 
 ---
@@ -1146,7 +1146,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 
 ```
 ## RMSE: 0.367
-## CORR: 0.432
+## CORR: 0.431
 ```
 
 ```r
@@ -1157,7 +1157,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 
 ```
 ## RMSE: 0.365
-## CORR: 0.441
+## CORR: 0.438
 ```
 
 ---
@@ -1302,8 +1302,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
 ```
 
 ```
-## RMSE: 0.351
-## CORR: 0.505
+## RMSE: 0.35
+## CORR: 0.507
 ```
 
 ```r
@@ -1315,7 +1315,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 
 ```
 ## RMSE: 0.352
-## CORR: 0.498
+## CORR: 0.499
 ```
 
 For variables importance see the `summary` function:
@@ -1353,8 +1353,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.353
-## CORR: 0.496
+## RMSE: 0.356
+## CORR: 0.485
 ```
 
 .warning[
@@ -1419,7 +1419,7 @@ We will define cats/dogs people in the following way and stick to non-NA observa
 
 ```r
 cats_categories &lt;- c("has cats", "likes cats", "dislikes dogs and has cats",
-                     "dislikes dogs and has cats")
+                     "dislikes dogs and likes cats")
 dogs_categories &lt;- c("has dogs", "likes dogs", "has dogs and dislikes cats",
                      "likes dogs and dislikes cats")
 okcupid3 &lt;- okcupid %&gt;%
@@ -1436,16 +1436,16 @@ okcupid3 %&gt;% count(pets)
 ## # A tibble: 2 x 2
 ##   pets      n
 ##   &lt;chr&gt; &lt;int&gt;
-## 1 cats   2550
+## 1 cats   2790
 ## 2 dogs  13939
 ```
 
-Notice the classes are very unbalanced, with roughly 11 dogs people to every 2 cats people.
+Notice the classes are very unbalanced, with roughly 5 dogs people to every 1 cats person.
 
 
 ---
 
-As before in the vector `predictors` we have 36 continuous and categorical variables which may or may not be predictive to being a cats/dogs person:
+As before in the vector `predictors` we have 37 continuous and categorical variables which may or may not be predictive to being a cats/dogs person:
 
 
 
@@ -1458,7 +1458,7 @@ dim(okcupid3)
 ```
 
 ```
-## [1] 16489    38
+## [1] 16729    39
 ```
 
 And as before we split the data into training, test and validation sets, not shown here:
@@ -1466,7 +1466,7 @@ And as before we split the data into training, test and validation sets, not sho
 
 ```
 ## train no. of rows: 10000
-## validation no. of rows: 2489
+## validation no. of rows: 2729
 ## test no. of rows: 4000
 ```
 
@@ -1605,8 +1605,8 @@ table(true_class, pred_class)
 ```
 ##           pred_class
 ## true_class cats dogs
-##       cats  238  125
-##       dogs  678 1448
+##       cats  313  160
+##       dogs  679 1577
 ```
 
 .insight[
@@ -1637,12 +1637,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_mice)
 ```
 
 ```
-## AUC: 0.738
-## ACC: 0.677
-## Dogs: Recall: 0.681
-##       Precision: 0.921
-## Cats: Recall: 0.656
-##       Precision: 0.26
+## AUC: 0.736
+## ACC: 0.693
+## Dogs: Recall: 0.699
+##       Precision: 0.908
+## Cats: Recall: 0.662
+##       Precision: 0.316
 ```
 
 ---
@@ -1668,12 +1668,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 ```
 
 ```
-## AUC: 0.739
-## ACC: 0.672
-## Dogs: Recall: 0.672
-##       Precision: 0.923
-## Cats: Recall: 0.672
-##       Precision: 0.259
+## AUC: 0.738
+## ACC: 0.685
+## Dogs: Recall: 0.688
+##       Precision: 0.909
+## Cats: Recall: 0.67
+##       Precision: 0.31
 ```
 
 ---
@@ -1857,12 +1857,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_na_class[, 2])
 ```
 
 ```
-## AUC: 0.612
-## ACC: 0.788
-## Dogs: Recall: 0.87
-##       Precision: 0.881
-## Cats: Recall: 0.309
-##       Precision: 0.289
+## AUC: 0.598
+## ACC: 0.751
+## Dogs: Recall: 0.842
+##       Precision: 0.855
+## Cats: Recall: 0.317
+##       Precision: 0.296
 ```
 
 As expected, far from impressive.
@@ -1883,12 +1883,12 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_tree_imp_class[, 2])
 ```
 
 ```
-## AUC: 0.672
-## ACC: 0.748
-## Dogs: Recall: 0.793
-##       Precision: 0.9
-## Cats: Recall: 0.485
-##       Precision: 0.285
+## AUC: 0.635
+## ACC: 0.75
+## Dogs: Recall: 0.828
+##       Precision: 0.864
+## Cats: Recall: 0.381
+##       Precision: 0.317
 ```
 
 ---

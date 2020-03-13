@@ -1318,7 +1318,7 @@ We will define cats/dogs people in the following way and stick to non-NA observa
 
 ```{r}
 cats_categories <- c("has cats", "likes cats", "dislikes dogs and has cats",
-                     "dislikes dogs and has cats")
+                     "dislikes dogs and likes cats")
 dogs_categories <- c("has dogs", "likes dogs", "has dogs and dislikes cats",
                      "likes dogs and dislikes cats")
 okcupid3 <- okcupid %>%
@@ -1331,11 +1331,12 @@ okcupid3 <- okcupid %>%
 okcupid3 %>% count(pets)
 ```
 
-Notice the classes are very unbalanced, with roughly 11 dogs people to every 2 cats people.
+Notice the classes are very unbalanced, with roughly 5 dogs people to every 1 cats person.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 okcupid3 <- okcupid3 %>%
   mutate(height_cm = 2.54 * height,
+         log_income = ifelse(income == -1, NA, log10(income/100000)),
          religion2 = case_when(
            str_detect(religion, "agnosticism") | str_detect(religion, "atheism") ~ "atheist",
            str_detect(religion, "buddhism") ~ "buddhist",
@@ -1390,7 +1391,7 @@ okcupid3 <- okcupid3 %>%
   mutate_if(is.character, as.factor) %>%
   mutate_if(is.logical, as.factor)
 
-predictors <- c("age", "height_cm", "sex", "body_type",
+predictors <- c("age", "height_cm", "sex", "body_type", "log_income",
                 "diet2", "drinks", "drugs", "religion2",
                 "education2" ,"education_kind",
                 "ethnicity2", "part_black", "part_white",
