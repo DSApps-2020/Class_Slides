@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-01" />
+    <meta name="date" content="2020-03-13" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-01
+### 2020-03-13
 
 ---
 
@@ -54,6 +54,149 @@ class: section-slide
 # What can you possibly teach us about Feature Engineering?
 
 ---
+
+Our two previous modeling attempts, with [Modeling in the Tidyverse](https://dsapps-2020.github.io/Class_Slides/u1_d05-modeling/u1_d05-modeling.html) and in [The Trees](https://dsapps-2020.github.io/Class_Slides/u3_d01-trees/u3_d01-trees.html) where problematic.
+
+- Using a "sinked" split, not using `set.seed()` - reproducible but wasteful
+- "Lazy" feature engineering, not using the entire data, not creative
+- No interactions
+- Test once, on the same validation set, for everything
+- Data "leakage" from training set to validation set (when imputing missing values)
+- Sometimes tuning params, sometimes not
+- No pre-processing of features, if at all by a hunch
+- Not thinking about Multicollinearity where it hurts (regession)
+- Almost no treatment of class imbalance in classification
+- Chaotic feature selection
+
+---
+
+Reminder: We have two tasks, Regression and Classification:
+
+1. Predict the income of an OKCupid user (from those who reported income)
+2. Predict if an OKCupid user is a Cats or Dogs person, where:
+
+
+```r
+cats_categories &lt;- c("has cats", "likes cats", "dislikes dogs and has cats",
+                     "dislikes dogs and likes cats")
+dogs_categories &lt;- c("has dogs", "likes dogs", "has dogs and dislikes cats",
+                     "likes dogs and dislikes cats")
+```
+
+And 80% of users are Dogs people, so we have class imbalance.
+
+---
+
+On our validation set we got...
+
+- Regression Task
+
+Model       | RMSE | R
+------------|------|--
+LM          | 0.35 | 0.5
+LM-L2       | 0.35 | 0.5
+LM-L1       | 0.35 | 0.5
+CART        | 0.36 | 0.45
+Bagging     | 0.37 | 0.44
+RF          | 0.35 | 0.49
+GBT-gbm     | 0.35 | 0.5
+GBT-XGBOOST | 0.35 | 0.5
+
+---
+
+- Classification Task
+
+Model  | AUC | Accuracy | Recall Dogs | Precision Dogs | Recall Cats | Precision Cats
+-------|-----|----------|-------------|----------------|-------------|---------------
+GLM    | 0.74|  0.68    |  0.68       |  0.92          |  0.66       |  0.26
+GLM-EN | 0.74|  0.67    |  0.67       |  0.92          |  0.67       |  0.26
+CART   | 0.67|  0.75    |  0.79       |  0.9           |  0.49       |  0.28
+
+And we were not impressed.
+
+---
+
+class: section-slide
+
+# Resampling/Cross-Validation
+
+---
+
+### Resampling done right
+
+The main goal of resampling: No Surprises.
+
+(By generating multiple versions of our data, and watching how our model behaves on unseen fresh data again. And again. And again.)
+
+- Resampling is a key principle when developing a ML solution
+- All ML practitioners are aware of the menace of overfitting
+- But resampling should also be made for:
+  - Feature engineering and transformation .font80percent[(should I use the Box-Cox or Yeo-Johnson transformation?)]
+  - Feature selection .font80percent[(Should I use 2nd-order intearctions here?)]
+  - Choosing imputation strategy .font80percent[(Simply use the median or regress?)]
+  - Tuning parameters .font80percent[(100 or 500 trees?)]
+  - Model selection .font80percent[(LM or MARS?)]
+  
+---
+
+- A good resampling scheme will:
+  - Have more than one train/valid/test samples!*
+  - Be stratified (usually by dependent variable distribution)
+  - Use a (paired/repeated/within) statistical test on resamples to reach a decision, or at least a proper plot
+  - Avoid data "leakage" and not include the test set!
+  - Encompass all steps in model building
+  - Ideally (when data is Big) perform each step on a different part *of the training data*
+
+.insight[
+💡 &amp;ast; How many resamples?
+
+`-` The higher the number the lower the variance of performance metric
+
+`-` The higher the number the less data used in each resample, the higher the bias of performance metric
+]
+
+---
+
+### Ideally (yes, I know)
+
+&lt;img src = "images/resampling.png" style="width: 100%"&gt;
+
+---
+
+### And don't forget
+
+Only once we decide on the final pre-processing, features, model and parameters, will we fit the model two more times:
+  1. On the entire training data, then test on the testing data and get a realistic metric of performance
+  2. On the *entire* data, right before deployment to production
+  
+---
+
+### Many approaches to resampling
+
+But two most common:
+
+1. V-fold Cross Validation (+ optionally repeating n times)
+2. Bootstrap Samples
+
+---
+
+#### V-fold Cross Validation
+
+&lt;img src = "images/cv_viz.png" style="width: 90%"&gt;
+
+.font80percent[
+[Applied Machine Learning Workshop at Rstudio-conf 2019 / Max Kuhn](https://github.com/topepo/rstudio-conf-2019)
+]
+
+---
+
+#### Bootstrap Samples
+
+&lt;img src = "images/boot_viz.png" style="width: 90%"&gt;
+
+.insight[
+💡 What is the probability of entering a fold (at least once)?
+]
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
