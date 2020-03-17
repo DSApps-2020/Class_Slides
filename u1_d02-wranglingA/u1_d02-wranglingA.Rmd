@@ -138,7 +138,7 @@ Find the average height of women
 ```{r Basic6}
 okcupid %>%
   filter(sex == "f") %>%
-  summarize(avg_height = mean(height_cm, na.rm = NA))
+  summarize(avg_height = mean(height_cm, na.rm = TRUE))
 ```
 
 Notice we got a `tibble`. We could either `pull` this single number:
@@ -146,7 +146,7 @@ Notice we got a `tibble`. We could either `pull` this single number:
 ```{r Basics7}
 okcupid %>%
   filter(sex == "f") %>%
-  summarize(avg_height = mean(height_cm, na.rm = NA)) %>%
+  summarize(avg_height = mean(height_cm, na.rm = TRUE)) %>%
   pull()
 ```
 
@@ -176,7 +176,7 @@ But why settle for women only?
 ```{r Basics9}
 okcupid %>%
   group_by(sex) %>%
-  summarize(avg_height = mean(height_cm, na.rm = NA))
+  summarize(avg_height = mean(height_cm, na.rm = TRUE))
 ```
 
 And you might want to consider `rename()`ing sex!
@@ -184,7 +184,7 @@ And you might want to consider `rename()`ing sex!
 ```{r Basics9B, eval=FALSE}
 okcupid %>%
   group_by(sex) %>%
-  summarize(avg_height = mean(height_cm, na.rm = NA)) %>%
+  summarize(avg_height = mean(height_cm, na.rm = TRUE)) %>%
   rename(gender = sex)
 ```
 

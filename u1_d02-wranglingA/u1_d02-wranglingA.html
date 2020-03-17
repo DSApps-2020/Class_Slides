@@ -4,7 +4,7 @@
     <title>Tidy Data Wrangling - Part A</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2019-12-12" />
+    <meta name="date" content="2020-03-17" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2019-12-12
+### 2020-03-17
 
 ---
 
@@ -219,7 +219,7 @@ Find the average height of women
 ```r
 okcupid %&gt;%
   filter(sex == "f") %&gt;%
-  summarize(avg_height = mean(height_cm, na.rm = NA))
+  summarize(avg_height = mean(height_cm, na.rm = TRUE))
 ```
 
 ```
@@ -235,7 +235,7 @@ Notice we got a `tibble`. We could either `pull` this single number:
 ```r
 okcupid %&gt;%
   filter(sex == "f") %&gt;%
-  summarize(avg_height = mean(height_cm, na.rm = NA)) %&gt;%
+  summarize(avg_height = mean(height_cm, na.rm = TRUE)) %&gt;%
   pull()
 ```
 
@@ -280,7 +280,7 @@ But why settle for women only?
 ```r
 okcupid %&gt;%
   group_by(sex) %&gt;%
-  summarize(avg_height = mean(height_cm, na.rm = NA))
+  summarize(avg_height = mean(height_cm, na.rm = TRUE))
 ```
 
 ```
@@ -297,7 +297,7 @@ And you might want to consider `rename()`ing sex!
 ```r
 okcupid %&gt;%
   group_by(sex) %&gt;%
-  summarize(avg_height = mean(height_cm, na.rm = NA)) %&gt;%
+  summarize(avg_height = mean(height_cm, na.rm = TRUE)) %&gt;%
   rename(gender = sex)
 ```
 
@@ -817,20 +817,20 @@ okcupid %&gt;% select(drugs, age, income, sex) %&gt;%
 ```
 ## # A tibble: 12 x 4
 ## # Groups:   drugs [4]
-##    drugs       age  income sex  
-##    &lt;chr&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;
-##  1 never        23      NA m    
-##  2 never        25      NA m    
-##  3 never        25      NA f    
-##  4 often        24 1000000 m    
-##  5 often        25      NA m    
-##  6 often        35  150000 m    
-##  7 sometimes    33   40000 f    
-##  8 sometimes    18      NA m    
-##  9 sometimes    30      NA m    
-## 10 &lt;NA&gt;         26   30000 m    
-## 11 &lt;NA&gt;         30      NA m    
-## 12 &lt;NA&gt;         35      NA m
+##    drugs       age income sex  
+##    &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;
+##  1 never        24     NA f    
+##  2 never        26     NA m    
+##  3 never        29     NA m    
+##  4 often        34     NA m    
+##  5 often        19     NA f    
+##  6 often        23     NA m    
+##  7 sometimes    22     NA m    
+##  8 sometimes    29 100000 m    
+##  9 sometimes    32     NA m    
+## 10 &lt;NA&gt;         25     NA f    
+## 11 &lt;NA&gt;         27     NA m    
+## 12 &lt;NA&gt;         40 250000 m
 ```
 
 ---
