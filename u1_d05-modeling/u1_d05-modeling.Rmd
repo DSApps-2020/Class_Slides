@@ -229,7 +229,7 @@ Here you might consider some preprocessing.
 
 ### Tuning and Modeling
 
-Define general methodology, e.g. 10-fold Cross-Validation:
+Define general methodology, e.g. 5-fold Cross-Validation:
 
 ```{r, warning=FALSE}
 fit_control <- trainControl(method = "cv", number = 5)
@@ -358,7 +358,7 @@ class: section-slide
 
 ### Packages under tidymodels
 
-- `paresnip`: tidy `caret`
+- `parsnip`: tidy `caret`
 - `dials` and `tune`: specifying and tuning model parameters
 - `rsample`: sampling, data partitioning
 - `recipes` and `embed`: preprocessing and creating model matrices
@@ -404,7 +404,7 @@ ipf_rec <- recipe(best3bench_kg ~ ., data = ipf_tr)
 ipf_rec
 ```
 
-`recipes` contains more preprocessing `step_`s than you imagine:
+`recipes` contains more preprocessing [`step_`s](https://tidymodels.github.io/recipes/reference/index.html) than you imagine:
 
 ```{r}
 ipf_rec <-  ipf_rec %>%
@@ -425,7 +425,26 @@ At this point our `recipe` has all necessary `sd` and `mean`s for numeric variab
 
 ---
 
-And then we `bake()`:
+```{r}
+ipf_rec$var_info
+```
+
+---
+
+```{r}
+ipf_rec$levels$meet_name
+```
+
+---
+
+```{r}
+ipf_rec$steps[[1]]$means
+ipf_rec$steps[[1]]$sds
+```
+
+---
+
+And then we `bake()` (or [`juice()`](https://tidymodels.github.io/recipes/reference/juice.html)):
 
 ```{r}
 ipf_tr2 <- ipf_rec %>% bake(ipf_tr)
@@ -545,7 +564,7 @@ dim(results_test)
 
 ### Comparing Models
 
-The package `yardstick` has tons of performance metrics:
+The package `yardstick` has tons of performance [metrics](https://tidymodels.github.io/yardstick/articles/metric-types.html):
 
 ```{r}
 results_test %>%
@@ -568,16 +587,15 @@ results_test %>%
 
 ### Tuning
 
-This isn't completely clear to me, but it seems to work:
-
-Define your model spec, using `tune()` from the `tune` package (needs to be installed separately) for a paramter you wish to tune:
+Define your model spec, using `tune()` from the `tune` package for a parameter you wish to tune:
 
 ```{r, message=FALSE, warning=FALSE}
 library(tune)
 
 mod_rf_spec <- rand_forest(mode = "regression",
-                           mtry = tune("mtry"),
-                           min_n = tune("min_n")) %>%
+                           mtry = tune(),
+                           min_n = tune(),
+                           trees = 100) %>%
   set_engine("ranger")
 ```
 
@@ -622,6 +640,12 @@ tune_res
 
 ---
 
+```{r}
+tune_res$.metrics[[1]]
+```
+
+---
+
 Collect the mean metric across folds:
 
 ```{r}
@@ -642,6 +666,31 @@ estimates %>%
   geom_line() + 
   labs(y = "Mean RMSE") +
   theme_classic()
+```
+
+---
+
+There are of course also methods for helping us choose best params and final model.
+
+```{r}
+best_rmse <- tune_res %>% select_best(metric = "rmse", maximize = FALSE)
+best_rmse
+```
+
+See also `?select_by_one_std_err`.
+
+```{r}
+mod_rf_final <- finalize_model(mod_rf_spec, best_rmse)
+mod_rf_final
+```
+
+---
+
+```{r}
+mod_rf_final %>%
+  fit(best3bench_kg ~ ., data = ipf_tr) %>%
+  predict(new_data = ipf_te) %>%
+  mutate(truth = ipf_te$best3bench_kg)
 ```
 
 ---
