@@ -45,6 +45,250 @@ library(tidyverse)
 
 class: section-slide
 
-# Regression's Relatives
+# MARS
 
 ---
+
+### What's the No. 1 complaint about LR?
+
+```{r Bad-LR, echo=FALSE, out.width="50%"}
+x1 <- seq(0, 3, 0.1)
+y1 <- 9 * x1 + rnorm(length(x1), sd = 3)
+x2 <- seq(3, 8, 0.1)
+y2 <- 33 - 2 * x2 + rnorm(length(x2), sd = 3)
+x <- c(x1, x2)
+y <- c(y1, y2)
+lm1 <- lm(y ~ x)
+plot(x, y)
+abline(lm1$coef, col = "red")
+```
+
+$\hat{y} = 12 + 1.5x$
+
+---
+
+### It would have been much nicer if we could...
+
+```{r LR-Good, echo=FALSE, out.width="50%"}
+plot(x, y)
+lines(x1, 9 * x1, col = "red")
+lines(x2, 33 - 2 * x2, col = "red")
+```
+
+$$\hat{y} = [9x]I(x < 3) + [33 - 2x]I(x \gt 3) = \\
+= 27 - 9\max(0, 3 - x) - 2\max(0, x - 3) = \\
+27 - 9[-(x-3)]_+ - 2[+(x-3)]_+$$
+
+---
+
+### The Hinge Function
+
+$h(x - c) = [(x - c)]_+ = max(0, x - c)$
+
+Where $c$ would be called a knot.
+
+```{r Hinge, out.width="40%", echo = FALSE}
+x1 <- seq(0, 8, 0.1)
+plot(x1, pmax(0, x1 - 3), type = "l", main = "h(x-3)", xlab = "x", ylab = "h(x-3)")
+```
+
+.insight[
+`r emo::ji("bulb")` If you know about Deep Learning this would be called...
+]
+
+---
+
+### MARS via `earth`
+
+```{r, echo=FALSE}
+set.seed(42)
+x1 <- seq(0, 3, 0.1)
+y1 <- 9 * x1 + rnorm(length(x1), sd = 1)
+x2 <- seq(3, 8, 0.1)
+y2 <- 33 - 2 * x2 + rnorm(length(x2), sd = 1)
+x <- c(x1, x2)
+y <- c(y1, y2)
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(earth)
+
+mod_mars <- earth(y ~ x, degree = 1)
+
+summary(mod_mars)
+```
+
+.insight[
+`r emo::ji("bulb")` Why on earth is the package for MARS called... `r emo::ji("person_facepalming")`
+]
+
+---
+
+### This is exactly like
+
+```{r}
+X <- data.frame(y, h1 = pmax(0, x - 3.1), h2 = pmax(0, 3.1 - x))
+
+head(X)
+
+lm(y ~ h1 + h2, data = X)
+```
+
+---
+
+### And which method knows how to scan X for the best partition?
+
+<img src="images/a_witch.jpg" style="width: 80%" />
+
+---
+
+### What's the No. 1 complaint about Trees?
+
+```{r Bad-Trees, echo=FALSE, out.width="50%"}
+plot(x, y)
+lines(x1, rep(mean(y1), length(x1)), col = "red")
+lines(x2, rep(mean(y2), length(x2)), col = "red")
+```
+
+---
+
+### Why are CART also called "Recursive Partitioning"?
+
+<img src="images/mars.png" style="width: 100%" />
+
+---
+
+### From CART to MARS
+
+Let $B_m(X)= \prod_{k=1}^{K_m}I(X_{v(km)} - t_{km} \ge 0)$
+
+Following [Friedman (1991)](https://projecteuclid.org/euclid.aos/1176347963), let:
+
+$$H(z) =
+  \begin{cases}
+   1 & \mbox{if } z \ge 0 \\
+   0 & \mbox{otherwise}
+ \end{cases}$$
+
+So: $B_m(X)= \prod_{k=1}^{K_m}H[s_{km}(X_{v(km)} - t_{km})]$ where $s_{km}=\pm 1$
+
+And: $\hat{y} = g(X)$
+
+And: $LOF(g)$ is the Lack of Fit function for $g(X)$, typically the $SSE$ critetion
+
+And: Switch all our $\beta$s to $\alpha$s
+
+---
+
+Then the growing of trees algorithm is really...
+
+<img src="images/cart_algo1.png" style="width: 100%" />
+
+---
+
+### Why gotta be H?
+
+<img src="images/mars_algo1.png" style="width: 100%" />
+
+---
+
+### More than H changed on the way to MARS
+
+* Most important: NOT removing the parent $B_{m*}(X)$, we can always go back to the parent and split it *again*, allowing for additive models such as $\hat{y} = 6 + 5[-(x_1-4)]_+ - 2[+(x_2-3)]_+$
+
+.insight[
+`r emo::ji("bulb")` Can you do this with a tree?
+]
+
+* The generalized form is actually $[\pm(x-t)]^q_+$ where $q$ is usually 1 but *can be* 2 or 3
+
+.insight[
+`r emo::ji("bulb")` What if $q=0$?
+]
+
+---
+
+* At each step of adding to $B_{m}(X)$ only variables which have not yet participated in this path are added
+
+.insight[
+`r emo::ji("bulb")` How is it different from trees and why do you think this was added?
+]
+
+* For "growing" and "pruning" the $LOF(g)$ used by MARS is $GCV$ (Generalized Cross Validation) which is a penalized version of $SSE$ which is out of scope
+
+* Easily extensible to GLM via the proper link function, e.g. for Logistic Regression: $logit(p) = \sum_k \beta_k B_k$
+
+* And more...
+
+---
+
+### "Pruning" MARS
+
+Another advantage of MARS is that once the full model has been "grown", **each and every** term is candidate for pruning from the formula, not whole pairs:
+
+<img src="images/mars_algo2.png" style="width: 60%" />
+
+The forward pass adds terms in pairs, but the pruning (backward pass) typically discards one side of the pair and so terms are often not seen in pairs in the final model.
+
+---
+
+### Predicting OKCupid Income
+
+```{r, echo=FALSE}
+okcupid2_imp_mice <- read_rds("../data/okcupid2_imp_mice.rds")
+idx <- read_rds("../data/okcupid2_idx.rda")
+train_idx <- idx$train_idx
+valid_idx <- idx$valid_idx
+test_idx <- idx$test_idx
+
+okcupid2_imp_mice_train <- okcupid2_imp_mice[train_idx, ]
+okcupid2_imp_mice_valid <- okcupid2_imp_mice[valid_idx, ]
+
+rmse <- function(obs, pred) sqrt(mean((obs - pred)^2))
+
+report_rmse_and_cor <- function(obs, pred) {
+  RMSE <- rmse(obs, pred)
+  CORR <- cor(obs, pred)
+  glue::glue("RMSE: {format(RMSE, digits = 3)}
+       CORR: {format(CORR, digits = 3)}")
+}
+```
+
+```{r}
+mod_mars <- earth(income ~ ., data = okcupid2_imp_mice_train, degree = 1)
+
+summary(mod_mars, digits = 2)
+```
+
+---
+
+<img src="images/earth_summary_cont.png" style="width: 90%" />
+
+```{r}
+pred_mars <- predict(mod_mars, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_imp_mice_valid$income, pred_mars)
+```
+
+---
+
+### Pros and Cons
+
+Pros:
+
+- Flexible, built-in interactions
+- Highly interpretable
+- Little pre-processing of predictors needed
+- Handle all types of predictors (continuous, categorical)
+- Feature selection built-in (but when predictors are correlated...)
+- Good variance-bias tradeoff
+
+Cons:
+- Greedy
+- The resulting fitted function may not be smooth (not differentiable along hinges)
+- No built-in CI for variables params
+
+---
+
+class: section-slide
+
+# CCA

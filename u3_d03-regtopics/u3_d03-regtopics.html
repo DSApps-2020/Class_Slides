@@ -4,7 +4,7 @@
     <title>Topics in Regression</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-01" />
+    <meta name="date" content="2020-03-31" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-01
+### 2020-03-31
 
 ---
 
@@ -51,9 +51,304 @@ layout: true
 
 class: section-slide
 
-# Regression's Relatives
+# MARS
 
 ---
+
+### What's the No. 1 complaint about LR?
+
+&lt;img src="images/Bad-LR-1.png" width="50%" /&gt;
+
+`\(\hat{y} = 12 + 1.5x\)`
+
+---
+
+### It would have been much nicer if we could...
+
+&lt;img src="images/LR-Good-1.png" width="50%" /&gt;
+
+`$$\hat{y} = [9x]I(x &lt; 3) + [33 - 2x]I(x \gt 3) = \\
+= 27 - 9\max(0, 3 - x) - 2\max(0, x - 3) = \\
+27 - 9[-(x-3)]_+ - 2[+(x-3)]_+$$`
+
+---
+
+### The Hinge Function
+
+`\(h(x - c) = [(x - c)]_+ = max(0, x - c)\)`
+
+Where `\(c\)` would be called a knot.
+
+&lt;img src="images/Hinge-1.png" width="40%" /&gt;
+
+.insight[
+💡 If you know about Deep Learning this would be called...
+]
+
+---
+
+### MARS via `earth`
+
+
+
+
+```r
+library(earth)
+
+mod_mars &lt;- earth(y ~ x, degree = 1)
+
+summary(mod_mars)
+```
+
+```
+## Call: earth(formula=y~x, degree=1)
+## 
+##             coefficients
+## (Intercept)    26.902230
+## h(3.1-x)       -8.403566
+## h(x-3.1)       -1.995450
+## 
+## Selected 3 of 3 terms, and 1 of 1 predictors
+## Termination condition: RSq changed by less than 0.001 at 3 terms
+## Importance: x
+## Number of terms at each degree of interaction: 1 2 (additive model)
+## GCV 1.319067    RSS 95.37498    GRSq 0.9715939    RSq 0.9743302
+```
+
+.insight[
+💡 Why on earth is the package for MARS called... 🤦
+]
+
+---
+
+### This is exactly like
+
+
+```r
+X &lt;- data.frame(y, h1 = pmax(0, x - 3.1), h2 = pmax(0, 3.1 - x))
+
+head(X)
+```
+
+```
+##           y h1  h2
+## 1 1.3709584  0 3.1
+## 2 0.3353018  0 3.0
+## 3 2.1631284  0 2.9
+## 4 3.3328626  0 2.8
+## 5 4.0042683  0 2.7
+## 6 4.3938755  0 2.6
+```
+
+```r
+lm(y ~ h1 + h2, data = X)
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ h1 + h2, data = X)
+## 
+## Coefficients:
+## (Intercept)           h1           h2  
+##      26.902       -1.995       -8.404
+```
+
+---
+
+### And which method knows how to scan X for the best partition?
+
+&lt;img src="images/a_witch.jpg" style="width: 80%" /&gt;
+
+---
+
+### What's the No. 1 complaint about Trees?
+
+&lt;img src="images/Bad-Trees-1.png" width="50%" /&gt;
+
+---
+
+### Why are CART also called "Recursive Partitioning"?
+
+&lt;img src="images/mars.png" style="width: 100%" /&gt;
+
+---
+
+### From CART to MARS
+
+Let `\(B_m(X)= \prod_{k=1}^{K_m}I(X_{v(km)} - t_{km} \ge 0)\)`
+
+Following [Friedman (1991)](https://projecteuclid.org/euclid.aos/1176347963), let:
+
+`$$H(z) =
+  \begin{cases}
+   1 &amp; \mbox{if } z \ge 0 \\
+   0 &amp; \mbox{otherwise}
+ \end{cases}$$`
+
+So: `\(B_m(X)= \prod_{k=1}^{K_m}H[s_{km}(X_{v(km)} - t_{km})]\)` where `\(s_{km}=\pm 1\)`
+
+And: `\(\hat{y} = g(X)\)`
+
+And: `\(LOF(g)\)` is the Lack of Fit function for `\(g(X)\)`, typically the `\(SSE\)` critetion
+
+And: Switch all our `\(\beta\)`s to `\(\alpha\)`s
+
+---
+
+Then the growing of trees algorithm is really...
+
+&lt;img src="images/cart_algo1.png" style="width: 100%" /&gt;
+
+---
+
+### Why gotta be H?
+
+&lt;img src="images/mars_algo1.png" style="width: 100%" /&gt;
+
+---
+
+### More than H changed on the way to MARS
+
+* Most important: NOT removing the parent `\(B_{m*}(X)\)`, we can always go back to the parent and split it *again*, allowing for additive models such as `\(\hat{y} = 6 + 5[-(x_1-4)]_+ - 2[+(x_2-3)]_+\)`
+
+.insight[
+💡 Can you do this with a tree?
+]
+
+* The generalized form is actually `\([\pm(x-t)]^q_+\)` where `\(q\)` is usually 1 but *can be* 2 or 3
+
+.insight[
+💡 What if `\(q=0\)`?
+]
+
+---
+
+* At each step of adding to `\(B_{m}(X)\)` only variables which have not yet participated in this path are added
+
+.insight[
+💡 How is it different from trees and why do you think this was added?
+]
+
+* For "growing" and "pruning" the `\(LOF(g)\)` used by MARS is `\(GCV\)` (Generalized Cross Validation) which is a penalized version of `\(SSE\)` which is out of scope
+
+* Easily extensible to GLM via the proper link function, e.g. for Logistic Regression: `\(logit(p) = \sum_k \beta_k B_k\)`
+
+* And more...
+
+---
+
+### "Pruning" MARS
+
+Another advantage of MARS is that once the full model has been "grown", **each and every** term is candidate for pruning from the formula, not whole pairs:
+
+&lt;img src="images/mars_algo2.png" style="width: 60%" /&gt;
+
+The forward pass adds terms in pairs, but the pruning (backward pass) typically discards one side of the pair and so terms are often not seen in pairs in the final model.
+
+---
+
+### Predicting OKCupid Income
+
+
+
+
+```r
+mod_mars &lt;- earth(income ~ ., data = okcupid2_imp_mice_train, degree = 1)
+
+summary(mod_mars, digits = 2)
+```
+
+```
+## Call: earth(formula=income~., data=okcupid2_imp_mice_train, degree=1)
+## 
+##                           coefficients
+## (Intercept)                     -0.011
+## sexm                             0.062
+## body_typeathletic                0.042
+## body_typejacked                  0.157
+## body_typeusedup                  0.251
+## body_type_not_perfectTRUE       -0.058
+## diet2kosher                      0.194
+## diet2other                       0.065
+## drinksnotatall                  -0.350
+## drinksoften                     -0.235
+## drinksrarely                    -0.330
+## drinkssocially                  -0.272
+## drinksveryoften                 -0.199
+## drugssometimes                  -0.049
+## religion2christian              -0.042
+## education2degree2                0.078
+## education2degree3                0.114
+## education2high_school           -0.166
+## education2student0              -0.213
+## education2student1              -0.115
+## education2student3              -0.135
+## job3financial                    0.197
+## job3hardware                     0.185
+## job3health                       0.072
+## job3legalservices                0.181
+## job3management                   0.224
+## job3marketing                    0.091
+## job3retired                      0.196
+## job3student                     -0.100
+## job3tech                         0.150
+## job3unemployed                  -0.189
+## orientationstraight              0.056
+## h(age-30)                        0.037
+## h(32-age)                       -0.009
+## h(age-32)                       -0.037
+## h(height_cm-203.2)               0.023
+## h(1.39029-essay4_len)           -0.317
+## h(essay4_len-1.39029)           -0.015
+## h(essay5_len-7.29167)            0.358
+## h(1.10393-essay6_len)            0.498
+## 
+## Selected 40 of 44 terms, and 36 of 114 predictors
+## Termination condition: RSq changed by less than 0.001 at 44 terms
+## Importance: age, body_type_not_perfectTRUE, job3hardware, job3tech, ...
+## Number of terms at each degree of interaction: 1 39 (additive model)
+## GCV 0.12    RSS 948    GRSq 0.25    RSq 0.26
+```
+
+---
+
+&lt;img src="images/earth_summary_cont.png" style="width: 90%" /&gt;
+
+
+```r
+pred_mars &lt;- predict(mod_mars, okcupid2_imp_mice_valid)
+report_rmse_and_cor(okcupid2_imp_mice_valid$income, pred_mars)
+```
+
+```
+## RMSE: 0.357
+## CORR: 0.481
+```
+
+---
+
+### Pros and Cons
+
+Pros:
+
+- Flexible, built-in interactions
+- Highly interpretable
+- Little pre-processing of predictors needed
+- Handle all types of predictors (continuous, categorical)
+- Feature selection built-in (but when predictors are correlated...)
+- Good variance-bias tradeoff
+
+Cons:
+- Greedy
+- The resulting fitted function may not be smooth (not differentiable along hinges)
+- No built-in CI for variables params
+
+---
+
+class: section-slide
+
+# CCA
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
