@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-13" />
+    <meta name="date" content="2020-03-31" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-13
+### 2020-03-31
 
 ---
 
@@ -555,6 +555,16 @@ class: section-slide
 
 ---
 
+### Why *Rectangular* Regions?
+
+&lt;img src="images/recursive_partitioning.png" style="width: 75%" /&gt;
+
+.insight[
+💡 Does this remind you of anything?
+]
+
+---
+
 ### The `\(SSE\)` criterion - continuous predictor
 
 - `\(y\)` is the continuous dependent variable
@@ -716,12 +726,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002177 0.02238436
-## 2 0.048179174      1 0.8864025 0.8900272 0.02275590
-## 3 0.013140594      2 0.8382233 0.8475651 0.02370686
-## 4 0.010043056      3 0.8250827 0.8375276 0.02384637
-## 5 0.009147817      4 0.8150397 0.8295442 0.02396390
-## 6 0.005634308      5 0.8058919 0.8209636 0.02397684
+## 1 0.113597498      0 1.0000000 1.0002472 0.02238124
+## 2 0.048179174      1 0.8864025 0.8897030 0.02273964
+## 3 0.013140594      2 0.8382233 0.8450335 0.02360412
+## 4 0.010043056      3 0.8250827 0.8347088 0.02372920
+## 5 0.009147817      4 0.8150397 0.8272763 0.02392690
+## 6 0.005634308      5 0.8058919 0.8203607 0.02403367
 ```
 
 ---
@@ -968,8 +978,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
 ```
 
 ```
-## RMSE: 0.364
-## CORR: 0.447
+## RMSE: 0.363
+## CORR: 0.449
 ```
 
 ---
@@ -1145,8 +1155,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.367
-## CORR: 0.431
+## RMSE: 0.365
+## CORR: 0.441
 ```
 
 ```r
@@ -1157,7 +1167,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 
 ```
 ## RMSE: 0.365
-## CORR: 0.438
+## CORR: 0.442
 ```
 
 ---
@@ -1303,7 +1313,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
 
 ```
 ## RMSE: 0.35
-## CORR: 0.507
+## CORR: 0.509
 ```
 
 ```r
@@ -1315,7 +1325,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 
 ```
 ## RMSE: 0.352
-## CORR: 0.499
+## CORR: 0.502
 ```
 
 For variables importance see the `summary` function:
@@ -1353,8 +1363,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.356
-## CORR: 0.485
+## RMSE: 0.359
+## CORR: 0.47
 ```
 
 .warning[
@@ -1669,11 +1679,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.738
-## ACC: 0.685
-## Dogs: Recall: 0.688
+## ACC: 0.687
+## Dogs: Recall: 0.69
 ##       Precision: 0.909
-## Cats: Recall: 0.67
-##       Precision: 0.31
+## Cats: Recall: 0.672
+##       Precision: 0.312
 ```
 
 ---

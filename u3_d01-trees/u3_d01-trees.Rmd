@@ -480,6 +480,16 @@ class: section-slide
 
 ---
 
+### Why *Rectangular* Regions?
+
+<img src="images/recursive_partitioning.png" style="width: 75%" />
+
+.insight[
+`r emo::ji("bulb")` Does this remind you of anything?
+]
+
+---
+
 ### The $SSE$ criterion - continuous predictor
 
 - $y$ is the continuous dependent variable
