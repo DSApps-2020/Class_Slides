@@ -70,3 +70,77 @@ class: section-slide
 - Rare diseases: [this](https://www.kaggle.com/c/hivprogression) dataset contains genetic data for 1,000 HIV patients, 206 out of 1,000 patients improved after 16 weeks of therapy
 - Conversion/Sell/CTR rates: [this]() dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
 - Fraud detection: [this](https://www.kaggle.com/mlg-ulb/creditcardfraud) dataset contains credit card transactions for a major European CC, 492 frauds out of 284,807 transactions
+
+---
+
+class: section-slide
+
+# Active Learning
+
+---
+
+### Got Data?
+
+```{r, echo=FALSE}
+set.seed(42)
+```
+
+```{r, warning=FALSE}
+n <- 20
+x1 <- rnorm(n, 0, 1); x2 <- rnorm(n, 0, 1)
+t <- 2 - 4 * x1 + 3 * x2
+y <- rbinom(n, 1, 1 / (1 + exp(-t)))
+glm_mod <- glm(y ~ x1 + x2, family = "binomial")
+```
+
+```{r AL-LR-Example, warning=FALSE, out.width="50%", echo=FALSE}
+a <- -glm_mod$coef[1]/glm_mod$coef[3]
+b <- -glm_mod$coef[2]/glm_mod$coef[3]
+formula1 <- glue::glue("{format(glm_mod$coef[1], digits = 2)} {format(glm_mod$coef[2], digits = 2)} * x1 + {format(glm_mod$coef[3], digits = 2)} * x2 = 0")
+
+tibble(x1 = x1, x2 = x2, y = factor(y)) %>%
+  ggplot(aes(x1, x2, color = y)) +
+  geom_point() +
+  geom_abline(intercept =  a, slope = b) +
+  xlim(c(-2.5, 2.5)) +
+  ylim(c(-2.5, 2.5)) +
+  guides(color = FALSE) +
+  geom_text(x = 0, y = 0, label = formula1,
+            parse = FALSE, color = "black", size = 5) +
+  theme_classic() +
+  theme(text = element_text(size = 20))
+```
+
+---
+
+### Want more?
+
+> The key idea behind *active learning* is that a machine learning algorithm can
+achieve greater accuracy with fewer training labels if it is allowed to choose the
+data from which it learns. An active learner may pose *queries*, usually in the form
+of unlabeled data instances to be labeled by an *oracle* (e.g., a human annotator).
+Active learning is well-motivated in many modern machine learning problems,
+where unlabeled data may be abundant or easily obtained, but labels are difficult,
+time-consuming, or expensive to obtain.
+
+([Settles, 2010](http://burrsettles.com/pub/settles.activelearning.pdf))
+
+> You want data? Well data costs!
+
+(No one, ever)
+
+---
+
+### Where this is going
+
+<img src="images/active_learning_plan.png" style="width: 90%" />
+
+---
+
+### Active Learning Scenarios
+
+1. **Membership Query Synthesis**: You get to choose which (maybe theoretical) points you'd want $y$ labelled for.
+2. **Stream-Based Selective Sampling**: You get a 1 point at a time and decide which ones you'd like to query and which to discard.
+3. **Pool-Based Sampling**: You have a large collecetion of unlabelled points at your disposal, you need to send the "best ones" for labelling
+
+<img src="images/active_learning_scenarios.png" style="width: 70%" />

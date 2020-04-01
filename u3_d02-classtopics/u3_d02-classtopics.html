@@ -4,7 +4,7 @@
     <title>Topics in Classification</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-01" />
+    <meta name="date" content="2020-04-01" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-01
+### 2020-04-01
 
 ---
 
@@ -76,6 +76,63 @@ class: section-slide
 - Rare diseases: [this](https://www.kaggle.com/c/hivprogression) dataset contains genetic data for 1,000 HIV patients, 206 out of 1,000 patients improved after 16 weeks of therapy
 - Conversion/Sell/CTR rates: [this]() dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
 - Fraud detection: [this](https://www.kaggle.com/mlg-ulb/creditcardfraud) dataset contains credit card transactions for a major European CC, 492 frauds out of 284,807 transactions
+
+---
+
+class: section-slide
+
+# Active Learning
+
+---
+
+### Got Data?
+
+
+
+
+```r
+n &lt;- 20
+x1 &lt;- rnorm(n, 0, 1); x2 &lt;- rnorm(n, 0, 1)
+t &lt;- 2 - 4 * x1 + 3 * x2
+y &lt;- rbinom(n, 1, 1 / (1 + exp(-t)))
+glm_mod &lt;- glm(y ~ x1 + x2, family = "binomial")
+```
+
+&lt;img src="images/AL-LR-Example-1.png" width="50%" /&gt;
+
+---
+
+### Want more?
+
+&gt; The key idea behind *active learning* is that a machine learning algorithm can
+achieve greater accuracy with fewer training labels if it is allowed to choose the
+data from which it learns. An active learner may pose *queries*, usually in the form
+of unlabeled data instances to be labeled by an *oracle* (e.g., a human annotator).
+Active learning is well-motivated in many modern machine learning problems,
+where unlabeled data may be abundant or easily obtained, but labels are difficult,
+time-consuming, or expensive to obtain.
+
+([Settles, 2010](http://burrsettles.com/pub/settles.activelearning.pdf))
+
+&gt; You want data? Well data costs!
+
+(No one, ever)
+
+---
+
+### Where this is going
+
+&lt;img src="images/active_learning_plan.png" style="width: 90%" /&gt;
+
+---
+
+### Active Learning Scenarios
+
+1. **Membership Query Synthesis**: You get to choose which (maybe theoretical) points you'd want `\(y\)` labelled for.
+2. **Stream-Based Selective Sampling**: You get a 1 point at a time and decide which ones you'd like to query and which to discard.
+3. **Pool-Based Sampling**: You have a large collecetion of unlabelled points at your disposal, you need to send the "best ones" for labelling
+
+&lt;img src="images/active_learning_scenarios.png" style="width: 70%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
