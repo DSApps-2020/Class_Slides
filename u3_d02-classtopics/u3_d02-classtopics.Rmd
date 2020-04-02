@@ -144,3 +144,245 @@ time-consuming, or expensive to obtain.
 3. **Pool-Based Sampling**: You have a large collecetion of unlabelled points at your disposal, you need to send the "best ones" for labelling
 
 <img src="images/active_learning_scenarios.png" style="width: 70%" />
+
+---
+
+### Uncertainty Sampling
+
+.insight[
+`r emo::ji("bulb")` For a 2-class dataset, the observations your model is most uncertain of are...
+]
+
+```{r AL-LR-Example2, ref.label = "AL-LR-Example", echo = FALSE, out.width = "50%", warning=FALSE}
+
+```
+
+---
+
+### Uncertainty Sampling Measures
+
+Let $\hat{y}_i$ be the predicted classes with $i$th highest score (probability), for observations $x$ under some model $\theta$.
+
+So $\hat{y}_1 = \arg\max{P_{\theta}(y|x)}$ are the actual predicted classes, $\hat{y}_2$ is the second choices, etc.
+
+* Least Confidence: Choose those observations for which $P_{\theta}(\hat{y}_1|x)$ is smallest:
+
+$x^*_{LC} = \arg\min{P_{\theta}(\hat{y}_1|x)}$
+
+.insight[
+`r emo::ji("bulb")` For a 2-class balanced dataset, this means...
+]
+
+---
+
+* Margin Sampling: Choose those observations for which the margin between the two highest scores is smallest:
+
+$x^*_M = \arg\min{P_{\theta}(\hat{y}_1|x) - P_{\theta}(\hat{y}_2|x)}$
+
+.insight[
+`r emo::ji("bulb")` For a 2-class balanced dataset, this means...
+]
+
+* Entropy: Choose the observations for which entropy is highest:
+
+$x^*_H = \arg\max-{\sum_i P_{\theta}(\hat{y}_i|x) \log[P_{\theta}(\hat{y}_i|x)}]$
+
+We will talk more about entropy in Neural Networks.
+
+.insight[
+`r emo::ji("bulb")` For a 2-class balanced dataset, this means...
+]
+
+---
+
+### Example: The `spotify_songs` data from HW3
+
+```{r, message=FALSE}
+spotify_songs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+
+spotify_songs %>% count(playlist_genre)
+```
+
+Let's try to classify the genre of a song!
+
+---
+
+We'll take only the 12 audio features as predictors, and choose each `track_id` once (remember each song appears a few times?):
+
+```{r, message=FALSE, warning=FALSE}
+library(tidymodels)
+
+predictors <- 12:23
+
+spotify_songs <- spotify_songs %>%
+  group_by(track_id) %>%
+  sample_n(1) %>%
+  ungroup() %>%
+  distinct(track_name, .keep_all = TRUE) %>%
+  select(track_id, track_name, track_artist, playlist_genre, predictors) %>%
+  mutate(playlist_genre = recode(playlist_genre, "r&b" = "rnb"))
+
+set.seed(42)
+sptfy_split_obj <- spotify_songs %>%
+  initial_split(prop = 0.8)
+sptfy_tr <- training(sptfy_split_obj)
+sptfy_te <- testing(sptfy_split_obj)
+```
+
+---
+
+Plot twist! We only have 100 songs from each genre!
+
+```{r}
+sptfy_tr_small <- sptfy_tr %>%
+  group_by(playlist_genre) %>%
+  sample_n(100) %>%
+  ungroup()
+
+sptfy_tr_small %>% count(playlist_genre)
+```
+
+Muhaha!
+
+---
+
+We'll also have a pool of songs to query, `sptfy_tr_large`:
+
+```{r}
+sptfy_tr_large <- sptfy_tr %>%
+  anti_join(sptfy_tr_small, by = "track_id")
+```
+
+We `bake()` the 3 datasets with the small sample params recipe:
+
+```{r}
+sptfy_rec <- recipe(playlist_genre ~ ., data = sptfy_tr_small) %>%
+  update_role(track_id, track_name, track_artist,
+              new_role = "id") %>%
+  step_normalize(all_numeric(), -has_role("id")) %>%
+  step_string2factor(playlist_genre) %>%
+  prep(sptfy_tr_small, strings_as_factors = FALSE)
+
+sptfy_tr_small <- juice(sptfy_rec)
+sptfy_tr_large <- bake(sptfy_rec, new_data = sptfy_tr_large)
+sptfy_te <- bake(sptfy_rec, new_data = sptfy_te)
+```
+
+---
+
+Let's build a simple multinomial model:
+
+```{r}
+mod_mn_spec <- multinom_reg() %>%
+  set_engine("glmnet")
+
+mod_mn_fit <- mod_mn_spec %>%
+  fit(playlist_genre ~ ., data = sptfy_tr_small %>%
+        select(-track_id, -track_name, -track_artist))
+
+mod_mn_pred <- mod_mn_fit %>%
+  multi_predict(new_data = sptfy_tr_large,
+                type = "prob", penalty = 0.0001)
+
+mod_mn_pred <- mod_mn_pred %>% unnest(.pred) %>% select(-penalty)
+
+mod_mn_pred
+```
+
+---
+
+Build a function which will take each row of predicted probs and return a list of 3 uncertainty metrics:
+
+```{r}
+uncertainty_lc <- function(probs) {
+  max(probs)
+}
+
+uncertainty_m <- function(probs) {
+  o <- order(probs, decreasing = TRUE)
+  probs[o[1]] - probs[o[2]]
+}
+
+uncertainty_h <- function(probs) {
+  -sum(probs * log(probs + 0.000001))
+}
+
+uncertainty <- function(...) {
+  probs <- c(...)
+  list(
+    lc = uncertainty_lc(probs),
+    margin = uncertainty_m(probs),
+    entropy = uncertainty_h(probs)
+  )
+}
+```
+
+---
+
+```{r}
+mod_mn_unc <- mod_mn_pred %>% pmap_dfr(uncertainty)
+
+mod_mn_unc
+```
+
+Obviously these are correlated:
+
+---
+
+.pull-left[
+
+```{r AL-MR-Lc-Margin, out.width="100%"}
+mod_mn_unc %>% sample_n(1000) %>%
+  ggplot(aes(lc, margin)) +
+  geom_point() +
+  theme_classic() +
+  theme(text =
+          element_text(size = 14))
+```
+
+]
+
+.pull-right[
+
+```{r AL-MR-Lc-Entropy, out.width="100%"}
+mod_mn_unc %>% sample_n(1000) %>%
+  ggplot(aes(lc, entropy)) +
+  geom_point() +
+  theme_light() +
+  theme(text =
+          element_text(size = 14))
+```
+
+]
+
+---
+
+Which are the top 10 songs in terms of each metric the model is most curious about?
+
+```{r}
+sptfy_tr_large %>%
+  bind_cols(mod_mn_unc) %>%
+  top_n(-10, lc) %>%
+  select(track_name, track_artist, playlist_genre, lc) %>%
+  arrange(lc)
+```
+
+---
+
+```{r}
+sptfy_tr_large %>%
+  bind_cols(mod_mn_unc) %>%
+  top_n(-10, margin) %>%
+  select(track_name, track_artist, playlist_genre, margin) %>%
+  arrange(margin)
+```
+
+---
+
+```{r}
+sptfy_tr_large %>%
+  bind_cols(mod_mn_unc) %>%
+  top_n(10, entropy) %>%
+  select(track_name, track_artist, playlist_genre, entropy) %>%
+  arrange(-entropy)
+```

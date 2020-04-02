@@ -4,7 +4,7 @@
     <title>Topics in Classification</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-01" />
+    <meta name="date" content="2020-04-02" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-01
+### 2020-04-02
 
 ---
 
@@ -133,6 +133,369 @@ time-consuming, or expensive to obtain.
 3. **Pool-Based Sampling**: You have a large collecetion of unlabelled points at your disposal, you need to send the "best ones" for labelling
 
 &lt;img src="images/active_learning_scenarios.png" style="width: 70%" /&gt;
+
+---
+
+### Uncertainty Sampling
+
+.insight[
+💡 For a 2-class dataset, the observations your model is most uncertain of are...
+]
+
+&lt;img src="images/AL-LR-Example2-1.png" width="50%" /&gt;
+
+---
+
+### Uncertainty Sampling Measures
+
+Let `\(\hat{y}_i\)` be the predicted classes with `\(i\)`th highest score (probability), for observations `\(x\)` under some model `\(\theta\)`.
+
+So `\(\hat{y}_1 = \arg\max{P_{\theta}(y|x)}\)` are the actual predicted classes, `\(\hat{y}_2\)` is the second choices, etc.
+
+* Least Confidence: Choose those observations for which `\(P_{\theta}(\hat{y}_1|x)\)` is smallest:
+
+`\(x^*_{LC} = \arg\min{P_{\theta}(\hat{y}_1|x)}\)`
+
+.insight[
+💡 For a 2-class balanced dataset, this means...
+]
+
+---
+
+* Margin Sampling: Choose those observations for which the margin between the two highest scores is smallest:
+
+`\(x^*_M = \arg\min{P_{\theta}(\hat{y}_1|x) - P_{\theta}(\hat{y}_2|x)}\)`
+
+.insight[
+💡 For a 2-class balanced dataset, this means...
+]
+
+* Entropy: Choose the observations for which entropy is highest:
+
+`\(x^*_H = \arg\max-{\sum_i P_{\theta}(\hat{y}_i|x) \log[P_{\theta}(\hat{y}_i|x)}]\)`
+
+We will talk more about entropy in Neural Networks.
+
+.insight[
+💡 For a 2-class balanced dataset, this means...
+]
+
+---
+
+### Example: The `spotify_songs` data from HW3
+
+
+```r
+spotify_songs &lt;- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+
+spotify_songs %&gt;% count(playlist_genre)
+```
+
+```
+## # A tibble: 6 x 2
+##   playlist_genre     n
+##   &lt;chr&gt;          &lt;int&gt;
+## 1 edm             6043
+## 2 latin           5155
+## 3 pop             5507
+## 4 r&amp;b             5431
+## 5 rap             5746
+## 6 rock            4951
+```
+
+Let's try to classify the genre of a song!
+
+---
+
+We'll take only the 12 audio features as predictors, and choose each `track_id` once (remember each song appears a few times?):
+
+
+```r
+library(tidymodels)
+
+predictors &lt;- 12:23
+
+spotify_songs &lt;- spotify_songs %&gt;%
+  group_by(track_id) %&gt;%
+  sample_n(1) %&gt;%
+  ungroup() %&gt;%
+  distinct(track_name, .keep_all = TRUE) %&gt;%
+  select(track_id, track_name, track_artist, playlist_genre, predictors) %&gt;%
+  mutate(playlist_genre = recode(playlist_genre, "r&amp;b" = "rnb"))
+
+set.seed(42)
+sptfy_split_obj &lt;- spotify_songs %&gt;%
+  initial_split(prop = 0.8)
+sptfy_tr &lt;- training(sptfy_split_obj)
+sptfy_te &lt;- testing(sptfy_split_obj)
+```
+
+---
+
+Plot twist! We only have 100 songs from each genre!
+
+
+```r
+sptfy_tr_small &lt;- sptfy_tr %&gt;%
+  group_by(playlist_genre) %&gt;%
+  sample_n(100) %&gt;%
+  ungroup()
+
+sptfy_tr_small %&gt;% count(playlist_genre)
+```
+
+```
+## # A tibble: 6 x 2
+##   playlist_genre     n
+##   &lt;chr&gt;          &lt;int&gt;
+## 1 edm              100
+## 2 latin            100
+## 3 pop              100
+## 4 rap              100
+## 5 rnb              100
+## 6 rock             100
+```
+
+Muhaha!
+
+---
+
+We'll also have a pool of songs to query, `sptfy_tr_large`:
+
+
+```r
+sptfy_tr_large &lt;- sptfy_tr %&gt;%
+  anti_join(sptfy_tr_small, by = "track_id")
+```
+
+We `bake()` the 3 datasets with the small sample params recipe:
+
+
+```r
+sptfy_rec &lt;- recipe(playlist_genre ~ ., data = sptfy_tr_small) %&gt;%
+  update_role(track_id, track_name, track_artist,
+              new_role = "id") %&gt;%
+  step_normalize(all_numeric(), -has_role("id")) %&gt;%
+  step_string2factor(playlist_genre) %&gt;%
+  prep(sptfy_tr_small, strings_as_factors = FALSE)
+
+sptfy_tr_small &lt;- juice(sptfy_rec)
+sptfy_tr_large &lt;- bake(sptfy_rec, new_data = sptfy_tr_large)
+sptfy_te &lt;- bake(sptfy_rec, new_data = sptfy_te)
+```
+
+---
+
+Let's build a simple multinomial model:
+
+
+```r
+mod_mn_spec &lt;- multinom_reg() %&gt;%
+  set_engine("glmnet")
+
+mod_mn_fit &lt;- mod_mn_spec %&gt;%
+  fit(playlist_genre ~ ., data = sptfy_tr_small %&gt;%
+        select(-track_id, -track_name, -track_artist))
+
+mod_mn_pred &lt;- mod_mn_fit %&gt;%
+  multi_predict(new_data = sptfy_tr_large,
+                type = "prob", penalty = 0.0001)
+
+mod_mn_pred &lt;- mod_mn_pred %&gt;% unnest(.pred) %&gt;% select(-penalty)
+
+mod_mn_pred
+```
+
+```
+## # A tibble: 18,161 x 6
+##    .pred_edm .pred_latin .pred_pop .pred_rap .pred_rnb .pred_rock
+##        &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
+##  1   0.0156      0.105      0.242    0.0593    0.461      0.117  
+##  2   0.0149      0.00562    0.0305   0.00154   0.00974    0.938  
+##  3   0.0725      0.201      0.236    0.0826    0.0672     0.341  
+##  4   0.301       0.232      0.215    0.0498    0.0780     0.124  
+##  5   0.0468      0.361      0.194    0.141     0.144      0.113  
+##  6   0.0654      0.107      0.0548   0.480     0.291      0.00174
+##  7   0.00427     0.0875     0.325    0.0171    0.472      0.0941 
+##  8   0.104       0.0392     0.0570   0.495     0.302      0.00249
+##  9   0.700       0.113      0.113    0.0539    0.0106     0.0102 
+## 10   0.114       0.412      0.189    0.160     0.110      0.0146 
+## # ... with 18,151 more rows
+```
+
+---
+
+Build a function which will take each row of predicted probs and return a list of 3 uncertainty metrics:
+
+
+```r
+uncertainty_lc &lt;- function(probs) {
+  max(probs)
+}
+
+uncertainty_m &lt;- function(probs) {
+  o &lt;- order(probs, decreasing = TRUE)
+  probs[o[1]] - probs[o[2]]
+}
+
+uncertainty_h &lt;- function(probs) {
+  -sum(probs * log(probs + 0.000001))
+}
+
+uncertainty &lt;- function(...) {
+  probs &lt;- c(...)
+  list(
+    lc = uncertainty_lc(probs),
+    margin = uncertainty_m(probs),
+    entropy = uncertainty_h(probs)
+  )
+}
+```
+
+---
+
+
+```r
+mod_mn_unc &lt;- mod_mn_pred %&gt;% pmap_dfr(uncertainty)
+
+mod_mn_unc
+```
+
+```
+## # A tibble: 18,161 x 3
+##       lc margin entropy
+##    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+##  1 0.461 0.219    1.42 
+##  2 0.938 0.907    0.314
+##  3 0.341 0.105    1.61 
+##  4 0.301 0.0686   1.64 
+##  5 0.361 0.167    1.63 
+##  6 0.480 0.189    1.30 
+##  7 0.472 0.148    1.25 
+##  8 0.495 0.194    1.25 
+##  9 0.700 0.587    0.994
+## 10 0.412 0.223    1.53 
+## # ... with 18,151 more rows
+```
+
+Obviously these are correlated:
+
+---
+
+.pull-left[
+
+
+```r
+mod_mn_unc %&gt;% sample_n(1000) %&gt;%
+  ggplot(aes(lc, margin)) +
+  geom_point() +
+  theme_classic() +
+  theme(text =
+          element_text(size = 14))
+```
+
+&lt;img src="images/AL-MR-Lc-Margin-1.png" width="100%" /&gt;
+
+]
+
+.pull-right[
+
+
+```r
+mod_mn_unc %&gt;% sample_n(1000) %&gt;%
+  ggplot(aes(lc, entropy)) +
+  geom_point() +
+  theme_light() +
+  theme(text =
+          element_text(size = 14))
+```
+
+&lt;img src="images/AL-MR-Lc-Entropy-1.png" width="100%" /&gt;
+
+]
+
+---
+
+Which are the top 10 songs in terms of each metric the model is most curious about?
+
+
+```r
+sptfy_tr_large %&gt;%
+  bind_cols(mod_mn_unc) %&gt;%
+  top_n(-10, lc) %&gt;%
+  select(track_name, track_artist, playlist_genre, lc) %&gt;%
+  arrange(lc)
+```
+
+```
+## # A tibble: 10 x 4
+##    track_name                     track_artist         playlist_genre    lc
+##    &lt;chr&gt;                          &lt;chr&gt;                &lt;fct&gt;          &lt;dbl&gt;
+##  1 Rollin' (Air Raid Vehicle)     Limp Bizkit          rock           0.202
+##  2 A Wake (feat. Evan Roman)      Macklemore &amp; Ryan L~ pop            0.205
+##  3 Truly Alive                    Mitzi                pop            0.205
+##  4 Act My Age                     Katy Perry           pop            0.208
+##  5 Chained To The Rhythm          Katy Perry           pop            0.211
+##  6 El Hijo De Mama                Mr. Knightowl        latin          0.211
+##  7 Cut to Black                   Lemaitre             pop            0.212
+##  8 You Called And Told Me - Jeff~ Various Artists      rnb            0.212
+##  9 Good Time                      Owl City             latin          0.213
+## 10 She's All That                 Tevin Campbell       rnb            0.214
+```
+
+---
+
+
+```r
+sptfy_tr_large %&gt;%
+  bind_cols(mod_mn_unc) %&gt;%
+  top_n(-10, margin) %&gt;%
+  select(track_name, track_artist, playlist_genre, margin) %&gt;%
+  arrange(margin)
+```
+
+```
+## # A tibble: 10 x 4
+##    track_name                     track_artist      playlist_genre   margin
+##    &lt;chr&gt;                          &lt;chr&gt;             &lt;fct&gt;             &lt;dbl&gt;
+##  1 Misery Business - Acoustic Ve~ Paramore          latin           1.09e-5
+##  2 Solito (Lonely) [feat. Nicky ~ Messiah           latin           2.28e-5
+##  3 A Wake (feat. Evan Roman)      Macklemore &amp; Rya~ pop             4.52e-5
+##  4 Fariña                         Semser            edm             6.86e-5
+##  5 Music Is The Only Way I Can C~ Shake             edm             7.69e-5
+##  6 Hans Betaalt De Schade (feat.~ Delivio Reavon    latin           1.16e-4
+##  7 The Right Stuff                Vanessa Williams  rnb             1.23e-4
+##  8 Startede Sammen                Gobs              rap             1.38e-4
+##  9 Golden Skans                   Klaxons           rock            1.56e-4
+## 10 We Found Love                  Rihanna           latin           1.61e-4
+```
+
+---
+
+
+```r
+sptfy_tr_large %&gt;%
+  bind_cols(mod_mn_unc) %&gt;%
+  top_n(10, entropy) %&gt;%
+  select(track_name, track_artist, playlist_genre, entropy) %&gt;%
+  arrange(-entropy)
+```
+
+```
+## # A tibble: 10 x 4
+##    track_name                   track_artist         playlist_genre entropy
+##    &lt;chr&gt;                        &lt;chr&gt;                &lt;fct&gt;            &lt;dbl&gt;
+##  1 She's All That               Tevin Campbell       rnb               1.78
+##  2 Don't Stop Me Now - 2011 Mix Queen                rock              1.77
+##  3 Funky Little Beat            Connie               latin             1.77
+##  4 P.D.A. (We Just Don't Care)  John Legend          rnb               1.77
+##  5 Foe Tha Love Of $            Bone Thugs-N-Harmony rap               1.77
+##  6 Here We Go Again!            Portrait             rnb               1.77
+##  7 Blood // Water               grandson             pop               1.77
+##  8 Act My Age                   Katy Perry           pop               1.77
+##  9 When The Sun Goes Down       Arctic Monkeys       rock              1.77
+## 10 Good Looking                 Don Omar             latin             1.77
+```
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
