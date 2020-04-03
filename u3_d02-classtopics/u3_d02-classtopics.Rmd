@@ -107,7 +107,7 @@ tibble(x1 = x1, x2 = x2, y = factor(y)) %>%
   guides(color = FALSE) +
   geom_text(x = 0, y = 0, label = formula1,
             parse = FALSE, color = "black", size = 5) +
-  theme_classic() +
+  theme_light() +
   theme(text = element_text(size = 20))
 ```
 
@@ -185,9 +185,9 @@ $x^*_M = \arg\min{P_{\theta}(\hat{y}_1|x) - P_{\theta}(\hat{y}_2|x)}$
 
 * Entropy: Choose the observations for which entropy is highest:
 
-$x^*_H = \arg\max-{\sum_i P_{\theta}(\hat{y}_i|x) \log[P_{\theta}(\hat{y}_i|x)}]$
+$x^*_H = \arg\max-{\sum_i P_{\theta}(\hat{y}_i|x) \log[P_{\theta}(\hat{y}_i|x)]}$
 
-We will talk more about entropy in Neural Networks.
+We will talk more about entropy in Neural Networks, let's minimize negative entropy.
 
 .insight[
 `r emo::ji("bulb")` For a 2-class balanced dataset, this means...
@@ -270,23 +270,59 @@ sptfy_te <- bake(sptfy_rec, new_data = sptfy_te)
 
 ---
 
-Let's build a simple multinomial model:
+Let's build a simple kNN model:
 
 ```{r}
-mod_mn_spec <- multinom_reg() %>%
-  set_engine("glmnet")
+mod_spec <- nearest_neighbor(mode = "classification", neighbors = 10) %>%
+  set_engine("kknn")
 
-mod_mn_fit <- mod_mn_spec %>%
+mod_fit <- mod_spec %>%
   fit(playlist_genre ~ ., data = sptfy_tr_small %>%
         select(-track_id, -track_name, -track_artist))
 
-mod_mn_pred <- mod_mn_fit %>%
-  multi_predict(new_data = sptfy_tr_large,
-                type = "prob", penalty = 0.0001)
+mod_pred <- mod_fit %>%
+  predict(new_data = sptfy_tr_large, type = "prob")
 
-mod_mn_pred <- mod_mn_pred %>% unnest(.pred) %>% select(-penalty)
+mod_pred
+```
 
-mod_mn_pred
+---
+
+Test accuracy?
+
+```{r}
+mod_te_pred_class <- mod_fit %>%
+      predict(new_data = sptfy_te) %>%
+      bind_cols(sptfy_te)
+
+mod_te_pred_class %>%
+  accuracy(truth = playlist_genre, estimate = .pred_class)
+```
+
+```{r, echo=FALSE}
+baseline_acc <- mod_te_pred_class %>%
+  accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+  pull(.estimate)
+```
+
+
+Remember this model was built on 600 of almost 19K available unique songs!
+
+---
+
+Test Recall and Precision:
+
+```{r}
+mod_te_pred_class %>%
+  group_by(playlist_genre) %>%
+  accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+  select(playlist_genre, recall = .estimate) %>%
+  bind_cols(
+    mod_te_pred_class %>%
+      group_by(.pred_class) %>%
+      accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+      select(precision = .estimate)
+  )
 ```
 
 ---
@@ -304,7 +340,7 @@ uncertainty_m <- function(probs) {
 }
 
 uncertainty_h <- function(probs) {
-  -sum(probs * log(probs + 0.000001))
+  sum(probs * log(probs + 0.000001))
 }
 
 uncertainty <- function(...) {
@@ -320,9 +356,9 @@ uncertainty <- function(...) {
 ---
 
 ```{r}
-mod_mn_unc <- mod_mn_pred %>% pmap_dfr(uncertainty)
+mod_unc <- mod_pred %>% pmap_dfr(uncertainty)
 
-mod_mn_unc
+mod_unc
 ```
 
 Obviously these are correlated:
@@ -332,10 +368,10 @@ Obviously these are correlated:
 .pull-left[
 
 ```{r AL-MR-Lc-Margin, out.width="100%"}
-mod_mn_unc %>% sample_n(1000) %>%
+mod_unc %>% sample_n(1000) %>%
   ggplot(aes(lc, margin)) +
   geom_point() +
-  theme_classic() +
+  theme_light() +
   theme(text =
           element_text(size = 14))
 ```
@@ -345,7 +381,7 @@ mod_mn_unc %>% sample_n(1000) %>%
 .pull-right[
 
 ```{r AL-MR-Lc-Entropy, out.width="100%"}
-mod_mn_unc %>% sample_n(1000) %>%
+mod_unc %>% sample_n(1000) %>%
   ggplot(aes(lc, entropy)) +
   geom_point() +
   theme_light() +
@@ -360,29 +396,289 @@ mod_mn_unc %>% sample_n(1000) %>%
 Which are the top 10 songs in terms of each metric the model is most curious about?
 
 ```{r}
-sptfy_tr_large %>%
-  bind_cols(mod_mn_unc) %>%
+sptfy_tr_large_with_unc <- sptfy_tr_large %>%
+  bind_cols(mod_unc) %>%
+  select(track_name, track_artist, playlist_genre, lc, margin, entropy)
+
+sptfy_tr_large_with_unc %>%
   top_n(-10, lc) %>%
-  select(track_name, track_artist, playlist_genre, lc) %>%
-  arrange(lc)
+  arrange(lc, track_name)
 ```
 
 ---
 
 ```{r}
-sptfy_tr_large %>%
-  bind_cols(mod_mn_unc) %>%
+sptfy_tr_large_with_unc %>%
   top_n(-10, margin) %>%
-  select(track_name, track_artist, playlist_genre, margin) %>%
-  arrange(margin)
+  arrange(margin, track_name)
 ```
 
 ---
 
 ```{r}
-sptfy_tr_large %>%
-  bind_cols(mod_mn_unc) %>%
-  top_n(10, entropy) %>%
-  select(track_name, track_artist, playlist_genre, entropy) %>%
-  arrange(-entropy)
+sptfy_tr_large_with_unc %>%
+  top_n(-10, entropy) %>%
+  arrange(entropy, track_name)
 ```
+
+---
+
+So far it's only interesting. Will sending the observations our model is most curious about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
+
+```{r, echo=FALSE}
+active_learning_uncertainty_iteration <- function(i, unc_metric, n, debug = FALSE) {
+  if (debug) {
+    print(str_c(i, n, nrow(mod_unc), nrow(sptfy_tr_small),
+              nrow(sptfy_tr_large), as.character(rlang::enquo(unc_metric))[2],
+              sep = " "))
+  }
+  
+  mod_unc <<- mod_unc %>%
+    mutate(random = sample(1:n(), n()))
+  
+  sptfy_added <- sptfy_tr_large %>%
+    bind_cols(mod_unc) %>%
+    arrange({{unc_metric}}, track_id) %>%
+    slice(1:n) %>%
+    select(-lc,-margin, -entropy, -random)
+
+  sptfy_tr_large <<- sptfy_tr_large %>%
+    anti_join(sptfy_added, by = "track_id")
+  
+  sptfy_tr_small <<- sptfy_tr_small %>%
+    bind_rows(sptfy_added)
+  
+  mod_fit <- mod_spec %>%
+    fit(playlist_genre ~ ., data = sptfy_tr_small %>%
+          select(-track_id, -track_name, -track_artist))
+  
+  mod_unc <<- mod_fit %>%
+    predict(new_data = sptfy_tr_large,
+                  type = "prob") %>%
+    pmap_dfr(uncertainty)
+  
+  acc <- mod_fit %>%
+    predict(new_data = sptfy_te) %>%
+    bind_cols(sptfy_te) %>%
+    accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+    pull(.estimate)
+  
+  return(acc)
+}
+
+active_learning_uncertainty <- function(unc_metric, n = 100, iter = 10) {
+  sptfy_tr_small_copy <<- sptfy_tr_small
+  sptfy_tr_large_copy <<- sptfy_tr_large
+  mod_unc_copy <<- mod_unc
+  accuracies <- map_dbl(1:iter,
+                     active_learning_uncertainty_iteration,
+                     unc_metric = {{unc_metric}},
+                     n = n)
+  sptfy_tr_small <<- sptfy_tr_small_copy
+  sptfy_tr_large <<- sptfy_tr_large_copy
+  mod_unc <<- mod_unc_copy
+  return(c(baseline_acc, accuracies))
+}
+```
+
+```{r, echo=FALSE}
+n_seq <- seq(0, 1000, 100)
+simul_uncertainty <- bind_rows(
+  tibble(unc_metric = "lc", n = n_seq, acc = active_learning_uncertainty(lc)),
+  tibble(unc_metric = "margin", n = n_seq,acc = active_learning_uncertainty(margin)),
+  tibble(unc_metric = "entropy", n = n_seq,acc = active_learning_uncertainty(entropy)),
+  tibble(unc_metric = "random", n = n_seq, acc = active_learning_uncertainty(random))
+)
+```
+
+```{r Simul-Unc, echo=FALSE, out.width="60%"}
+simul_uncertainty %>%
+  ggplot(aes(n, acc, color = unc_metric)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "No. of added observations", y = "Accuracy", color = "uncertainty") +
+  scale_x_continuous(breaks = n_seq) +
+  scale_y_continuous(breaks = seq(0.32, 0.40, 0.01),
+                     labels = scales::percent_format(accuracy = 1)) +
+  theme_light()
+```
+
+---
+
+### Query by Commity (QBC)
+
+Similar to ensemble models, we have a committee of models:
+
+$C = \{\theta_1, ..., \theta_C\}$
+
+Which observations the commitee is most uncertain of? E.g.
+
+$x^*_{VE} = \arg\max-{\sum_i \frac{V(\hat{y}_i|x)}{|C|}\log{\frac{V(\hat{y}_i|x)}{|C|}}}$
+
+Where $V(\hat{y}_i|x)$ is the number of votes for $\hat{y}_i$.
+
+How do you get a committee?
+- Different models
+- Bagging
+- Same model, different subsets of features
+- Same model, different params
+
+---
+
+For example let's try multinomial regression on the small dataset:
+
+```{r}
+mod_spec <- multinom_reg() %>%
+  set_engine("glmnet")
+
+mod_fit <- mod_spec %>%
+  fit(playlist_genre ~ ., data = sptfy_tr_small %>%
+        select(-track_id, -track_name, -track_artist))
+
+mod_te_pred_class <- mod_fit %>%
+      predict(new_data = sptfy_te, penalty = 0.0001) %>%
+      bind_cols(sptfy_te)
+
+mod_te_pred_class %>%
+  accuracy(truth = playlist_genre, estimate = .pred_class)
+```
+
+```{r, echo=FALSE}
+baseline_acc <- mod_te_pred_class %>%
+  accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+  pull(.estimate)
+```
+
+---
+
+Let's do 6 multinomial regression models, each receiving 2 different features:
+
+```{r}
+fit_sub_model <- function(i, tr, te) {
+  mod_fit <- mod_spec %>%
+    fit(playlist_genre ~ ., data = tr %>%
+          select(playlist_genre, (2 + i * 2):(3 + i * 2)))
+
+  mod_fit %>%
+    predict(new_data = te, penalty = 0.0001)
+}
+mod_pred <- map_dfc(1:6, fit_sub_model,
+                    tr = sptfy_tr_small, te = sptfy_tr_large)
+mod_pred
+```
+
+---
+
+```{r}
+mod_qbc <- mod_pred %>%
+  mutate(probs = pmap(
+    select(., starts_with(".pred")),
+    function(...) table(c(...)) / 6),
+    vote_entropy = map_dbl(probs, uncertainty_h),
+    vote_margin = map_dbl(probs, uncertainty_m))
+
+sptfy_tr_large_with_qbc <- sptfy_tr_large %>%
+  bind_cols(mod_qbc) %>%
+  select(track_name, track_artist, playlist_genre,
+         starts_with(".pred"), vote_entropy)
+
+sptfy_tr_large_with_qbc %>%
+  top_n(-10, vote_entropy) %>%
+  arrange(vote_entropy)
+```
+
+---
+
+Will sending the observations our commitee is in most disagreement about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
+
+```{r, echo=FALSE}
+active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = FALSE) {
+  if (debug) {
+    print(str_c(i, n, nrow(mod_qbc), nrow(sptfy_tr_small),
+              nrow(sptfy_tr_large), as.character(rlang::enquo(qbc_metric))[2],
+              sep = " "))
+  }
+  
+  mod_qbc <<- mod_qbc %>%
+    select(-starts_with(".pred"), -probs) %>%
+    mutate(random = sample(1:n(), n()))
+  
+  sptfy_added <- sptfy_tr_large %>%
+    bind_cols(mod_qbc) %>%
+    arrange({{qbc_metric}}, track_id) %>%
+    slice(1:n) %>%
+    select(-vote_entropy, -vote_margin, -random)
+
+  sptfy_tr_large <<- sptfy_tr_large %>%
+    anti_join(sptfy_added, by = "track_id")
+  
+  sptfy_tr_small <<- sptfy_tr_small %>%
+    bind_rows(sptfy_added)
+  
+  mod_fit <- mod_spec %>%
+    fit(playlist_genre ~ ., data = sptfy_tr_small %>%
+          select(-track_id, -track_name, -track_artist))
+  
+  mod_qbc <<- map_dfc(1:6, fit_sub_model,
+                      tr = sptfy_tr_small, te = sptfy_tr_large) %>%
+    mutate(probs = pmap(
+    select(., starts_with(".pred")),
+    function(...) table(c(...)) / 6),
+    vote_entropy = map_dbl(probs, uncertainty_h),
+    vote_margin = map_dbl(probs, uncertainty_m))
+  
+  acc <- mod_fit %>%
+    predict(new_data = sptfy_te, penalty = 0.0001) %>%
+    bind_cols(sptfy_te) %>%
+    accuracy(truth = playlist_genre, estimate = .pred_class) %>%
+    pull(.estimate)
+  
+  return(acc)
+}
+
+active_learning_qbc <- function(qbc_metric, n = 100, iter = 10) {
+  sptfy_tr_small_copy <<- sptfy_tr_small
+  sptfy_tr_large_copy <<- sptfy_tr_large
+  mod_qbc_copy <<- mod_qbc
+  accuracies <- map_dbl(1:iter,
+                     active_learning_qbc_iteration,
+                     qbc_metric = {{qbc_metric}},
+                     n = n)
+  sptfy_tr_small <<- sptfy_tr_small_copy
+  sptfy_tr_large <<- sptfy_tr_large_copy
+  mod_qbc <<- mod_qbc_copy
+  return(c(baseline_acc, accuracies))
+}
+```
+
+```{r, echo=FALSE}
+n_seq <- seq(0, 1000, 100)
+simul_qbc <- bind_rows(
+  tibble(qbc_metric = "vote entropy", n = n_seq,
+         acc = active_learning_qbc(vote_entropy)),
+  tibble(qbc_metric = "vote margin", n = n_seq,
+         acc = active_learning_qbc(vote_margin)),
+  tibble(qbc_metric = "random", n = n_seq,
+         acc = active_learning_qbc(random))
+)
+```
+
+```{r Simul-QBC, echo=FALSE, out.width="60%"}
+simul_qbc %>%
+  ggplot(aes(n, acc, color = qbc_metric)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "No. of added observations", y = "Accuracy", color = "QBC") +
+  scale_y_continuous(breaks = seq(0.44, 0.50, 0.005),
+                     labels = percent_format(accuracy = 0.1)) +
+  theme_light()
+```
+
+---
+
+### Other Active Learning Metrics
+
+- Expected Model Change
+- Expected Error Reduction
+- Variance Reduction
+- And more...
