@@ -4,7 +4,7 @@
     <title>Topics in Classification</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-03" />
+    <meta name="date" content="2020-04-04" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-03
+### 2020-04-04
 
 ---
 
@@ -232,13 +232,13 @@ sptfy_te &lt;- testing(sptfy_split_obj)
 
 ---
 
-Plot twist! We only have 100 songs from each genre!
+Plot twist! We only have 10 songs from each genre!
 
 
 ```r
 sptfy_tr_small &lt;- sptfy_tr %&gt;%
   group_by(playlist_genre) %&gt;%
-  sample_n(100) %&gt;%
+  sample_n(10) %&gt;%
   ungroup()
 
 sptfy_tr_small %&gt;% count(playlist_genre)
@@ -248,12 +248,12 @@ sptfy_tr_small %&gt;% count(playlist_genre)
 ## # A tibble: 6 x 2
 ##   playlist_genre     n
 ##   &lt;chr&gt;          &lt;int&gt;
-## 1 edm              100
-## 2 latin            100
-## 3 pop              100
-## 4 rap              100
-## 5 rnb              100
-## 6 rock             100
+## 1 edm               10
+## 2 latin             10
+## 3 pop               10
+## 4 rap               10
+## 5 rnb               10
+## 6 rock              10
 ```
 
 Muhaha!
@@ -286,12 +286,12 @@ sptfy_te &lt;- bake(sptfy_rec, new_data = sptfy_te)
 
 ---
 
-Let's build a simple kNN model:
+Let's build a simple GBT model:
 
 
 ```r
-mod_spec &lt;- nearest_neighbor(mode = "classification", neighbors = 10) %&gt;%
-  set_engine("kknn")
+mod_spec &lt;- boost_tree(mode = "classification", trees = 100) %&gt;%
+  set_engine("xgboost")
 
 mod_fit &lt;- mod_spec %&gt;%
   fit(playlist_genre ~ ., data = sptfy_tr_small %&gt;%
@@ -304,20 +304,20 @@ mod_pred
 ```
 
 ```
-## # A tibble: 18,161 x 6
+## # A tibble: 18,701 x 6
 ##    .pred_edm .pred_latin .pred_pop .pred_rap .pred_rnb .pred_rock
 ##        &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
-##  1   0            0.0546     0.276   0          0.120      0.549 
-##  2   0.0188       0          0.240   0          0          0.742 
-##  3   0.0486       0.291      0.106   0.00600    0.224      0.324 
-##  4   0.113        0.0853     0.369   0.291      0.0546     0.0874
-##  5   0.297        0.345      0.178   0.113      0.0673     0     
-##  6   0.145        0.200      0       0.603      0.0516     0     
-##  7   0.00600      0          0.210   0          0.623      0.161 
-##  8   0            0.113      0.324   0.476      0.0874     0     
-##  9   0.779        0          0.115   0          0          0.106 
-## 10   0.113        0.369      0.451   0.0673     0          0     
-## # ... with 18,151 more rows
+##  1   0.00390     0.893     0.0103    0.00293   0.0798     0.00991
+##  2   0.00522     0.00160   0.112     0.00188   0.00116    0.878  
+##  3   0.593       0.183     0.181     0.0294    0.00658    0.00661
+##  4   0.150       0.358     0.0570    0.292     0.0808     0.0621 
+##  5   0.434       0.173     0.142     0.152     0.0413     0.0569 
+##  6   0.0752      0.0382    0.0382    0.781     0.0334     0.0344 
+##  7   0.0109      0.0205    0.860     0.00904   0.00922    0.0904 
+##  8   0.152       0.00578   0.0118    0.287     0.532      0.0128 
+##  9   0.0680      0.00579   0.859     0.0463    0.0103     0.0101 
+## 10   0.0159      0.0661    0.00784   0.891     0.0111     0.00763
+## # ... with 18,691 more rows
 ```
 
 ---
@@ -338,13 +338,13 @@ mod_te_pred_class %&gt;%
 ## # A tibble: 1 x 3
 ##   .metric  .estimator .estimate
 ##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-## 1 accuracy multiclass     0.383
+## 1 accuracy multiclass     0.380
 ```
 
 
 
 
-Remember this model was built on 600 of almost 19K available unique songs!
+Remember this model was built on 60 of almost 19K available unique songs!
 
 ---
 
@@ -368,12 +368,12 @@ mod_te_pred_class %&gt;%
 ## # A tibble: 6 x 3
 ##   playlist_genre recall precision
 ##   &lt;fct&gt;           &lt;dbl&gt;     &lt;dbl&gt;
-## 1 edm             0.522     0.503
-## 2 latin           0.324     0.287
-## 3 pop             0.303     0.247
-## 4 rap             0.432     0.525
-## 5 rnb             0.279     0.323
-## 6 rock            0.4       0.409
+## 1 edm             0.460     0.583
+## 2 latin           0.250     0.263
+## 3 pop             0.257     0.244
+## 4 rap             0.527     0.453
+## 5 rnb             0.214     0.296
+## 6 rock            0.517     0.385
 ```
 
 ---
@@ -415,20 +415,20 @@ mod_unc
 ```
 
 ```
-## # A tibble: 18,161 x 3
+## # A tibble: 18,701 x 3
 ##       lc margin entropy
 ##    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-##  1 0.549 0.272   -1.10 
-##  2 0.742 0.502   -0.639
-##  3 0.324 0.0329  -1.48 
-##  4 0.369 0.0777  -1.55 
-##  5 0.345 0.0478  -1.46 
-##  6 0.603 0.403   -1.06 
-##  7 0.623 0.413   -0.947
-##  8 0.476 0.152   -1.18 
-##  9 0.779 0.664   -0.682
-## 10 0.451 0.0823  -1.15 
-## # ... with 18,151 more rows
+##  1 0.893 0.813   -0.434
+##  2 0.878 0.766   -0.417
+##  3 0.593 0.410   -1.10 
+##  4 0.358 0.0664  -1.55 
+##  5 0.434 0.262   -1.52 
+##  6 0.781 0.705   -0.867
+##  7 0.860 0.770   -0.562
+##  8 0.532 0.245   -1.12 
+##  9 0.859 0.791   -0.579
+## 10 0.891 0.825   -0.473
+## # ... with 18,691 more rows
 ```
 
 Obviously these are correlated:
@@ -483,20 +483,19 @@ sptfy_tr_large_with_unc %&gt;%
 ```
 
 ```
-## # A tibble: 152 x 6
-##    track_name           track_artist   playlist_genre    lc  margin entropy
-##    &lt;chr&gt;                &lt;chr&gt;          &lt;fct&gt;          &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
-##  1 &lt;U+0412&gt;&lt;U+043E&gt;&lt;U+0443&gt;-&lt;U+0432&gt;&lt;U+043E&gt;&lt;U+0443&gt; &lt;U+043F&gt;&lt;U+0430&gt;&lt;U+043B&gt;&lt;U+0435&gt;&lt;U+0445&gt;&lt;U+0447&gt;&lt;U+044D&gt;      Jah Khalib     rap            0.291 5.89e-2   -1.56
-##  2 &lt;U+0423&gt;&lt;U+0439&gt;&lt;U+0434&gt;&lt;U+0443&gt; &lt;U+0441&gt; &lt;U+043C&gt;&lt;U+044B&gt;&lt;U+0441&gt;&lt;U+043B&gt;&lt;U+044F&gt;&lt;U+043C&gt;&lt;U+0438&gt;       Nurminsky      rap            0.291 4.25e-2   -1.50
-##  3 3 Days               Rhye           pop            0.291 5.15e-2   -1.55
-##  4 911                  BONES          rap            0.291 6.35e-2   -1.59
-##  5 A Million Lights - ~ Grant Smillie  edm            0.291 5.15e-2   -1.62
-##  6 A Moment In A Milli~ Scorpions      rock           0.291 1.27e-2   -1.51
-##  7 A Partir De Hoy      David Bisbal   latin          0.291 9.77e-2   -1.69
-##  8 Alcoholic Shrink     Upchurch       rap            0.291 7.72e-4   -1.64
-##  9 All About Us         He Is We       pop            0.291 4.01e-2   -1.63
-## 10 All For Love         Tungevaag &amp; R~ pop            0.291 1.49e-2   -1.49
-## # ... with 142 more rows
+## # A tibble: 10 x 6
+##    track_name             track_artist playlist_genre    lc  margin entropy
+##    &lt;chr&gt;                  &lt;chr&gt;        &lt;fct&gt;          &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 Buried Alive           Logic        rap            0.192 9.79e-4   -1.77
+##  2 El Ritmo de Mi Corazón Gian Marco   latin          0.202 1.71e-2   -1.78
+##  3 My Love (feat. Major ~ Wale         pop            0.206 2.33e-3   -1.76
+##  4 Suki? Suki!            Night Tempo  rnb            0.211 5.49e-3   -1.75
+##  5 rockstar               Post Malone  rap            0.219 8.05e-3   -1.77
+##  6 Just a Touch           Keith Sweat  rnb            0.220 1.20e-2   -1.76
+##  7 En Busca de Ti - Remix Zazo &amp; Gxur~ latin          0.221 1.01e-2   -1.75
+##  8 Habri Pia              Broederlief~ latin          0.222 3.52e-3   -1.75
+##  9 Mi Tierra              Gloria Este~ latin          0.222 2.57e-2   -1.77
+## 10 Quitate Tu Pa Ponerme~ Eddie Dee    latin          0.222 6.34e-3   -1.74
 ```
 
 ---
@@ -509,23 +508,19 @@ sptfy_tr_large_with_unc %&gt;%
 ```
 
 ```
-## # A tibble: 14 x 6
-##    track_name          track_artist    playlist_genre    lc  margin entropy
-##    &lt;chr&gt;               &lt;chr&gt;           &lt;fct&gt;          &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
-##  1 Niña Bonita         Chino &amp; Nacho   latin          0.364 1.00e-6   -1.09
-##  2 Gimme Gimme Gimme ~ Narada Michael~ pop            0.385 9.01e-6   -1.23
-##  3 King of Everything  Dominic Fike    pop            0.324 1.37e-5   -1.38
-##  4 RedRover            BONES           rap            0.324 1.37e-5   -1.30
-##  5 Bang My Head (feat~ David Guetta    latin          0.358 2.56e-5   -1.27
-##  6 Bring Me Back       Pure Pleasure   latin          0.358 2.56e-5   -1.12
-##  7 Temple              SwuM            rap            0.358 2.56e-5   -1.27
-##  8 Fill the Crown      Poppy           rock           0.330 2.68e-5   -1.24
-##  9 Insecure            Billy Bueffer   rap            0.379 4.03e-5   -1.24
-## 10 Chillax (feat. Ky-~ Farruko         latin          0.297 4.05e-5   -1.61
-## 11 Coloring Outside T~ MisterWives     pop            0.297 4.05e-5   -1.52
-## 12 Crash n Burn        Ilvs            edm            0.297 4.05e-5   -1.48
-## 13 Pyar Bolda          Jassa Dhillon   rap            0.297 4.05e-5   -1.48
-## 14 Venom               Ghostemane      rap            0.297 4.05e-5   -1.45
+## # A tibble: 10 x 6
+##    track_name        track_artist      playlist_genre    lc  margin entropy
+##    &lt;chr&gt;             &lt;chr&gt;             &lt;fct&gt;          &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 Tiffany           Shindy            rap            0.271 2.77e-5  -1.58 
+##  2 Amsterdam         Olly James        edm            0.474 8.28e-5  -0.932
+##  3 We'll Be Ok       Afrojack          edm            0.254 1.08e-4  -1.71 
+##  4 Funeral March - ~ Black Tiger Sex ~ edm            0.235 1.43e-4  -1.68 
+##  5 Nova              [ocean jams]      rap            0.366 3.17e-4  -1.30 
+##  6 No Te Debí Besar  C. Tangana        latin          0.315 3.49e-4  -1.46 
+##  7 Starving          Hailee Steinfeld  pop            0.443 4.12e-4  -1.11 
+##  8 Lonely (feat. Lo~ Jamila Woods      rnb            0.354 4.37e-4  -1.30 
+##  9 Karma.            Tunebased         edm            0.481 4.43e-4  -0.865
+## 10 Para, Money, E's  JIGGO             rap            0.321 4.77e-4  -1.52
 ```
 
 ---
@@ -539,18 +534,18 @@ sptfy_tr_large_with_unc %&gt;%
 
 ```
 ## # A tibble: 10 x 6
-##    track_name             track_artist  playlist_genre    lc margin entropy
-##    &lt;chr&gt;                  &lt;chr&gt;         &lt;fct&gt;          &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-##  1 Contagious             Sean Tizzle   latin          0.291 0.100    -1.73
-##  2 Together Forever       Lisette Mele~ latin          0.291 0.100    -1.73
-##  3 Black Cat              Janet Jackson rnb            0.291 0.100    -1.73
-##  4 I Feel Fly             Simon Green   edm            0.297 0.106    -1.73
-##  5 Tbt                    Madiel Lara   latin          0.291 0.100    -1.73
-##  6 Dancehall Queen (feat~ Beenie Man    rnb            0.291 0.0941   -1.72
-##  7 Stay Away from My Baby Banes World   rock           0.291 0.100    -1.72
-##  8 Ya No                  Lautaro Lopez rap            0.291 0.0941   -1.72
-##  9 Chulin Culin Chunfly ~ Voltio        latin          0.291 0.100    -1.72
-## 10 Saoco                  Wisin         latin          0.291 0.100    -1.72
+##    track_name             track_artist playlist_genre    lc  margin entropy
+##    &lt;chr&gt;                  &lt;chr&gt;        &lt;fct&gt;          &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1 El Ritmo de Mi Corazón Gian Marco   latin          0.202 1.71e-2   -1.78
+##  2 Buried Alive           Logic        rap            0.192 9.79e-4   -1.77
+##  3 Mi Tierra              Gloria Este~ latin          0.222 2.57e-2   -1.77
+##  4 rockstar               Post Malone  rap            0.219 8.05e-3   -1.77
+##  5 Time of Our Lives      Pitbull      pop            0.234 5.29e-2   -1.77
+##  6 Just a Touch           Keith Sweat  rnb            0.220 1.20e-2   -1.76
+##  7 My Love (feat. Major ~ Wale         pop            0.206 2.33e-3   -1.76
+##  8 Dance?                 Night Tempo  rnb            0.233 3.18e-2   -1.76
+##  9 Habri Pia              Broederlief~ latin          0.222 3.52e-3   -1.75
+## 10 A Real Indication      Thought Gang rock           0.255 7.60e-2   -1.75
 ```
 
 ---
@@ -561,7 +556,7 @@ So far it's only interesting. Will sending the observations our model is most cu
 
 
 
-&lt;img src="images/Simul-Unc-1.png" width="60%" /&gt;
+&lt;img src="images/Simul-Unc-1.png" width="100%" /&gt;
 
 ---
 
@@ -585,37 +580,7 @@ How do you get a committee?
 
 ---
 
-For example let's try multinomial regression on the small dataset:
-
-
-```r
-mod_spec &lt;- multinom_reg() %&gt;%
-  set_engine("glmnet")
-
-mod_fit &lt;- mod_spec %&gt;%
-  fit(playlist_genre ~ ., data = sptfy_tr_small %&gt;%
-        select(-track_id, -track_name, -track_artist))
-
-mod_te_pred_class &lt;- mod_fit %&gt;%
-      predict(new_data = sptfy_te, penalty = 0.0001) %&gt;%
-      bind_cols(sptfy_te)
-
-mod_te_pred_class %&gt;%
-  accuracy(truth = playlist_genre, estimate = .pred_class)
-```
-
-```
-## # A tibble: 1 x 3
-##   .metric  .estimator .estimate
-##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-## 1 accuracy multiclass     0.445
-```
-
-
-
----
-
-Let's do 6 multinomial regression models, each receiving 2 different features:
+Let's do 6 GBT models, each receiving 2 different consecutive features:
 
 
 ```r
@@ -625,7 +590,7 @@ fit_sub_model &lt;- function(i, tr, te) {
           select(playlist_genre, (2 + i * 2):(3 + i * 2)))
 
   mod_fit %&gt;%
-    predict(new_data = te, penalty = 0.0001)
+    predict(new_data = te)
 }
 mod_pred &lt;- map_dfc(1:6, fit_sub_model,
                     tr = sptfy_tr_small, te = sptfy_tr_large)
@@ -633,20 +598,20 @@ mod_pred
 ```
 
 ```
-## # A tibble: 18,161 x 6
+## # A tibble: 18,701 x 6
 ##    .pred_class .pred_class1 .pred_class2 .pred_class3 .pred_class4
 ##    &lt;fct&gt;       &lt;fct&gt;        &lt;fct&gt;        &lt;fct&gt;        &lt;fct&gt;       
-##  1 rnb         rnb          rock         rnb          rnb         
-##  2 rock        edm          rock         edm          edm         
-##  3 edm         rap          pop          edm          latin       
-##  4 edm         edm          rock         rock         rnb         
-##  5 latin       edm          pop          rock         rock        
-##  6 rap         rock         rap          edm          rock        
-##  7 rnb         edm          pop          rnb          pop         
-##  8 rnb         rnb          rap          rock         edm         
-##  9 edm         edm          rock         rock         edm         
-## 10 latin       edm          pop          latin        latin       
-## # ... with 18,151 more rows, and 1 more variable: .pred_class5 &lt;fct&gt;
+##  1 rnb         rnb          rock         latin        rap         
+##  2 edm         rap          rnb          edm          rock        
+##  3 latin       pop          latin        edm          latin       
+##  4 pop         rock         edm          pop          rap         
+##  5 edm         edm          rnb          edm          rap         
+##  6 rap         rap          pop          edm          rap         
+##  7 rnb         pop          pop          rnb          edm         
+##  8 pop         rnb          latin        rap          rock        
+##  9 edm         rock         pop          rap          pop         
+## 10 latin       edm          rnb          rnb          rap         
+## # ... with 18,691 more rows, and 1 more variable: .pred_class5 &lt;fct&gt;
 ```
 
 ---
@@ -667,26 +632,25 @@ sptfy_tr_large_with_qbc &lt;- sptfy_tr_large %&gt;%
 
 sptfy_tr_large_with_qbc %&gt;%
   top_n(-10, vote_entropy) %&gt;%
-  arrange(vote_entropy)
+  arrange(vote_entropy) %&gt;%
+  select(starts_with(".pred"))
 ```
 
 ```
-## # A tibble: 161 x 10
-##    track_name track_artist playlist_genre .pred_class .pred_class1
-##    &lt;chr&gt;      &lt;chr&gt;        &lt;fct&gt;          &lt;fct&gt;       &lt;fct&gt;       
-##  1 Dedicated~ Katalyst     rnb            rock        edm         
-##  2 About Las~ Miguel Reyes latin          rap         rnb         
-##  3 You're Ma~ Toni Braxton rnb            rap         rock        
-##  4 Bandito    Enzo Dong    rap            latin       edm         
-##  5 Teenage F~ Jorja Smith  pop            pop         rnb         
-##  6 Awake      Electric Gu~ pop            pop         rap         
-##  7 Seu olhar~ 2STRANGE     rnb            rock        edm         
-##  8 Brujeria   El Gran Com~ latin          rap         edm         
-##  9 Born To B~ Kygo         latin          latin       edm         
-## 10 Es un Sec~ Plan B       latin          latin       edm         
-## # ... with 151 more rows, and 5 more variables: .pred_class2 &lt;fct&gt;,
-## #   .pred_class3 &lt;fct&gt;, .pred_class4 &lt;fct&gt;, .pred_class5 &lt;fct&gt;,
-## #   vote_entropy &lt;dbl&gt;
+## # A tibble: 197 x 6
+##    .pred_class .pred_class1 .pred_class2 .pred_class3 .pred_class4
+##    &lt;fct&gt;       &lt;fct&gt;        &lt;fct&gt;        &lt;fct&gt;        &lt;fct&gt;       
+##  1 rnb         latin        edm          rock         pop         
+##  2 rap         pop          rock         latin        rnb         
+##  3 pop         edm          rnb          rock         rap         
+##  4 rap         rnb          pop          latin        rock        
+##  5 pop         rock         edm          rnb          latin       
+##  6 edm         rock         pop          rnb          rap         
+##  7 rnb         pop          latin        rock         rap         
+##  8 pop         edm          rap          rnb          latin       
+##  9 rnb         rock         rap          latin        edm         
+## 10 latin       pop          edm          rnb          rap         
+## # ... with 187 more rows, and 1 more variable: .pred_class5 &lt;fct&gt;
 ```
 
 ---
@@ -697,7 +661,7 @@ Will sending the observations our commitee is in most disagreement about to the 
 
 
 
-&lt;img src="images/Simul-QBC-1.png" width="60%" /&gt;
+&lt;img src="images/Simul-QBC-1.png" width="100%" /&gt;
 
 ---
 

@@ -231,12 +231,12 @@ sptfy_te <- testing(sptfy_split_obj)
 
 ---
 
-Plot twist! We only have 100 songs from each genre!
+Plot twist! We only have 10 songs from each genre!
 
 ```{r}
 sptfy_tr_small <- sptfy_tr %>%
   group_by(playlist_genre) %>%
-  sample_n(100) %>%
+  sample_n(10) %>%
   ungroup()
 
 sptfy_tr_small %>% count(playlist_genre)
@@ -270,11 +270,11 @@ sptfy_te <- bake(sptfy_rec, new_data = sptfy_te)
 
 ---
 
-Let's build a simple kNN model:
+Let's build a simple GBT model:
 
 ```{r}
-mod_spec <- nearest_neighbor(mode = "classification", neighbors = 10) %>%
-  set_engine("kknn")
+mod_spec <- boost_tree(mode = "classification", trees = 100) %>%
+  set_engine("xgboost")
 
 mod_fit <- mod_spec %>%
   fit(playlist_genre ~ ., data = sptfy_tr_small %>%
@@ -306,7 +306,7 @@ baseline_acc <- mod_te_pred_class %>%
 ```
 
 
-Remember this model was built on 600 of almost 19K available unique songs!
+Remember this model was built on 60 of almost 19K available unique songs!
 
 ---
 
@@ -426,7 +426,7 @@ sptfy_tr_large_with_unc %>%
 So far it's only interesting. Will sending the observations our model is most curious about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
 
 ```{r, echo=FALSE}
-active_learning_uncertainty_iteration <- function(i, unc_metric, n, debug = FALSE) {
+active_learning_uncertainty_iteration <- function(i, unc_metric, n, debug = TRUE) {
   if (debug) {
     print(str_c(i, n, nrow(mod_unc), nrow(sptfy_tr_small),
               nrow(sptfy_tr_large), as.character(rlang::enquo(unc_metric))[2],
@@ -438,7 +438,7 @@ active_learning_uncertainty_iteration <- function(i, unc_metric, n, debug = FALS
   
   sptfy_added <- sptfy_tr_large %>%
     bind_cols(mod_unc) %>%
-    arrange({{unc_metric}}, track_id) %>%
+    arrange({{unc_metric}}) %>%
     slice(1:n) %>%
     select(-lc,-margin, -entropy, -random)
 
@@ -481,8 +481,9 @@ active_learning_uncertainty <- function(unc_metric, n = 100, iter = 10) {
 }
 ```
 
-```{r, echo=FALSE}
-n_seq <- seq(0, 1000, 100)
+```{r, echo=FALSE, eval=FALSE}
+n <- 100
+n_seq <- seq(0, 10*n, n)
 simul_uncertainty <- bind_rows(
   tibble(unc_metric = "lc", n = n_seq, acc = active_learning_uncertainty(lc)),
   tibble(unc_metric = "margin", n = n_seq,acc = active_learning_uncertainty(margin)),
@@ -491,15 +492,20 @@ simul_uncertainty <- bind_rows(
 )
 ```
 
-```{r Simul-Unc, echo=FALSE, out.width="60%"}
+```{r Simul-Unc, echo=FALSE, fig.asp=0.5, out.width="100%"}
+simul_uncertainty <- read_rds("../data/AL_simul_uncertainty.rds")
+
+n <- 100
+n_seq <- seq(0, 10*n, n)
+
 simul_uncertainty %>%
   ggplot(aes(n, acc, color = unc_metric)) +
   geom_point() +
   geom_line() +
   labs(x = "No. of added observations", y = "Accuracy", color = "uncertainty") +
   scale_x_continuous(breaks = n_seq) +
-  scale_y_continuous(breaks = seq(0.32, 0.40, 0.01),
-                     labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(breaks = seq(0.3, 0.5, 0.02),
+                     labels = percent_format(accuracy = 1)) +
   theme_light()
 ```
 
@@ -525,33 +531,7 @@ How do you get a committee?
 
 ---
 
-For example let's try multinomial regression on the small dataset:
-
-```{r}
-mod_spec <- multinom_reg() %>%
-  set_engine("glmnet")
-
-mod_fit <- mod_spec %>%
-  fit(playlist_genre ~ ., data = sptfy_tr_small %>%
-        select(-track_id, -track_name, -track_artist))
-
-mod_te_pred_class <- mod_fit %>%
-      predict(new_data = sptfy_te, penalty = 0.0001) %>%
-      bind_cols(sptfy_te)
-
-mod_te_pred_class %>%
-  accuracy(truth = playlist_genre, estimate = .pred_class)
-```
-
-```{r, echo=FALSE}
-baseline_acc <- mod_te_pred_class %>%
-  accuracy(truth = playlist_genre, estimate = .pred_class) %>%
-  pull(.estimate)
-```
-
----
-
-Let's do 6 multinomial regression models, each receiving 2 different features:
+Let's do 6 GBT models, each receiving 2 different consecutive features:
 
 ```{r}
 fit_sub_model <- function(i, tr, te) {
@@ -560,7 +540,7 @@ fit_sub_model <- function(i, tr, te) {
           select(playlist_genre, (2 + i * 2):(3 + i * 2)))
 
   mod_fit %>%
-    predict(new_data = te, penalty = 0.0001)
+    predict(new_data = te)
 }
 mod_pred <- map_dfc(1:6, fit_sub_model,
                     tr = sptfy_tr_small, te = sptfy_tr_large)
@@ -584,7 +564,8 @@ sptfy_tr_large_with_qbc <- sptfy_tr_large %>%
 
 sptfy_tr_large_with_qbc %>%
   top_n(-10, vote_entropy) %>%
-  arrange(vote_entropy)
+  arrange(vote_entropy) %>%
+  select(starts_with(".pred"))
 ```
 
 ---
@@ -592,7 +573,7 @@ sptfy_tr_large_with_qbc %>%
 Will sending the observations our commitee is in most disagreement about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
 
 ```{r, echo=FALSE}
-active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = FALSE) {
+active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = TRUE) {
   if (debug) {
     print(str_c(i, n, nrow(mod_qbc), nrow(sptfy_tr_small),
               nrow(sptfy_tr_large), as.character(rlang::enquo(qbc_metric))[2],
@@ -605,7 +586,7 @@ active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = FALSE) {
   
   sptfy_added <- sptfy_tr_large %>%
     bind_cols(mod_qbc) %>%
-    arrange({{qbc_metric}}, track_id) %>%
+    arrange({{qbc_metric}}) %>%
     slice(1:n) %>%
     select(-vote_entropy, -vote_margin, -random)
 
@@ -628,7 +609,7 @@ active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = FALSE) {
     vote_margin = map_dbl(probs, uncertainty_m))
   
   acc <- mod_fit %>%
-    predict(new_data = sptfy_te, penalty = 0.0001) %>%
+    predict(new_data = sptfy_te) %>%
     bind_cols(sptfy_te) %>%
     accuracy(truth = playlist_genre, estimate = .pred_class) %>%
     pull(.estimate)
@@ -636,7 +617,7 @@ active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = FALSE) {
   return(acc)
 }
 
-active_learning_qbc <- function(qbc_metric, n = 100, iter = 10) {
+active_learning_qbc <- function(qbc_metric, n = 100, iter = 5) {
   sptfy_tr_small_copy <<- sptfy_tr_small
   sptfy_tr_large_copy <<- sptfy_tr_large
   mod_qbc_copy <<- mod_qbc
@@ -651,8 +632,9 @@ active_learning_qbc <- function(qbc_metric, n = 100, iter = 10) {
 }
 ```
 
-```{r, echo=FALSE}
-n_seq <- seq(0, 1000, 100)
+```{r, echo=FALSE, eval=FALSE}
+n <- 100
+n_seq <- seq(0, 5*n, n)
 simul_qbc <- bind_rows(
   tibble(qbc_metric = "vote entropy", n = n_seq,
          acc = active_learning_qbc(vote_entropy)),
@@ -663,14 +645,20 @@ simul_qbc <- bind_rows(
 )
 ```
 
-```{r Simul-QBC, echo=FALSE, out.width="60%"}
+```{r Simul-QBC, echo=FALSE, fig.asp=0.5, out.width="100%"}
+simul_qbc <- read_rds("../data/AL_simul_qbc.rds")
+
+n <- 100
+n_seq <- seq(0, 5*n, n)
+
 simul_qbc %>%
   ggplot(aes(n, acc, color = qbc_metric)) +
   geom_point() +
   geom_line() +
   labs(x = "No. of added observations", y = "Accuracy", color = "QBC") +
-  scale_y_continuous(breaks = seq(0.44, 0.50, 0.005),
-                     labels = percent_format(accuracy = 0.1)) +
+  scale_x_continuous(breaks = n_seq) +
+  scale_y_continuous(breaks = seq(0.3, 0.50, 0.02),
+                     labels = percent_format(accuracy = 1)) +
   theme_light()
 ```
 
