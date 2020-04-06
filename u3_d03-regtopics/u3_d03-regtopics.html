@@ -4,7 +4,7 @@
     <title>Topics in Regression</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-31" />
+    <meta name="date" content="2020-04-06" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-31
+### 2020-04-06
 
 ---
 
@@ -52,7 +52,7 @@ layout: true
 class: section-slide
 
 # MARS
-
+#### (Multivariate Adaptive Regression Splines)
 ---
 
 ### What's the No. 1 complaint about LR?
@@ -349,6 +349,228 @@ Cons:
 class: section-slide
 
 # CCA
+#### (Canonical Correlation Analysis)
+
+---
+
+### What is Linear Regression, really?
+
+&lt;img src="images/LR_geometric_interp.png" style="width: 60%" /&gt;
+
+.font80percent[
+([ESL II](https://web.stanford.edu/~hastie/Papers/ESLII.pdf))
+]
+
+`\(y = X\beta + \epsilon \rightarrow \hat{y} = X\hat\beta = X(X'X)^{-1}X'y = Hy\)`
+
+"We project `\(y\)` to the space spanned by `\(X\)`..."
+
+"We seek a linear combination of `\(X\)` that would be closest to `\(y\)`..."
+
+---
+
+### What if `\(y\)` is `\(Y\)`?
+
+If `\(Y\)` is multi-dimensional (not a single vector, but a matrix of `\(nxq\)` dependent variables), we get the same result with a `\(\hat{B}_{pxq}\)` matrix:
+
+`\(Y = XB + E \rightarrow \hat{Y} = X\hat{B} = X(X'X)^{-1}X'Y = HY\)`
+
+And if the columns of `\(X\)` are linearly independent this is equivalent to `\(q\)` separate linear regressions:
+
+
+```r
+n &lt;- 1000
+x1 &lt;- rnorm(n)
+x2 &lt;- rnorm(n)
+x3 &lt;- rnorm(n)
+
+y1 &lt;- 0 + 1 * x1 + 2 * x2 + 3 * x3 + rnorm(n)
+y2 &lt;- 1 + 2 * x1 + 3 * x2 + 4 * x3 + rnorm(n)
+Y &lt;- cbind(y1, y2)
+
+lm(Y ~ x1 + x2 + x3)
+```
+
+---
+
+
+```
+## 
+## Call:
+## lm(formula = Y ~ x1 + x2 + x3)
+## 
+## Coefficients:
+##              y1        y2      
+## (Intercept)  -0.05197   1.00172
+## x1            1.02041   2.02414
+## x2            2.07436   3.01918
+## x3            2.98838   3.96748
+```
+
+Though harder to interpret geometrically, it isn't that different:
+
+"We project each of `\(Y\)`'s columns to the space spanned by `\(X\)`..."
+
+"We seek a few linear combinations of `\(X\)` that would be closest to each of `\(Y\)`'s columns..."
+
+➡️ But in case of multi-dimensional `\(Y\)` could we not find linear combinations **of `\(Y\)`** that would be closest to linear combinations of `\(X\)`?
+
+---
+
+### What is Pearson correlation coefficient, really?
+
+`$$r=Corr(x, y) = \frac{Cov(x, y)}{\sqrt{Var(x)}\sqrt{Var(y)}} =\frac{\sum(x_i - \bar x)(y_i - \bar y)}{\sqrt{\sum(x_i - \bar x)^2}\sqrt{\sum(y_i - \bar y)^2}}$$`
+
+If we assume `\(x\)` and `\(y\)` are standardized (centered and scaled) to have mean 0 and variance `\(\frac{1}{n - 1}\)` (they have a L2 norm of 1), we could write:
+
+`\(r = \sum x_i y_i \space s.t. \space \sum x_i = 0;\sum y_i = 0; \sum x^2_i=1; \sum y^2_i=1\)`
+
+Or:
+
+`\(r = x'y \space s.t. \space \sum x_i = 0;\sum y_i = 0; x'x=1; y'y=1\)`
+
+---
+
+
+```r
+center_vec &lt;- function(x) x - mean(x)
+norm_vec &lt;- function(x) sqrt(sum(x^2))
+x_scaled &lt;- center_vec(x1) / norm_vec(center_vec(x1))
+y_scaled &lt;- center_vec(y1) / norm_vec(center_vec(y1))
+
+glue::glue("pearson: {format(cor(x1, y1), digits = 3)}
+x'y: {format(t(x_scaled) %*% y_scaled, digits = 3)}")
+```
+
+```
+## pearson: 0.246
+## x'y: 0.246
+```
+
+So the Pearson's `\(r\)` can be viewed as the dot product between `\(x\)` and `\(y\)`, when scaled.
+
+And the dot product between two vectors with L2 norm of 1 is actually the cosine of the angle between them. The higher the correlation, the larger the cosine, the smaller the angle between them, which gives another interpretation for correlation.
+
+---
+
+### What does correlation have to do with regression?
+
+`\(y = a + bx + \epsilon \rightarrow y = X\beta + \epsilon\)`
+
+And we're intereseted in `\(\hat{b}\)` which is `\(\hat \beta_2\)`.
+
+`$$\hat \beta = (X'X)^{-1}X'y = \\
+(\begin{bmatrix}
+1 &amp; ... &amp; 1\\
+x_1 &amp; ... &amp; x_n
+\end{bmatrix} \begin{bmatrix}
+1 &amp; x_1\\
+\vdots &amp; \vdots \\
+1 &amp; x_n
+\end{bmatrix})^{-1} \begin{bmatrix}
+1 &amp; ... &amp; 1\\
+x_1 &amp; ... &amp; x_n
+\end{bmatrix} \begin{bmatrix}
+y_1\\
+\vdots \\
+y_n
+\end{bmatrix}$$`
+
+It's not that hard to get that:
+
+`\(\hat{b} = \hat \beta_2 = \frac{\sum(x_i - \bar x)(y_i - \bar y)}{\sum(x_i - \bar x)^2}\)`
+
+But that means...
+
+---
+
+`$$\hat{b} = \hat \beta_2 = \frac{\sum(x_i - \bar x)(y_i - \bar y)\sqrt{\sum(y_i - \bar y)^2}}{\sum(x_i - \bar x)^2\sqrt{\sum(y_i - \bar y)^2}} \\
+=\frac{\sum(x_i - \bar x)(y_i - \bar y)\sqrt{\sum(y_i - \bar y)^2}}{\sqrt{\sum(x_i - \bar x)^2}\sqrt{\sum(y_i - \bar y)^2}\sqrt{\sum(x_i - \bar x)^2}} \\
+=\frac{Cov(x, y)}{\sqrt{Var(x)}\sqrt{Var(y)}}\frac{s_y}{s_x} = r\frac{s_y}{s_x}$$`
+
+So the Pearson's `\(r\)` is the regression coefficient when regressing `\(y\)` against `\(x\)`, and vice versa, times a different factor! .font80percent[(And the same if they are standardized to have the same variance)]
+
+
+
+
+```r
+lm_yx &lt;- lm(y1 ~ x1); lm_xy &lt;- lm(x1 ~ y1); s_x = sd(x1); s_y = sd(y1)
+
+glue::glue("pearson: {format(cor(x1, y1), digits = 3)}
+b_y * s_x / s_y: {format(lm_yx$coef[2] * s_x/s_y, digits = 3)}; b_x * s_y / s_x: {format(lm_xy$coef[2] * s_y/s_x, digits = 3)}")
+```
+
+```
+## pearson: 0.246
+## b_y * s_x / s_y: 0.246; b_x * s_y / s_x: 0.246
+```
+
+---
+
+### And now, CCA
+
+- Let `\(X_{nxp}\)` be a matrix of `\(n\)` observations with `\(p\)` random variables and `\(Y_{nxq}\)` matrix of the same `\(n\)` observations with `\(q\)` different random variables.
+
+- For example, `\(X\)` represents `\(n\)` people answering `\(p\)` questions in questionnaire A measuring stress, and `\(Y\)` represents the same `\(n\)` people answering `\(q\)` in questionnaire B also measuring stress.
+
+- Canonical Correlation Analysis seeks to find linear combinations of `\(Y\)` and of `\(X\)` that would be "closest" in the common space.
+
+- Whether you understand "closest" via correlation (small angle) or via "regression" (small sum of squares) it is the same thing.
+
+- A typical result would be `\(Corr(x_1, \frac{y_1+y_2+y_3}{3})=0.8\)`, meaning question 1 of questionnaire A is "very" correlated with the average of questions 1, 2 and 3 of questionnaire B.
+
+---
+
+We want a "viewpoint" `\(u\)` to look at high-dimensional `\(X\)`, and a "viewpoint" `\(v\)` to look at high-dimensional `\(Y\)`, such that:
+
+`\((u, v) = \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}{\frac{Cov(Xu, Yv)}{\sqrt{Var(xu)}\sqrt{Var(Yv)}}}\)`
+
+Writing `\(Corr(Xu, Yv)\)` as we did:
+
+`\((u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u^tX^tYv\)`
+`\(\text{ s.t. }\sum{Xu_i}=0;\sum{Yv_i}=0;u^tX^tXu=1;v^tY^tYv=1\)`
+
+Applying the Lagrange multipliers technique to this optimization gives:
+
+`\(L = u^tX^tYv - \frac{\theta}{2}(u^tX^tXu - 1) - \frac{\tau}{2}(v^tY^tYv - 1)\rightarrow max_{u,v}\)`
+
+(where the `\(\sum{Xu_i}=0\)` terms are dropped since they won't have an effect on `\(u\)` and `\(v\)`)
+
+---
+
+Taking derivatives with respect to `\(u\)` and `\(v\)` and comparing to 0 we obtain the equations:
+`$$(1) \space X'Yv - \theta X'Xu = 0 \\
+(2) \space Y'Xu - \tau Y'Yv = 0 $$
+
+Multiplying equation (1) by `\(u\)`, and equation (2) by `\(v\)`, and subtracting equation (2) from equation (1) we get: `\(\theta u'X'Xu = \tau v'Y'Yv\)`
+
+However, `\(u'X'Xu = v'Y'Yv = 1\)`, so we get:
+
+`\(\theta = \tau = u'X'Yv = Corr(Xu, Yv) = r\)`
+
+Equations (1) and (2) now become:
+`$$(3) \space X'Yv - rX'Xu = 0 \\
+(4) \space Y'Xu - rY'Yv = 0 $$
+
+I we assume `\(Y'Y\)` is invertible we can write from (4):
+
+`\((5) \space v = \frac{1}{r}(Y'Y)^{-1}Y'Xu\)`
+
+---
+
+Substituting for `\(v\)` in equation (3):
+
+`\((X'X)^{-1}X'Y(Y'Y)^{-1}Y'Xu = r^2u\)`
+
+If we write `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` we see that:
+
+`\(Au = r^2u\)`
+
+is a simple eigenproblem.
+
+Here the first `\(k\)` canonical correlations `\(r_1, ..., r_k\)` are the square roots of the first ordered `\(k\)` eigenvalues of the matrix `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` and the first `\(k\)` weight vectors `\(u_1, ..., u_k\)` are the associated eigenvectors.
+
+Similarly, `\(v_1, ..., v_k\)` are the eigenvectors of the matrix `\(B = (Y'Y)^{-1}Y'X(X'X)^{-1}X'Y\)`, or we can put in (5) any `\(u_i\)` and `\(r_i\)`, to give `\(v_i\)`.
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
