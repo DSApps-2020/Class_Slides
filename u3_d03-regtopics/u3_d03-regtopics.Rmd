@@ -461,13 +461,13 @@ $(u, v) = \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}{\frac{Cov(Xu, 
 
 Writing $Corr(Xu, Yv)$ as we did:
 
-$(u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u^tX^tYv$
+$(0) \space (u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u'X'Yv$
 
-$\text{ s.t. }\sum_i{X_{ij}}=0 \space\forall j;\sum_i{Y_{il}}=0 \space\forall l;u^tX^tXu=1;v^tY^tYv=1$
+$\text{ s.t. }\sum_i{X_{ij}}=0 \space\forall j;\sum_i{Y_{il}}=0 \space\forall l;u'X'Xu=1;v'Y'Yv=1$
 
 Applying the Lagrange multipliers technique to this optimization gives:
 
-$L = u^tX^tYv - \frac{\theta}{2}(u^tX^tXu - 1) - \frac{\tau}{2}(v^tY^tYv - 1)\rightarrow max_{u,v}$
+$L = u'X'Yv - \frac{\theta}{2}(u'X'Xu - 1) - \frac{\tau}{2}(v'Y'Yv - 1)\rightarrow max_{u,v}$
 
 (where the $\sum_i{X_{ij}}=0$ terms are dropped since they won't have an effect on $u$ and $v$)
 
@@ -506,7 +506,7 @@ $Au = r^2u$
 
 is a simple eigenproblem.
 
-Here the first $k$ canonical correlations $r_1, ..., r_k$ are the square roots of the first ordered $k$ eigenvalues of the matrix $A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X$ and the first $k$ weight vectors $u_1, ..., u_k$ are the associated eigenvectors.
+Here the first $k$ canonical correlations $r_1, ..., r_k$ are the square roots of the first ordered $k$ eigenvalues of the matrix $A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X$ and the first $k$ weight vectors $u_1, ..., u_k$ are the associated eigenvectors, where $k = \min(p, q)$.
 
 Similarly, $v_1, ..., v_k$ are the eigenvectors of the matrix $B = (Y'Y)^{-1}Y'X(X'X)^{-1}X'Y$, or we can put in (5) any $u_i$ and $r_i$, to give $v_i$.
 
@@ -521,4 +521,284 @@ CCA can be viewed as a unified framework for dimensionality reduction in multiva
 
 ---
 
-### CCA: Simple Example
+### CCA: A Simple Example
+
+We have 20 middle-aged men, some data regarding their physique and some data regarding their fitness results:
+
+```{r, message=FALSE}
+fitness <- read_csv("../data/fitness.csv")
+
+head(fitness)
+```
+
+What is the relationship between a man's physique and his fitness results?
+
+---
+
+We have a *really* heavy guy, and a guy who *really* likes to jump:
+
+.pull-left[
+```{r Fitness-Weight-Waist, out.width="100%"}
+ggplot(fitness, aes(weight, waist)) +
+  geom_point() +
+  theme_light()
+```
+]
+
+.pull-right[
+```{r Fitness-Jums-Situps, out.width="100%"}
+ggplot(fitness, aes(jumps, situps)) +
+  geom_point() +
+  theme_light()
+```
+]
+
+---
+
+```{r}
+fitness <- fitness %>% slice(-14, -20)
+X <-  fitness %>%
+  select(weight, waist, pulse) %>% as.matrix()
+Y <- fitness %>%
+  select(chins, situps, jumps) %>% as.matrix()
+
+mod_cca <- cancor(X, Y)
+
+mod_cca
+```
+
+---
+
+What does this mean?
+
+- The first canonical pair shows a strong negative relationship between waist size and no. of chins (the larger the waist, the less chins)
+- The effect waist size has on chins is mildly suppressed by weight and pulse
+- But this DOES NOT mean weight is positively correlated with chins, only that it is LESS negatively correlated (check this)
+- Anyway 20 observations... don't cite this.
+
+Also make sure you get the same correlation on the projected $X$ and projected $Y$:
+
+```{r}
+Xu = X %*% mod_cca$xcoef[, 1]
+Yv = Y %*% mod_cca$ycoef[, 1]
+cor(Xu, Yv)[1, 1]
+```
+
+---
+
+```{r Fitness-Max-Corr, out.width="50%"}
+tibble(Xu, Yv) %>%
+  ggplot(aes(Xu, Yv)) +
+  geom_point() +
+  theme_light()
+```
+
+---
+
+### CCA: A Problem
+
+What if $p$ and/or $q$ are very large?
+
+.font80percent[
+Example: a researcher in order to understand a complex disease, would want to find relations between the expressions of many genes (like, tens of thousands) and the variations in many DNA-markers for this disease
+]
+
+- all multiplications, inversions and eigendecompositions of matrices (e.g. $(Y'Y)^{−1}$) are long and unstable
+- as these Regression-like solutions tend to be, $u$ and $v$ will not be sparse, will probably have all elements different from zero, making interpretation very difficult
+
+---
+
+### Sparse CCA
+
+[Witten, Tibshirani and Hastie (2009)](https://www.ncbi.nlm.nih.gov/pubmed/19377034) developed one possible approach, Diagnoal Penalized CCA (or DP-CCA)
+
+General approach for decomposing matrices with penalties, "Penalized Matrix Decomposition" (PMD). They show how Sparse CCA can be achieved by essentially performing what they call $PMD(L1,L1)$ on the covariance matrix $X'Y$, with some modifications to (0):
+
+- Treat $X'X$ and $Y'Y$ as the identity matrix $I$, a step that has proven to be beneficial in high-dimensional problems where we expect sparsity
+- Loosen up the variance constraint, the L2 norm constraint, to be $\leq 1$ rather than $=1$, to make the problem convex
+- Add the Lasso penalty, controlling the L1 norm of $u$ and $v$, which tends to bring sparse solutions
+
+---
+
+(0) then becomes:
+
+$$(u, v)= 
+\text{argmax}_{u,v}{Corr(Xu, Yv)} \approx
+\text{argmax}_{u,v}u'X'Yv$$
+
+$$\text{ s.t. }u'u\leq1;v'v\leq1; ||u||_1\leq c_1; ||v||_1\leq c_2$$
+
+With $c_1$ and $c_2$ being penalty parameters which can be chosen via cross-validation.
+
+And from here the problem is solved iteratively:
+
+---
+
+Assuming some $v$ vector, the problem becomes very similar to the LASSO problem:
+
+$u = \text{argmax}_{u}u'X'Yv\text{ s.t. }u'u\leq1;||u||_1\leq c_1$
+
+We are "regressing" $X$ on $Yv$ (which is now a given vector!) to get an update for vector $u$, with this $u$ "regressing" $Y$ on $Xu$ to get an update for vector $v$, and so on until convergence.
+
+Using Regression also means high speed!
+
+These are $u_1$ and $v_1$. To get the next pair of $u_2$ and $v_2$, they repeat the process on the "remainder" of the $X'Y$ covariance matrix, once you subtract the resulting $u_1'X'Yv_1\cdot u_1\cdot v_1'$ matrix from it. And so on:
+
+$X'Y^{k+1} \leftarrow X'Y^{k} - u_1'X'Yv_1\cdot u_1\cdot v_1'$
+
+---
+
+### CCA: A Modern Example
+
+Using the [`chorrrds`](https://r-music.rbind.io/posts/2018-08-19-chords-analysis-with-the-chorrrds-package/) package I scraped the Brazilian site [CifraClub](https://www.cifraclub.com.br/) for the chords and lyrics of thousands of Rock songs:
+
+```{r}
+chords_lyrics <- read_rds("../data/chords_lyrics.rds")
+X <- chords_lyrics$X
+Y <- chords_lyrics$Y
+
+dim(X)
+dim(Y)
+```
+
+.font80percent[
+for the script including some basic pre-processing see [here](http://giorasimchoni.com/2018/10/11/2018-10-06-a-million-bright-ambassadors-of-morning/).
+]
+
+Are there interesting relations between chords and lyrics of Rock songs?
+
+---
+
+What's in $X$?
+
+```{r}
+X[1:5, 1:3]
+```
+
+What's in $Y$?
+
+```{r}
+Y[1:5, 1:3]
+```
+
+---
+
+### DP-CCA in R
+
+```{r, message=FALSE, warning=FALSE}
+library(PMA)
+
+K <- 10
+scca <- CCA(X, Y, K = 10, niter = 100, trace = FALSE)
+
+print(scca)
+```
+
+The first pair of $u$ and $v$ has 9 non-zero chords (out of `r ncol(X)`!) correlated with 206 non-zero words (out of `r ncol(Y)`!), and a correlation of 0.448.
+
+---
+
+The top 5 chords in terms of absolute weights and corresponding weights are:
+
+```{r SCCA-u1}
+k <- 1
+important_id <- which(scca$u[, k] != 0)
+important_id_order <- order(abs(scca$u[important_id, k]), decreasing = TRUE)
+important_id <- important_id[important_id_order[1:5]]
+important_id <- important_id[!is.na(important_id)]
+colnames(X)[important_id]
+scca$u[important_id, k]
+```
+
+---
+
+The top 5 words and corresponding weights are:
+
+```{r SCCA-v1}
+important_id <- which(scca$v[, k] != 0)
+important_id_order <- order(abs(scca$v[important_id, k]), decreasing = TRUE)
+important_id <- important_id[important_id_order[1:5]]
+important_id <- important_id[!is.na(important_id)]
+colnames(Y)[important_id]
+scca$v[important_id, k]
+```
+
+If you know some chords this pattern makes perfect sense! The A5, B5, D5 etc. chords are also known as Power Chords, usually played with electric guitars, and are used mainly in hard rock songs (think Guns n Roses), where words such as "hell", "thunder" and... "blood" are used abundantly.
+
+---
+
+```{r SCCA-Pair1, echo=FALSE, out.width = "100%", warning=FALSE, message=FALSE, fig.asp=0.8}
+library(patchwork)
+
+weights_tibble <- function(m1, m2) {
+  as_tibble(m1) %>%
+    mutate(label = colnames(m2)) %>%
+    mutate_if(is.numeric,
+              funs(case_when(. == 0 ~ runif(n(), -0.01, 0.01), TRUE ~ .))) %>%
+    select(label, everything())
+}
+
+max_weights <- function(tib, k, top, n, col) {
+  tn <- ifelse(top, n, -n) 
+  suppressMessages(
+    tib %>%
+      select(1, k + 1) %>%
+      top_n(tn) %>%
+      slice(1:n) %>%
+      mutate(color = col) %>%
+      set_names(c("label", "weight", "color"))
+  )
+}
+
+max_weights_combined <- function(M, k, n, col_top, col_bot) {
+  combined <- rbind(
+    max_weights(M, k, TRUE, n, col_top),
+    max_weights(M, k, FALSE, n, col_bot)
+    ) %>%
+    mutate(weight = ifelse(abs(weight) <= 0.01, 0, weight)) %>%
+    arrange(weight)
+  combined$label_factor <- factor(combined$label, levels = as.character(combined$label))
+  combined
+}
+
+plot_weights_single_side <- function(combined, title) {
+  combined %>%
+    mutate(pos_label = ifelse(weight > 0, label, NA),
+           neg_label = ifelse(weight < 0, label, NA)) %>%
+    ggplot(aes(label_factor, weight, fill = color)) +
+    geom_bar(stat = "identity", alpha = 0.5) +
+    coord_flip() +
+    theme_bw() +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.title = element_text(
+            family = "mono", hjust = 0.05,
+            margin = margin(t = 10, b = -15))) +
+    ylim(c(-1.1, 1.1)) +
+    labs(title = title, y = NULL, x = NULL) +
+    scale_fill_identity() +
+    scale_color_identity() +
+    geom_text(aes(y = weight, label = pos_label, color = color),
+              na.rm = TRUE, nudge_y = 0.05, family = "mono", hjust = "left") +
+    geom_text(aes(y = weight, label = neg_label, color = color),
+              na.rm = TRUE, nudge_y = -0.05, family = "mono", hjust = "right")
+}
+
+plot_weights <- function(res, x, y, k, title = NULL) {
+  U <- weights_tibble(res$u, x)
+  V <- weights_tibble(res$v, y)
+  chords_combined <- max_weights_combined(U, k, 5, "darkgreen", "red")
+  words_combined <- max_weights_combined(V, k, 5, "blue", "orange")
+  p1 <- plot_weights_single_side(chords_combined, "Chords")
+  p2 <- plot_weights_single_side(words_combined, "Lyrics")
+  p1 + p2 + plot_annotation(title = title)
+}
+
+plot_weights(scca, X, Y, 1, "Power chords are correlated with hard rock lyrics")
+```
+
+---
+
+```{r SCCA-Pair2, echo=FALSE, out.width = "100%", warning=FALSE, message=FALSE, fig.asp=0.8}
+plot_weights(scca, X, Y, 2, "Major chords A, E, B are correlated with Soft Rock happy lyrics")
+```

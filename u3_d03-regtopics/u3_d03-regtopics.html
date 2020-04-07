@@ -527,13 +527,13 @@ We want a "viewpoint" `\(u \in R^p\)` to look at high-dimensional `\(X\)`, and a
 
 Writing `\(Corr(Xu, Yv)\)` as we did:
 
-`\((u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u^tX^tYv\)`
+`\((0) \space (u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u'X'Yv\)`
 
-`\(\text{ s.t. }\sum_i{X_{ij}}=0 \space\forall j;\sum_i{Y_{il}}=0 \space\forall l;u^tX^tXu=1;v^tY^tYv=1\)`
+`\(\text{ s.t. }\sum_i{X_{ij}}=0 \space\forall j;\sum_i{Y_{il}}=0 \space\forall l;u'X'Xu=1;v'Y'Yv=1\)`
 
 Applying the Lagrange multipliers technique to this optimization gives:
 
-`\(L = u^tX^tYv - \frac{\theta}{2}(u^tX^tXu - 1) - \frac{\tau}{2}(v^tY^tYv - 1)\rightarrow max_{u,v}\)`
+`\(L = u'X'Yv - \frac{\theta}{2}(u'X'Xu - 1) - \frac{\tau}{2}(v'Y'Yv - 1)\rightarrow max_{u,v}\)`
 
 (where the `\(\sum_i{X_{ij}}=0\)` terms are dropped since they won't have an effect on `\(u\)` and `\(v\)`)
 
@@ -572,7 +572,7 @@ If we write `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` we see that:
 
 is a simple eigenproblem.
 
-Here the first `\(k\)` canonical correlations `\(r_1, ..., r_k\)` are the square roots of the first ordered `\(k\)` eigenvalues of the matrix `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` and the first `\(k\)` weight vectors `\(u_1, ..., u_k\)` are the associated eigenvectors.
+Here the first `\(k\)` canonical correlations `\(r_1, ..., r_k\)` are the square roots of the first ordered `\(k\)` eigenvalues of the matrix `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` and the first `\(k\)` weight vectors `\(u_1, ..., u_k\)` are the associated eigenvectors, where `\(k = \min(p, q)\)`.
 
 Similarly, `\(v_1, ..., v_k\)` are the eigenvectors of the matrix `\(B = (Y'Y)^{-1}Y'X(X'X)^{-1}X'Y\)`, or we can put in (5) any `\(u_i\)` and `\(r_i\)`, to give `\(v_i\)`.
 
@@ -587,7 +587,343 @@ CCA can be viewed as a unified framework for dimensionality reduction in multiva
 
 ---
 
-### CCA: Simple Example
+### CCA: A Simple Example
+
+We have 20 middle-aged men, some data regarding their physique and some data regarding their fitness results:
+
+
+```r
+fitness &lt;- read_csv("../data/fitness.csv")
+
+head(fitness)
+```
+
+```
+## # A tibble: 6 x 6
+##   weight waist pulse chins situps jumps
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+## 1    191    36    50     5    162    60
+## 2    189    37    52     2    110    60
+## 3    193    38    58    12    101   101
+## 4    162    35    62    12    105    37
+## 5    189    35    46    13    155    58
+## 6    182    36    56     4    101    42
+```
+
+What is the relationship between a man's physique and his fitness results?
+
+---
+
+We have a *really* heavy guy, and a guy who *really* likes to jump:
+
+.pull-left[
+
+```r
+ggplot(fitness, aes(weight, waist)) +
+  geom_point() +
+  theme_light()
+```
+
+&lt;img src="images/Fitness-Weight-Waist-1.png" width="100%" /&gt;
+]
+
+.pull-right[
+
+```r
+ggplot(fitness, aes(jumps, situps)) +
+  geom_point() +
+  theme_light()
+```
+
+&lt;img src="images/Fitness-Jums-Situps-1.png" width="100%" /&gt;
+]
+
+---
+
+
+```r
+fitness &lt;- fitness %&gt;% slice(-14, -20)
+X &lt;-  fitness %&gt;%
+  select(weight, waist, pulse) %&gt;% as.matrix()
+Y &lt;- fitness %&gt;%
+  select(chins, situps, jumps) %&gt;% as.matrix()
+
+mod_cca &lt;- cancor(X, Y)
+
+mod_cca
+```
+
+```
+## $cor
+## [1] 0.81405809 0.29671748 0.06902653
+## 
+## $xcoef
+##                [,1]         [,2]         [,3]
+## weight -0.004532796 -0.021071104 -0.000489462
+## waist   0.138548292  0.115809822 -0.045769011
+## pulse  -0.004648447  0.003889603 -0.036050107
+## 
+## $ycoef
+##                [,1]         [,2]         [,3]
+## chins  -0.017960992  0.019265549 -0.060928131
+## situps -0.004276666 -0.002437772  0.003750079
+## jumps   0.003124631  0.005168287  0.001372880
+## 
+## $xcenter
+##    weight     waist     pulse 
+## 177.05556  34.94444  55.77778 
+## 
+## $ycenter
+##     chins    situps     jumps 
+##  10.33333 152.83333  72.94444
+```
+
+---
+
+What does this mean?
+
+- The first canonical pair shows a strong negative relationship between waist size and no. of chins (the larger the waist, the less chins)
+- The effect waist size has on chins is mildly suppressed by weight and pulse
+- But this DOES NOT mean weight is positively correlated with chins, only that it is LESS negatively correlated (check this)
+- Anyway 20 observations... don't cite this.
+
+Also make sure you get the same correlation on the projected `\(X\)` and projected `\(Y\)`:
+
+
+```r
+Xu = X %*% mod_cca$xcoef[, 1]
+Yv = Y %*% mod_cca$ycoef[, 1]
+cor(Xu, Yv)[1, 1]
+```
+
+```
+## [1] 0.8140581
+```
+
+---
+
+
+```r
+tibble(Xu, Yv) %&gt;%
+  ggplot(aes(Xu, Yv)) +
+  geom_point() +
+  theme_light()
+```
+
+&lt;img src="images/Fitness-Max-Corr-1.png" width="50%" /&gt;
+
+---
+
+### CCA: A Problem
+
+What if `\(p\)` and/or `\(q\)` are very large?
+
+.font80percent[
+Example: a researcher in order to understand a complex disease, would want to find relations between the expressions of many genes (like, tens of thousands) and the variations in many DNA-markers for this disease
+]
+
+- all multiplications, inversions and eigendecompositions of matrices (e.g. `\((Y'Y)^{−1}\)`) are long and unstable
+- as these Regression-like solutions tend to be, `\(u\)` and `\(v\)` will not be sparse, will probably have all elements different from zero, making interpretation very difficult
+
+---
+
+### Sparse CCA
+
+[Witten, Tibshirani and Hastie (2009)](https://www.ncbi.nlm.nih.gov/pubmed/19377034) developed one possible approach, Diagnoal Penalized CCA (or DP-CCA)
+
+General approach for decomposing matrices with penalties, "Penalized Matrix Decomposition" (PMD). They show how Sparse CCA can be achieved by essentially performing what they call `\(PMD(L1,L1)\)` on the covariance matrix `\(X'Y\)`, with some modifications to (0):
+
+- Treat `\(X'X\)` and `\(Y'Y\)` as the identity matrix `\(I\)`, a step that has proven to be beneficial in high-dimensional problems where we expect sparsity
+- Loosen up the variance constraint, the L2 norm constraint, to be `\(\leq 1\)` rather than `\(=1\)`, to make the problem convex
+- Add the Lasso penalty, controlling the L1 norm of `\(u\)` and `\(v\)`, which tends to bring sparse solutions
+
+---
+
+(0) then becomes:
+
+`$$(u, v)= 
+\text{argmax}_{u,v}{Corr(Xu, Yv)} \approx
+\text{argmax}_{u,v}u'X'Yv$$`
+
+`$$\text{ s.t. }u'u\leq1;v'v\leq1; ||u||_1\leq c_1; ||v||_1\leq c_2$$`
+
+With `\(c_1\)` and `\(c_2\)` being penalty parameters which can be chosen via cross-validation.
+
+And from here the problem is solved iteratively:
+
+---
+
+Assuming some `\(v\)` vector, the problem becomes very similar to the LASSO problem:
+
+`\(u = \text{argmax}_{u}u'X'Yv\text{ s.t. }u'u\leq1;||u||_1\leq c_1\)`
+
+We are "regressing" `\(X\)` on `\(Yv\)` (which is now a given vector!) to get an update for vector `\(u\)`, with this `\(u\)` "regressing" `\(Y\)` on `\(Xu\)` to get an update for vector `\(v\)`, and so on until convergence.
+
+Using Regression also means high speed!
+
+These are `\(u_1\)` and `\(v_1\)`. To get the next pair of `\(u_2\)` and `\(v_2\)`, they repeat the process on the "remainder" of the `\(X'Y\)` covariance matrix, once you subtract the resulting `\(u_1'X'Yv_1\cdot u_1\cdot v_1'\)` matrix from it. And so on:
+
+`\(X'Y^{k+1} \leftarrow X'Y^{k} - u_1'X'Yv_1\cdot u_1\cdot v_1'\)`
+
+---
+
+### CCA: A Modern Example
+
+Using the [`chorrrds`](https://r-music.rbind.io/posts/2018-08-19-chords-analysis-with-the-chorrrds-package/) package I scraped the Brazilian site [CifraClub](https://www.cifraclub.com.br/) for the chords and lyrics of thousands of Rock songs:
+
+
+```r
+chords_lyrics &lt;- read_rds("../data/chords_lyrics.rds")
+X &lt;- chords_lyrics$X
+Y &lt;- chords_lyrics$Y
+
+dim(X)
+```
+
+```
+## [1] 3297   79
+```
+
+```r
+dim(Y)
+```
+
+```
+## [1] 3297  784
+```
+
+.font80percent[
+for the script including some basic pre-processing see [here](http://giorasimchoni.com/2018/10/11/2018-10-06-a-million-bright-ambassadors-of-morning/).
+]
+
+Are there interesting relations between chords and lyrics of Rock songs?
+
+---
+
+What's in `\(X\)`?
+
+
+```r
+X[1:5, 1:3]
+```
+
+```
+##                                Terms
+## Docs                                    A5        D5         E5
+##   ac dc back in black           1.38518557 1.4010408 1.47338388
+##   ac dc big balls               0.00000000 0.0000000 0.00000000
+##   ac dc cant stop rock n roll   1.36621043 0.6909242 0.00000000
+##   ac dc for those about to rock 0.03710318 0.0000000 0.03946564
+##   ac dc highway to hell         0.00000000 0.0000000 0.14258554
+```
+
+What's in `\(Y\)`?
+
+
+```r
+Y[1:5, 1:3]
+```
+
+```
+##                                Terms
+## Docs                                black     catch        die
+##   ac dc back in black           0.9662521 0.1348891 0.09439266
+##   ac dc big balls               0.0000000 0.0000000 0.00000000
+##   ac dc cant stop rock n roll   0.0000000 0.0000000 0.00000000
+##   ac dc for those about to rock 0.0000000 0.0000000 0.00000000
+##   ac dc highway to hell         0.0000000 0.0000000 0.00000000
+```
+
+---
+
+### DP-CCA in R
+
+
+```r
+library(PMA)
+
+K &lt;- 10
+scca &lt;- CCA(X, Y, K = 10, niter = 100, trace = FALSE)
+
+print(scca)
+```
+
+```
+## Call: CCA(x = X, z = Y, K = 10, niter = 100, trace = FALSE)
+## 
+## 
+## Num non-zeros u's:  9 9 14 22 16 18 37 30 32 27 
+## Num non-zeros v's:  206 144 221 262 177 279 277 199 268 212 
+## Type of x:  standard 
+## Type of z:  standard 
+## Penalty for x: L1 bound is  0.3 
+## Penalty for z: L1 bound is  0.3 
+## Cor(Xu,Zv):  0.4481368 0.3475206 0.4145097 0.4594632 0.4311564 0.4451745 
+## 0.489829 0.4203822 0.463351 0.4276246
+```
+
+The first pair of `\(u\)` and `\(v\)` has 9 non-zero chords (out of 79!) correlated with 206 non-zero words (out of 784!), and a correlation of 0.448.
+
+---
+
+The top 5 chords in terms of absolute weights and corresponding weights are:
+
+
+```r
+k &lt;- 1
+important_id &lt;- which(scca$u[, k] != 0)
+important_id_order &lt;- order(abs(scca$u[important_id, k]), decreasing = TRUE)
+important_id &lt;- important_id[important_id_order[1:5]]
+important_id &lt;- important_id[!is.na(important_id)]
+colnames(X)[important_id]
+```
+
+```
+## [1] "B5"  "A5"  "E5"  "D5"  "F#5"
+```
+
+```r
+scca$u[important_id, k]
+```
+
+```
+## [1] 0.5120943 0.4797985 0.4200780 0.3749777 0.2375822
+```
+
+---
+
+The top 5 words and corresponding weights are:
+
+
+```r
+important_id &lt;- which(scca$v[, k] != 0)
+important_id_order &lt;- order(abs(scca$v[important_id, k]), decreasing = TRUE)
+important_id &lt;- important_id[important_id_order[1:5]]
+important_id &lt;- important_id[!is.na(important_id)]
+colnames(Y)[important_id]
+```
+
+```
+## [1] "edge"    "hell"    "tryin"   "thunder" "blood"
+```
+
+```r
+scca$v[important_id, k]
+```
+
+```
+## [1] 0.3788166 0.2625134 0.2603274 0.2382183 0.2306617
+```
+
+If you know some chords this pattern makes perfect sense! The A5, B5, D5 etc. chords are also known as Power Chords, usually played with electric guitars, and are used mainly in hard rock songs (think Guns n Roses), where words such as "hell", "thunder" and... "blood" are used abundantly.
+
+---
+
+&lt;img src="images/SCCA-Pair1-1.png" width="100%" /&gt;
+
+---
+
+&lt;img src="images/SCCA-Pair2-1.png" width="100%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
