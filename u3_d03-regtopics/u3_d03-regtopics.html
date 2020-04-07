@@ -4,7 +4,7 @@
     <title>Topics in Regression</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-06" />
+    <meta name="date" content="2020-04-07" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-06
+### 2020-04-07
 
 ---
 
@@ -521,26 +521,28 @@ b_y * s_x / s_y: {format(lm_yx$coef[2] * s_x/s_y, digits = 3)}; b_x * s_y / s_x:
 
 ---
 
-We want a "viewpoint" `\(u\)` to look at high-dimensional `\(X\)`, and a "viewpoint" `\(v\)` to look at high-dimensional `\(Y\)`, such that:
+We want a "viewpoint" `\(u \in R^p\)` to look at high-dimensional `\(X\)`, and a "viewpoint" `\(v \in R^q\)` to look at high-dimensional `\(Y\)`, such that:
 
 `\((u, v) = \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}{\frac{Cov(Xu, Yv)}{\sqrt{Var(xu)}\sqrt{Var(Yv)}}}\)`
 
 Writing `\(Corr(Xu, Yv)\)` as we did:
 
 `\((u, v)= \text{argmax}_{u,v}{Corr(Xu, Yv)} = \text{argmax}_{u,v}u^tX^tYv\)`
-`\(\text{ s.t. }\sum{Xu_i}=0;\sum{Yv_i}=0;u^tX^tXu=1;v^tY^tYv=1\)`
+
+`\(\text{ s.t. }\sum_i{X_{ij}}=0 \space\forall j;\sum_i{Y_{il}}=0 \space\forall l;u^tX^tXu=1;v^tY^tYv=1\)`
 
 Applying the Lagrange multipliers technique to this optimization gives:
 
 `\(L = u^tX^tYv - \frac{\theta}{2}(u^tX^tXu - 1) - \frac{\tau}{2}(v^tY^tYv - 1)\rightarrow max_{u,v}\)`
 
-(where the `\(\sum{Xu_i}=0\)` terms are dropped since they won't have an effect on `\(u\)` and `\(v\)`)
+(where the `\(\sum_i{X_{ij}}=0\)` terms are dropped since they won't have an effect on `\(u\)` and `\(v\)`)
 
 ---
 
 Taking derivatives with respect to `\(u\)` and `\(v\)` and comparing to 0 we obtain the equations:
-`$$(1) \space X'Yv - \theta X'Xu = 0 \\
-(2) \space Y'Xu - \tau Y'Yv = 0 $$
+
+`\((1) \space X'Yv - \theta X'Xu = 0 \space\)`
+`\((2) \space Y'Xu - \tau Y'Yv = 0\)`
 
 Multiplying equation (1) by `\(u\)`, and equation (2) by `\(v\)`, and subtracting equation (2) from equation (1) we get: `\(\theta u'X'Xu = \tau v'Y'Yv\)`
 
@@ -549,12 +551,14 @@ However, `\(u'X'Xu = v'Y'Yv = 1\)`, so we get:
 `\(\theta = \tau = u'X'Yv = Corr(Xu, Yv) = r\)`
 
 Equations (1) and (2) now become:
-`$$(3) \space X'Yv - rX'Xu = 0 \\
-(4) \space Y'Xu - rY'Yv = 0 $$
 
-I we assume `\(Y'Y\)` is invertible we can write from (4):
+`\((3) \space X'Yv - rX'Xu = 0  \space\)`
+`\((4) \space Y'Xu - rY'Yv = 0\)`
 
-`\((5) \space v = \frac{1}{r}(Y'Y)^{-1}Y'Xu\)`
+If we assume `\(Y'Y\)` and `\(X'X\)` are invertible we can write:
+
+`\((5) \space v = \frac{1}{r}(Y'Y)^{-1}Y'Xu \space\)` 
+`\((6) \space u = \frac{1}{r}(X'X)^{-1}X'Yv\)`
 
 ---
 
@@ -571,6 +575,19 @@ is a simple eigenproblem.
 Here the first `\(k\)` canonical correlations `\(r_1, ..., r_k\)` are the square roots of the first ordered `\(k\)` eigenvalues of the matrix `\(A = (X'X)^{-1}X'Y(Y'Y)^{-1}Y'X\)` and the first `\(k\)` weight vectors `\(u_1, ..., u_k\)` are the associated eigenvectors.
 
 Similarly, `\(v_1, ..., v_k\)` are the eigenvectors of the matrix `\(B = (Y'Y)^{-1}Y'X(X'X)^{-1}X'Y\)`, or we can put in (5) any `\(u_i\)` and `\(r_i\)`, to give `\(v_i\)`.
+
+---
+
+### The beauty of CCA
+
+CCA can be viewed as a unified framework for dimensionality reduction in multivariate data analysis, and it generalizes other methods:
+- If we let `\(X = Y\)` and change the constraints to be `\(u'u = 1\)` we get Principal Components Analysis (PCA), i.e. finding directions of maximum variance in `\(X\)` (or let `\(X\)` predict itself)
+- If we let `\(Y'Y = I\)` we get a result equivalent to multivariate linear regression
+- If `\(X'X = I\)` and `\(Y'Y = I\)` we get symmetrical Partial Least Squares (PLS), i.e. `\(u\)` and `\(v\)` would maximize the sample covariance `\(u'X'Yv\)`
+
+---
+
+### CCA: Simple Example
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
