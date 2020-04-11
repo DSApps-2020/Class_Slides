@@ -4,7 +4,7 @@
     <title>Topics in Classification</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-04" />
+    <meta name="date" content="2020-04-11" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-04
+### 2020-04-11
 
 ---
 
@@ -62,20 +62,6 @@ Let's tackle just a few issues:
 - Imbalanced Classes
 - Multiple Classes
 - Not enough labelled data and data labeling is expensive
-
----
-
-class: section-slide
-
-# Imbalanced Classes
-
----
-
-### Typical examples of Imbalanced Classes scenarios
-
-- Rare diseases: [this](https://www.kaggle.com/c/hivprogression) dataset contains genetic data for 1,000 HIV patients, 206 out of 1,000 patients improved after 16 weeks of therapy
-- Conversion/Sell/CTR rates: [this]() dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
-- Fraud detection: [this](https://www.kaggle.com/mlg-ulb/creditcardfraud) dataset contains credit card transactions for a major European CC, 492 frauds out of 284,807 transactions
 
 ---
 
@@ -671,6 +657,784 @@ Will sending the observations our commitee is in most disagreement about to the 
 - Expected Error Reduction
 - Variance Reduction
 - And more...
+
+---
+
+class: section-slide
+
+# Imbalanced Classes
+
+---
+
+### Typical examples of Imbalanced Classes scenarios
+
+- Rare diseases: [this](https://www.kaggle.com/c/hivprogression) dataset contains genetic data for 1,000 HIV patients, 206 out of 1,000 patients improved after 16 weeks of therapy
+- Conversion/Sell/CTR rates: [this]() dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
+- Fraud detection: [this](https://www.kaggle.com/mlg-ulb/creditcardfraud) dataset contains credit card transactions for a major European CC, 492 frauds out of 284,807 transactions
+
+---
+
+### What's so difficult about imbalanced classes?
+
+
+```r
+okcupid_pets &lt;- as_tibble(read_rds("../data/okcupid3_imp_mice.rds"))
+
+idx &lt;- read_rds("../data/okcupid3_idx.rda")
+train_idx &lt;- idx$train_idx
+valid_idx &lt;- idx$valid_idx
+test_idx &lt;- idx$test_idx
+
+ok_train &lt;- okcupid_pets[train_idx, ]
+ok_valid &lt;- okcupid_pets[valid_idx, ]
+
+ok_train %&gt;%
+  count(pets) %&gt;%
+  mutate(pct = round(n / sum(n), 2))
+```
+
+```
+## # A tibble: 2 x 3
+##   pets      n   pct
+##   &lt;fct&gt; &lt;int&gt; &lt;dbl&gt;
+## 1 cats   1624  0.16
+## 2 dogs   8376  0.84
+```
+
+.insight[
+💡 What's a sure way to get 84% accuracy?
+]
+
+---
+
+
+
+
+```r
+mod_glm &lt;- glm(pets ~ ., data = ok_train, family = "binomial")
+pred_glm &lt;- 1 - predict(mod_glm, ok_valid, type = "response")
+
+pred_glm_class &lt;- ifelse(pred_glm &gt; 0.5, "cats", "dogs")
+true_class &lt;- ok_valid$pets
+
+table(true_class, pred_glm_class)
+```
+
+```
+##           pred_glm_class
+## true_class cats dogs
+##       cats   66  407
+##       dogs   62 2194
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_glm)
+```
+
+```
+## Setting direction: controls &lt; cases
+```
+
+```
+## AUC: 0.736
+## ACC: 0.828
+## Cats: Recall: 0.14
+##       Precision: 0.516
+## Dogs: Recall: 0.973
+##       Precision: 0.844
+```
+
+---
+
+### Remedies for Imbalanced Classes
+
+- Model level
+  - Tuning parameters and Cutoff choice
+  - Cost-aware training: Case weights and Prior probabilities
+- Data level
+  - Down sampling
+  - Up sampling
+  - Get more data and features from minority class, similar to Active Learning
+- Change of Framework
+  - Anomaly Detection
+- One final word of wisdom
+
+---
+
+### Tuning parameters and cutoff choice
+
+A general good approach would be:
+
+1. Choose a  model to maximize AUC on one part of the training dataset (using resampling)
+2. Choose a cutoff score on another part of the training dataset
+3. Fitting the entire thing on all training set and checking on test set
+
+But. You could incorporate your initial goal even into (1), making the cutoff another tuning parameter that would maximize:
+
+- Recall(cats): If never missing a cat person (the minority class) is your job .font80percent[(while maintaining acceptable level of Precision(cats))]
+- Precision(cats): If you don't have room for error when you say a person is a cat person .font80percent[(while maintaining acceptable level of Precision(cats))]
+- Some other metric like F1-score
+
+---
+
+Let us choose a model by maximizing AUC then present our client with a few potential cutoffs.
+
+We'll begin by splitting our training set into two:
+
+
+```r
+ok_split &lt;- initial_split(ok_train, prop = 0.7, strata = pets)
+
+ok_train1 &lt;- training(ok_split)
+ok_train2 &lt;- testing(ok_split)
+
+dim(ok_train1)
+```
+
+```
+## [1] 7001   38
+```
+
+```r
+dim(ok_train2)
+```
+
+```
+## [1] 2999   38
+```
+
+---
+
+Use the first training set to choose a GBT model to maximize AUC with 5-fold CV:
+
+
+```r
+library(tune)
+
+mod_gbt_spec &lt;- boost_tree(mode = "classification",
+                           mtry = tune(),
+                           min_n = tune(),
+                           learn_rate = tune(),
+                           trees = 1000) %&gt;%
+  set_engine("xgboost")
+
+gbt_grid &lt;- grid_regular(mtry(range(10, 50)),
+                         min_n(range(10, 100)),
+                         learn_rate(range(-3, -1)),
+                         levels = 3)
+rec_gbt &lt;- recipe(pets ~ ., data = ok_train1) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes()) %&gt;%
+  prep(ok_train1)
+
+cv_splits &lt;- vfold_cv(juice(rec_gbt), v = 5, strata = pets)
+```
+
+---
+
+
+```r
+tune_res &lt;- tune_grid(recipe(pets~., data = juice(rec_gbt)),
+                      model = mod_gbt_spec,
+                      resamples = cv_splits,
+                      grid = gbt_grid,
+                      control = control_grid(verbose = TRUE),
+                      metrics = metric_set(roc_auc))
+```
+
+&lt;img src="images/Imbalanced-AUC-Res-1.png" width="100%" /&gt;
+
+
+
+---
+
+Fit the best model on all of `ok_train1` and get scores on `ok_train2`:
+
+
+```r
+mod_gbt_spec &lt;- mod_gbt_spec %&gt;%
+  update(mtry = 30, trees = 1000,
+         min_n = 10, learn_rate = 0.01)
+mod_gbt &lt;- mod_gbt_spec %&gt;%
+  fit(pets ~ ., data = juice(rec_gbt))
+
+pred_gbt &lt;- mod_gbt %&gt;%
+  predict(new_data = bake(rec_gbt, ok_train2), type = "prob") %&gt;%
+  pull(.pred_cats)
+```
+
+---
+
+You can use the ROC curve to understad the behavior of the cutoff:
+
+
+
+
+
+&lt;img src="images/Imbalanced-AUC-ROC-1.png" width="60%" /&gt;
+
+---
+
+Maybe better, draw a histogram of `cats` score and mark the cutoffs there:
+
+&lt;img src="images/Imbalanced-Score-Host-1.png" width="100%" /&gt;
+
+---
+
+Lastly, train on entire training set and evaluate on test set:
+
+
+```r
+mod_gbt &lt;- mod_gbt_spec %&gt;%
+  fit(pets ~ ., data = bake(rec_gbt, ok_train))
+pred_gbt &lt;- mod_gbt %&gt;%
+  predict(new_data = bake(rec_gbt, ok_valid), type = "prob") %&gt;%
+  pull(.pred_cats)
+pred_gbt_class &lt;- ifelse(pred_gbt &gt; 0.17, "cats", "dogs")
+true_class &lt;- ok_valid$pets
+table(true_class, pred_gbt_class)
+```
+
+```
+##           pred_gbt_class
+## true_class cats dogs
+##       cats  309  164
+##       dogs  638 1618
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_gbt, cutoff = 0.17)
+```
+
+```
+## AUC: 0.749
+## ACC: 0.706
+## Cats: Recall: 0.653
+##       Precision: 0.326
+## Dogs: Recall: 0.717
+##       Precision: 0.908
+```
+
+---
+
+### Cost aware training: Case weights
+
+For example, in `glm()` you can simply specify a `weights`:
+
+&gt; when the elements of weights are positive integers *w_i*, each response *y_i* is the mean of *w_i* unit-weight observations
+
+
+```r
+pets_weights &lt;- rep(1, nrow(ok_train))
+pets_weights[which(ok_train$pets == "cats")] &lt;- 5
+
+mod_glm &lt;- glm(pets ~ ., data = ok_train,
+*              family = "binomial", weights = pets_weights)
+
+pred_glm &lt;- 1 - predict(mod_glm, ok_valid, type = "response")
+
+pred_glm_class &lt;- ifelse(pred_glm &gt; 0.5, "cats", "dogs")
+true_class &lt;- ok_valid$pets
+```
+
+---
+
+
+```r
+table(true_class, pred_glm_class)
+```
+
+```
+##           pred_glm_class
+## true_class cats dogs
+##       cats  303  170
+##       dogs  655 1601
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_glm)
+```
+
+```
+## AUC: 0.736
+## ACC: 0.698
+## Cats: Recall: 0.641
+##       Precision: 0.316
+## Dogs: Recall: 0.71
+##       Precision: 0.904
+```
+
+But this is almost equivalent to up sampling.
+
+A more intelligent use of class weights would be something like using the `class.weights` parameter in `e1071::svm()`
+
+---
+
+### Cost aware training: Prior probabilities
+
+**Small Detour: Naive Bayes**
+
+You know Bayes' Theorem, right?
+
+`\(P(A|B) = \frac{P(B|A)P(A)}{P(B)}\)`
+
+or
+
+`\(posterior = \frac{likelihood \cdot prior}{evidence}\)`
+
+So what would be the posterior probability of class `\(C_k\)` given that we've seen observation `\(x_i\)`?
+
+`\(P(C_k|x_i) = \frac{P(x_i|C_k)P(C_k)}{P(x_i)}\)`
+
+---
+
+`\(P(C_k|x_i) = \frac{P(x_i|C_k)P(C_k)}{P(x_i)}\)`
+
+In words: the likelihood of seeing an observation like `\(x_i\)` in all class `\(C_k\)` observations, times the prior of class `\(C_k\)` observations, divided by the evidence seeing an observation like `\(x_i\)` in general.
+
+.insight[
+💡 What increases `\(P(C_k|x_i)\)`? What decreases it?
+]
+
+But if we have, say 100 predictors, each categorical with 2 levels - we'd have to pre-compute `\(2^{100}\)` possible for each `\(C_k\)`!
+
+---
+
+Enter *Naive* Bayes:
+
+Assume that all predictors `\(X\)`  are mutually independent, conditional on the class `\(C_k\)`, and so:
+
+`\(P(x_i|C_k) = \prod_{j = 1}^pP(x_{ij}|C_k)\)`
+
+And so:
+
+`\(P(C_k|x_i) = \frac{\prod P(x_{ij}|C_k)P(C_k)}{P(x_i)}\)`
+
+And we can further expand: `\(P(x_i) = \sum_k P(x_{i}|C_k)P(C_k)\)`
+
+.insight[
+💡 How would you compute `\(P(x_{ij}|C_k)\)` when `\(x_{ij}\)` is continuous?
+]
+
+---
+
+
+```r
+library(naivebayes)
+
+mod_nb &lt;- naive_bayes(pets ~ ., data = ok_train)
+
+pred_nb &lt;- predict(mod_nb, ok_valid, type = "prob")[, "cats"]
+
+pred_nb_class &lt;- ifelse(pred_nb &gt; 0.5, "cats", "dogs")
+table(true_class, pred_nb_class)
+```
+
+```
+##           pred_nb_class
+## true_class cats dogs
+##       cats  180  293
+##       dogs  294 1962
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_nb)
+```
+
+```
+## AUC: 0.718
+## ACC: 0.785
+## Cats: Recall: 0.381
+##       Precision: 0.38
+## Dogs: Recall: 0.87
+##       Precision: 0.87
+```
+
+---
+
+BTW, *are* our features mutually independent?
+
+
+```r
+ok_train %&gt;%
+  filter(pets == "cats") %&gt;%
+  select_if(is.numeric) %&gt;%
+  cor() %&gt;%
+  corrplot::corrplot()
+```
+
+&lt;img src="images/Imbalanced-Cor-Matrix-1.png" width="50%" /&gt;
+
+---
+
+In the context of imbalanced classes you could just give a 5 times more weight to the score of cats by specifying different prior probabilities `\(P(C_k)\)`:
+
+
+```r
+mod_nb &lt;- naive_bayes(pets ~ ., data = ok_train, prior = c(5, 1))
+
+pred_nb &lt;- predict(mod_nb, ok_valid, type = "prob")[, "cats"]
+
+pred_nb_class &lt;- ifelse(pred_nb &gt; 0.5, "cats", "dogs")
+table(true_class, pred_nb_class)
+```
+
+```
+##           pred_nb_class
+## true_class cats dogs
+##       cats  398   75
+##       dogs 1251 1005
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_nb)
+```
+
+```
+## AUC: 0.718
+## ACC: 0.514
+## Cats: Recall: 0.841
+##       Precision: 0.241
+## Dogs: Recall: 0.445
+##       Precision: 0.931
+```
+
+---
+
+### Down Sampling
+
+Yes, down sampling the majority class, usually to make it the same amount as the minority class (but you can tune this parameter as any other.
+
+You'd be surprised.
+
+
+```r
+rec_gbt &lt;- recipe(pets ~ ., data = ok_train) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes()) %&gt;%
+* step_downsample(pets, under_ratio = 1) %&gt;%
+  prep(ok_train)
+```
+
+---
+
+.warning[
+⚠️ Never down-sample the testing set! Look at the `skip` parameter.
+]
+
+
+```r
+juice(rec_gbt) %&gt;% count(pets)
+```
+
+```
+## # A tibble: 2 x 2
+##   pets      n
+##   &lt;fct&gt; &lt;int&gt;
+## 1 cats   1624
+## 2 dogs   1624
+```
+
+```r
+bake(rec_gbt, ok_valid) %&gt;% count(pets)
+```
+
+```
+## # A tibble: 2 x 2
+##   pets      n
+##   &lt;fct&gt; &lt;int&gt;
+## 1 cats    473
+## 2 dogs   2256
+```
+
+---
+
+
+```r
+mod_gbt &lt;- mod_gbt_spec %&gt;%
+  fit(pets ~ ., data = juice(rec_gbt))
+pred_gbt &lt;- mod_gbt %&gt;%
+  predict(new_data = bake(rec_gbt, ok_valid), type = "prob") %&gt;%
+  pull(.pred_cats)
+pred_gbt_class &lt;- ifelse(pred_gbt &gt; 0.5, "cats", "dogs")
+
+table(true_class, pred_gbt_class)
+```
+
+```
+##           pred_gbt_class
+## true_class cats dogs
+##       cats  330  143
+##       dogs  745 1511
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_gbt)
+```
+
+```
+## AUC: 0.745
+## ACC: 0.675
+## Cats: Recall: 0.698
+##       Precision: 0.307
+## Dogs: Recall: 0.67
+##       Precision: 0.914
+```
+
+---
+
+### Up Sampling
+
+The main disadvantage of down sampling is of course the loss of data.
+
+Will replicating (minority class) data do any better?
+
+
+```r
+rec_gbt &lt;- recipe(pets ~ ., data = ok_train) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes()) %&gt;%
+* step_upsample(pets, over_ratio = 1) %&gt;%
+  prep(ok_train)
+
+mod_gbt &lt;- mod_gbt_spec %&gt;%
+  fit(pets ~ ., data = juice(rec_gbt))
+pred_gbt &lt;- mod_gbt %&gt;%
+  predict(new_data = bake(rec_gbt, ok_valid), type = "prob") %&gt;%
+  pull(.pred_cats)
+pred_gbt_class &lt;- ifelse(pred_gbt &gt; 0.5, "cats", "dogs")
+```
+
+---
+
+
+```r
+table(true_class, pred_gbt_class)
+```
+
+```
+##           pred_gbt_class
+## true_class cats dogs
+##       cats  256  217
+##       dogs  463 1793
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_gbt)
+```
+
+```
+## AUC: 0.744
+## ACC: 0.751
+## Cats: Recall: 0.541
+##       Precision: 0.356
+## Dogs: Recall: 0.795
+##       Precision: 0.892
+```
+
+---
+
+### SMOTE
+
+[Chawla et. al. (2002)](https://arxiv.org/pdf/1106.1813.pdf) developed SMOTE (Synthetic Minority Over-sampling Technique) which is a up sampling technique.
+
+The authors claim that a hybrid combination of SMOTE and regular down sampling works best, that's why SMOTE is sometimes refered as "hybrid" sampling algo itself
+
+But the up sampling does not simply replicates the minority class...
+
+---
+
+It synthesizes them!
+
+&lt;img src="images/smote_algo.png" style="width: 70%" /&gt;
+
+---
+
+If you want to stay in the `tidymodels` framework you can download the `themis` package for extra recipes for dealing with unbalanced data:
+
+
+```r
+library(themis)
+
+n &lt;- 100
+x1 &lt;- rnorm(n, 0, 1); x2 &lt;- rnorm(n, 0, 1)
+t &lt;- 2 - 4 * x1 + 3 * x2
+y &lt;- rbinom(n, 1, 1 / (1 + exp(-t)))
+
+df &lt;- tibble(x1 = x1, x2 = x2, y = factor(y))
+df %&gt;% count(y)
+```
+
+```
+## # A tibble: 2 x 2
+##   y         n
+##   &lt;fct&gt; &lt;int&gt;
+## 1 0        38
+## 2 1        62
+```
+
+```r
+df_smoted &lt;- recipe(y ~ ., data = df) %&gt;%
+  step_smote(y, over_ratio = 1) %&gt;%
+  prep(df) %&gt;%
+  juice()
+```
+
+---
+
+
+```r
+df_smoted %&gt;% count(y)
+```
+
+```
+## # A tibble: 2 x 2
+##   y         n
+##   &lt;fct&gt; &lt;int&gt;
+## 1 0        62
+## 2 1        62
+```
+
+&lt;img src="images/SMOTE-simulation-1.png" width="100%" /&gt;
+
+---
+
+Let's do a hybrid of down sampling and SMOTE on our data:
+
+
+```r
+rec_gbt &lt;- recipe(pets ~ ., data = ok_train) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes()) %&gt;%
+  step_downsample(pets, under_ratio = 1.5) %&gt;%
+  step_smote(pets, over_ratio = 1) %&gt;%
+  prep(ok_train)
+
+juice(rec_gbt) %&gt;% count(pets)
+```
+
+```
+## # A tibble: 2 x 2
+##   pets      n
+##   &lt;fct&gt; &lt;int&gt;
+## 1 cats   2436
+## 2 dogs   2436
+```
+
+```r
+mod_gbt &lt;- mod_gbt_spec %&gt;%
+  fit(pets ~ ., data = juice(rec_gbt))
+pred_gbt &lt;- mod_gbt %&gt;%
+  predict(new_data = bake(rec_gbt, ok_valid), type = "prob") %&gt;%
+  pull(.pred_cats)
+pred_gbt_class &lt;- ifelse(pred_gbt &gt; 0.5, "cats", "dogs")
+```
+
+---
+
+
+```r
+table(true_class, pred_gbt_class)
+```
+
+```
+##           pred_gbt_class
+## true_class cats dogs
+##       cats  272  201
+##       dogs  467 1789
+```
+
+```r
+report_accuracy_and_auc(true_class, pred_gbt)
+```
+
+```
+## AUC: 0.748
+## ACC: 0.755
+## Cats: Recall: 0.575
+##       Precision: 0.368
+## Dogs: Recall: 0.793
+##       Precision: 0.899
+```
+
+---
+
+### Other Up Sampling Methods
+
+- ADASYN
+- Borderline SMOTE
+- ROSE
+- Depends on data (e.g. with images it is common to perform image augmentation: flip, crop, rotate, blur it)
+
+### Change of Framework
+
+- Anomaly Detection
+
+---
+
+### One final word of wisdom
+
+- It's Ok for a model to not know!
+
+- The optimal choice would be for a classification model to output a *score*, rather than a class, and have the client's system interpret that score for different applications
+
+- However, if a class output is required, consider output a `\(k+1\)` class: "I don't know"
+
+- In the case of classifying cats vs. dogs people - it makes sense!
+
+- For a two-class problem, you would have not one cutoff on the score, but two: Below cutoff 1 classify as "Dogs", above "Cats" and in the middle: "I don't know"
+
+- As long as you make a decision regarding at least X% of the data
+
+---
+
+Let's see this on the `ok_valid` test set using our last SMOTEd model (but notice to tune these cutoffs you would need an extra set of untouched data!):
+
+
+```r
+upper &lt;- 0.65
+lower &lt;- 0.35
+pred_gbt_class &lt;- ifelse(pred_gbt &gt; upper, "cats",
+                         ifelse(pred_gbt &lt; lower, "dogs", NA))
+table(true_class, pred_gbt_class)
+```
+
+```
+##           pred_gbt_class
+## true_class cats dogs
+##       cats  148  104
+##       dogs  194 1367
+```
+
+---
+
+
+```r
+report_accuracy_and_auc2 &lt;- function(obs, pred, lower = 0.35, upper = 0.65) {
+  pred_class &lt;- ifelse(pred &gt; upper, "cats",
+                         ifelse(pred &lt; lower, "dogs", NA))
+  cm &lt;- table(true_class, pred_class)
+  recall_cats &lt;- cm[1, 1] / sum(cm[1,])
+  recall_dogs &lt;- cm[2, 2] / sum(cm[2,])
+  prec_cats &lt;- cm[1, 1] / sum(cm[,1])
+  prec_dogs &lt;- cm[2, 2] / sum(cm[,2])
+  acc &lt;- sum(diag(cm)) / sum(cm)
+  pred_pct &lt;- sum(cm) / length(obs)
+  glue::glue("Predicted: {format(pred_pct, digits = 3)}
+  ACC: {format(acc, digits = 3)}
+  Cats: Recall: {format(recall_cats, digits = 3)}
+        Precision: {format(prec_cats, digits = 3)}
+  Dogs: Recall: {format(recall_dogs, digits = 3)}
+        Precision: {format(prec_dogs, digits = 3)}")
+}
+
+report_accuracy_and_auc2(true_class, pred_gbt)
+```
+
+```
+## Predicted: 0.664
+## ACC: 0.836
+## Cats: Recall: 0.587
+##       Precision: 0.433
+## Dogs: Recall: 0.876
+##       Precision: 0.929
+```
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
