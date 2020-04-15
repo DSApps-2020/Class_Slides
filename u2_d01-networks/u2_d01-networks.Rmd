@@ -285,13 +285,64 @@ Math Expression            |   `r v`  |          |    weakly |            | `r v
 ## Obtaining Networks
 
 - Surveys, Interviews, Questionnaires, Observations .font80percent[(Moreno's schoolchildren)]
-- Archives, sometimes historical .font80percent[(Padget's families of Florence)]
+- Archives, sometimes historical .font80percent[(Padgett's families of Florence)]
 - Snowball Sampling .font80percent[(Drug users' ego networks)]
 - Web Scraping .font80percent[(Adamic's political blogs)]
 - Web APIs .font80percent[(Twitter)]
 - Co-occurrence matrices .font80percent[(Marvel's cinematic universe)]
 - Any tabular dataset? .font80percent[(Sci-Fi books)]
 - Just really hard work .font80percent[(Milgram's Small world experiment)]
+
+---
+
+### Moreno's Sociograms
+
+<img src = "images/moreno.png" style = "width: 80%">
+
+.font80percent[
+[Who Shall Survive: A New Approach to the Problem of Human Interrelations (1934)](https://archive.org/details/whoshallsurviven00jlmo)
+]
+
+---
+
+### Padgett's Families of Florence
+
+<img src = "images/padgett.png" style = "width: 80%">
+
+.font80percent[
+[CASOS Data Sets](http://www.casos.cs.cmu.edu/computational_tools/datasets/external/padgett/index2.html)
+]
+
+---
+
+### Adamic Political Blogsphere
+
+<img src = "images/divided_they_blog.png" style = "width: 90%">
+
+.font80percent[
+[The Political Blogosphere and the 2004 U.S. Election:
+Divided They Blog](http://www.ramb.ethz.ch/CDstore/www2005-ws/workshop/wf10/AdamicGlanceBlogWWW.pdf)
+]
+
+---
+
+### RuPaul's Drag Race Twitterverse by Rank
+
+<img src = "images/rpdr_rank.png" style = "width: 70%">
+
+.font80percent[
+[You better (Net)Work!](http://giorasimchoni.com/2017/04/27/2017-04-27-you-better-net-work-netweork-analysis-of-rupaul-s-drag-race-contestants/)
+]
+
+---
+
+### Milgram's Small World Experiment
+
+<img src = "images/milgram.gif" style = "width: 60%">
+
+.font80percent[
+[Wikipedia](https://en.wikipedia.org/wiki/Small-world_experiment)
+]
 
 ---
 
@@ -914,7 +965,7 @@ What is an easy way of making the network "more" or "less" connected?
 ## Directed Networks
 
 Type I Definition:
-- *weakly connected* components: a subset of nodes such there exists at least one directed path between each pair of nodes in the subset, direction can be either way
+- *weakly connected* components: a subset of nodes such that there exists at least one directed path between each pair of nodes in the subset, direction can be either way
 - *strongly connected* components: a subset of nodes such that there exists at least one directed path between each pair of nodes, in both direction
 
 <img src = "images/Strongly-CC.png" style = "width: 30%">
@@ -940,7 +991,7 @@ class: section-slide
 
 ---
 
-### Udirected, Weighted and Unweighted Networks
+### Undirected, Weighted and Unweighted Networks
 
 A different matrix representation of a network which proves useful in many situations is the Laplacian $L_{n\times n}$:
 
