@@ -1642,7 +1642,7 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
 
 #### Text Features
 
-Extracting textual features could be the subject of entire class or even a course.
+Extracting textual features could be the subject of an entire class or even a course.
 
 Just to demonstrate how worthwhile being creative can get here let us just add two textual features here, `n_cat` and `n_dog` in all `essay`s:
 
@@ -1712,6 +1712,124 @@ cv_splits_eng %>%
   geom_point() +
   guides(color = FALSE) +
   theme_light()
+```
+
+---
+
+#### Text Features: some ideas for you
+
+- not just words: do cat people tend to use more the letter "z"? no. of commas, no. of dot-dot-dots, no. of links, no. of hashtags, no. of extra spaces, no. of digits
+- to stem or not to stem?
+  - "plays", "playing", ["playa"](https://www.urbandictionary.com/define.php?term=Playa)
+- sentiment features
+  - not just no. of "hate" vs. love
+  - also no. of "you" and "I"
+- stop words or not to stop words?
+- TF-IDF or not to TF-IDF
+- Feature Hashing
+- n-grams: "I love my cats"
+- topics
+
+---
+
+#### Using `textrecipes` + `textfeatures`
+
+- The `textrecipes` package lets you calculate a few features with a single `step_textfeature()`
+- The `extract_functions` parameter accepts a named list of functions you wish to define on your text data
+- By default it will accept `count_functions` list from the [`textfeatures`](https://textfeatures.mikewk.com/reference/textfeatures.html) by Mike Kearney, which gets you basic counts like `n_words`, `n_digits` etc.
+
+But `textfeatures` also has via the `textfeatures()` function:
+  - basic sentiment features like `sent_bing`
+  - first word2vec 2-200 dimensions!
+
+```{r}
+print(textfeatures:::sentiment_bing("I hate cats!"))
+print(textfeatures:::sentiment_bing("I love cats! Hate dogs though."))
+
+print(textfeatures::word_dims("Why would Kim Jong-un insult me by calling me \"old,\""))
+```
+
+```{r}
+ok_tr_eng2 <- ok_tr_eng2 %>%
+  mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c))
+```
+
+```{r}
+my_text_funs <- c(textfeatures::count_functions,
+                      "sent_bing" = textfeatures:::sentiment_bing)
+
+recipe(pets ~ ., data = ok_tr_eng2 %>% select(pets, essays)) %>%
+  update_role(essays, new_role = "discard") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  prep(ok_tr_eng2 %>% head(10)) %>%
+  juice() %>%
+  select(t_essays_n_uq_words, t_essays_n_hashtags, t_essays_sent_bing)
+```
+
+---
+
+#### Text Features: but the words are most important
+
+We'll take [Kuhn & Johnson (2019)](http://www.feat.engineering/index.html) approach, and:
+
+1. Filter 1-gram tokens (words) with at least X occurrences
+2. Calculate the odds ratio $\frac{P(w|cats)}{1- P(w|cats)} / \frac{P(w|dogs)}{1- P(w|dogs)}$ where $P(w|cats)$ is the % of cats people who used the word $w$ at least once in all essays
+3. Calculate a p-value with a FDR correction
+4. Choose words with OR of at least |2| and FDR value of maximum $10^{-5}$
+
+Then use resampling to see if these have any effect on AUC.
+
+```{r}
+library(tidytext)
+
+tidy_essays <- ok_tr_eng2 %>%
+  mutate(id = 1:n()) %>%
+  select(id, pets, essays) %>%
+  unnest_tokens(word, essays) %>%
+  filter(!word %in% stop_words$word,
+         str_detect(word, "[a-z]"))
+
+min_n_words <- tidy_essays %>%
+  count(id, word) %>%
+  count(word) %>%
+  filter(n > 100) %>%
+  pull(word)
+
+print(c("cat", "dog", "cats", "dogs") %in% min_n_words)
+
+n_cats_people <- sum(ok_tr_eng2$pets == "cats")
+n_dogs_people <- sum(ok_tr_eng2$pets == "dogs")
+
+fisher_test <- function(cats, dogs) {
+  cont_tab <- matrix(c(cats, n_cats_people - cats,
+                       dogs, n_dogs_people - dogs),
+                     ncol = 2, nrow = 2)
+  ft <- fisher.test(cont_tab)
+  list(OR = ft$estimate, p_val = ft$p.value)
+}
+
+or_res <- tidy_essays %>%
+  filter(word %in% min_n_words) %>%
+  count(id, word, pets) %>%
+  count(word, pets) %>%
+  pivot_wider(id_cols = word, names_from = pets,
+              values_from = n, values_fill = list(cats = 0, dogs = 0)) %>%
+  mutate(fisher_obj = map2(cats, dogs, fisher_test))
+
+or_res <- or_res %>%
+  bind_cols(
+    bind_rows(or_res$fisher_obj)
+  ) %>%
+  mutate(fdr = p.adjust(p_val, method = "fdr"))
+
+or_res%>%
+  arrange(fdr) %>%
+  filter(fdr < 10e-5)
+
 ```
 
 ---
