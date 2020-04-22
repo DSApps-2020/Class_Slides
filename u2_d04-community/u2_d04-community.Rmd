@@ -108,7 +108,7 @@ Then:
 $$\frac{1}{2}(1-s_is_j) =
  \begin{cases}
    1 & \mbox{if nodes}\ i,j \mbox{ belong to different communities} \\
-   -1 & \mbox{if nodes}\ i,j \mbox{ belong to the same community}
+   0 & \mbox{if nodes}\ i,j \mbox{ belong to the same community}
  \end{cases}$$
 
 ---
@@ -139,11 +139,11 @@ $\sum_is_i=\mathbf{1}^\intercal\cdot\mathbf{s}=n_1-n_2$
 
 **Relaxation**:
 
-We get rid of having $s_i=\pm1$, instead we'll require its $l2$ norm to be: $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
+We get rid of having $s_i=\pm1$, instead we'll require its $L2$ norm to be: $\sum_is_i^2=\mathbf{s}^\intercal\mathbf{s}=n$
 
 Applying Lagrange multipliers we get:
 
-$\frac{\partial R}{\partial s}=\frac{\partial}{\partial s}\frac{1}{4}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}+\lambda(n-\mathbf{s}^\intercal\mathbf{s})+2\mu((n_1-n_2)-\mathbf{1}^\intercal\cdot\mathbf{s})$
+$\frac{\partial R}{\partial s}=\frac{\partial}{\partial s}\mathbf{s}^\intercal\mathbf{L}\mathbf{s}+\lambda(n-\mathbf{s}^\intercal\mathbf{s})+2\mu((n_1-n_2)-\mathbf{1}^\intercal\cdot\mathbf{s})$
 
 Equating to 0 to find the minimum and performing the derivatives we get:
 
@@ -221,7 +221,7 @@ But what criterion to choose for "strongest" edges?
 
 ---
 
-Girvan & Newman suggested *edge betweenness* which is the same *betweenness centrality* we have defined, using edges:
+Girvan & Newman suggested *edge betweenness* which is the same as *betweenness centrality* we have defined, using edges:
 
 $x_e = \sum_{u,v}\frac{\tau(u,v|e)}{\tau(u,v)}$
 
@@ -346,7 +346,7 @@ for i, n in enumerate(inner_nodes):
 
 # dendrogram
 # plt.figure()
-set_link_color_palette(['b', 'r'])
+set_link_color_palette(['r', 'b'])
 d = dendrogram(Z, labels=[node_labels[node_id] for node_id in leaves],
   orientation='top', above_threshold_color='k', leaf_font_size=10, leaf_rotation=90)
 plt.gcf().subplots_adjust(bottom=0.35)
@@ -652,6 +652,8 @@ plt.show()
 
 ### The Leiden Method .font80percent[(What everyone will use?...)]
 
+[https://arxiv.org/abs/1810.08473](https://arxiv.org/abs/1810.08473)
+
 ---
 
 class: section-slide
@@ -687,7 +689,7 @@ class: section-slide
 ]
 
 - In the Oxford English dictionary there are 171K words. When expanding to jargon etc. the estimate is 1M words
-- Now suppose you have 3,000 Yelp reviews classified as "positive" or "negative", which you would use train a classification model to deploy on the Yelp website
+- Now suppose you have 3,000 Yelp reviews classified as "positive" or "negative", which you would use to train a classification model to deploy on the Yelp website
 - Each sentence is comprised of a few words
 - If a word is a categorical variable which can receive 1 in 1M levels, using the classic approach of dummy variables, in order to build a simple $X_{n\text{x}p}$ matrix for say, logistic regression, you would need to build a 3K x 1M matrix
 
@@ -751,7 +753,7 @@ The model was only trained to find the weight matrix $W$ of dimension $|V|\text{
 - $|V|$ is the vocabulary size, the length of the dummy vectors input to the network
 - $D$ the size of the hidden layer
 
-In the above example this would be a 10K x 300 matrix where for each word there would be a 300-long *word vector* or *embedding* hopefully representing its sematic/syntactic better than traditional dimensionality reduction methods.
+In the above example this would be a 10K x 300 matrix where for each word there would be a 300-long *word vector* or *embedding* hopefully representing its semantic/syntactic better than traditional dimensionality reduction methods.
 
 This form of learning is also called *Representation Learning*.
 
@@ -799,7 +801,7 @@ The researchers differentiate between two similarities between a pair of nodes:
 - Homophily: which are your immediate neighbors? .font80percent[similar to semantics?]
 - Structural Equivalence: what is your *role* in the neighborhood? .font80percent[similar to syntactics?]
 
-In addition they point out that the two common serach strategies BFS and DFS "play a key role in producing representations that reflect either of the above equivalences".
+In addition they point out that the two common search strategies BFS and DFS "play a key role in producing representations that reflect either of the above equivalences".
 
 <img src = "images/node2vec_bfs_dfs.png" style = "width: 50%">
 
