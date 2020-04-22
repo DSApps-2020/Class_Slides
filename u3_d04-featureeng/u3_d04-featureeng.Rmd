@@ -1761,7 +1761,7 @@ my_text_funs <- c(textfeatures::count_functions,
                       "sent_bing" = textfeatures:::sentiment_bing)
 
 recipe(pets ~ ., data = ok_tr_eng2 %>% select(pets, essays)) %>%
-  update_role(essays, new_role = "discard") %>%
+  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
@@ -1826,10 +1826,101 @@ or_res <- or_res %>%
   ) %>%
   mutate(fdr = p.adjust(p_val, method = "fdr"))
 
-or_res%>%
+cd_words <- or_res %>%
   arrange(fdr) %>%
   filter(fdr < 10e-5)
 
+cd_words
+
+```
+
+```{r}
+count_words <- function(essays) {
+  counts <- map(cd_words$word, ~str_count_na(essays, .x))
+  names(counts) = str_c("w_", cd_words$word)
+  counts
+}
+
+ok_tr_eng3 <- ok_tr_eng2 %>%
+  bind_cols(
+    map_dfr(ok_tr_eng2$essays, count_words)
+  ) %>%
+  select(-starts_with("essay"), -starts_with("len_essay")) %>%
+  bind_cols(ok_tr_eng2 %>% select(essays)) %>%
+  mutate_if(is.character, as.factor)
+```
+
+```{r}
+rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %>%
+  step_log(income, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+
+rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+
+rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+```{r}
+set.seed(42)
+cv_splits_eng <- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
+
+lst_recs <- list("notext" = rec_eng_notext,
+                 "textfeat" = rec_eng_textfeat,
+                 "fulltext" = rec_eng_fulltext)
+
+cv_splits_eng <- cv_splits_eng %>%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_eng$splits)
+  )
+```
+
+```{r}
+cv_splits_eng %>%
+    pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %>%
+  select(id, recipe, AUC) %>%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+  geom_line() +
+  geom_point() +
+  guides(color = FALSE) +
+  theme_light()
 ```
 
 ---
