@@ -4,7 +4,7 @@
     <title>Network Metrics</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-01" />
+    <meta name="date" content="2020-04-22" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-01
+### 2020-04-22
 
 ---
 
@@ -377,7 +377,7 @@ How "in between" is a node? If we keep pushing messages from one random node to 
 
 Where `\(\tau(u,v)\)` is the number of shortest paths from node `\(u\)` to node `\(v\)` and `\(\tau(u,v|i)\)` is the number of those shortest paths which pass through node `\(i\)`.
 
-When `\(\tau(u,v)\)` the contribution is "0/0" and is defined as zero.
+When `\(\tau(u,v) = 0\)` the contribution is "0/0" and is defined as zero.
 
 .insight[
 💡 What is assumed regarding the motivation for Betweenness centrality above?
@@ -640,11 +640,11 @@ pretty_print(sim_jaccard_top5)
 ```
 
 ```
-## ("Ender's Game", 'I, Robot'): 0.50
+## ('I, Robot', "Ender's Game"): 0.50
 ## ('The Lion, the Witch and the Wardrobe', 'The Princess Bride'): 0.50
+## ('Babel 17', '2001: A Space Odyssey'): 0.43
+## ('Solaris', 'Brave New World'): 0.43
 ## ('Journey to the Center of the Earth', 'The Lord of the Rings'): 0.43
-## ('Brave New World', 'Solaris'): 0.43
-## ('The Hunger Games', 'Harry Potter Series'): 0.43
 ```
 
 ---

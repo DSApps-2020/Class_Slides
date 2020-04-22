@@ -284,7 +284,7 @@ $x_i = \sum_{u,v}\frac{\tau(u,v|i)}{\tau(u,v)}$
 
 Where $\tau(u,v)$ is the number of shortest paths from node $u$ to node $v$ and $\tau(u,v|i)$ is the number of those shortest paths which pass through node $i$.
 
-When $\tau(u,v)$ the contribution is "0/0" and is defined as zero.
+When $\tau(u,v) = 0$ the contribution is "0/0" and is defined as zero.
 
 .insight[
 `r emo::ji("bulb")` What is assumed regarding the motivation for Betweenness centrality above?
