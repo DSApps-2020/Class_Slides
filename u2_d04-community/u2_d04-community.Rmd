@@ -392,8 +392,9 @@ Relatively fast (in parallel) | May not converge
 
 Pros               | Cons
 ------------------ | -----------------------
-Relatively slow    | Even worse reproducibility issue, no single solution
-Better convergence | "Monster communities"
+Better convergence | Even worse reproducibility issue, no single solution
+                   | "Monster communities"
+                   | Relatively slow
 
 ---
 
@@ -416,7 +417,7 @@ class: section-slide
 
 ---
 
-Can you color a network using as few colors as possible, where no two adjacent nodes share the same nodes?
+Can you color a network using as few colors as possible, where no two adjacent nodes share the same color?
 
 ```{python Coloring-Problem, out.width = "30%"}
 F = nx.petersen_graph()
@@ -705,7 +706,7 @@ Don't do it .font80percent[(why?)].
 2. They ignore (and therefore lose) semantic meaning and grammatical function of a word, as can be seen by unsatisfactory performance in NLP tasks such as transaltion, finding synonyms and analogies.
 
 
-Q: What model *would* preserve semantic/sytactic meaning?
+Q: What model *would* preserve semantic/syntactic meaning?
 
 A: A model which would be excellent at predicting a word out of context (or the opposite!).
 
