@@ -203,7 +203,7 @@ class: section-slide
 
 ---
 
-### OkCupid from scratch
+#### OkCupid from scratch
 
 ```{r}
 okcupid <- read_csv("../data/okcupid.csv.zip")
@@ -225,7 +225,9 @@ okcupid <- okcupid %>%
 okcupid %>% count(pets)
 ```
 
-Using `rsample::initial_split(okcupid, strata = pets)` would have been better, but if we do it now our results would not be comparabale.
+---
+
+Using `rsample::initial_split(okcupid, strata = pets)` would have been better, but if we do it now we won't have the same test data to compare.
 
 ```{r}
 idx <- read_rds("../data/okcupid3_idx.rda")
@@ -247,6 +249,8 @@ glue("train no. of rows: {nrow(okcupid_train)}
      test no. of rows: {nrow(okcupid_test)}")
 ```
 
+---
+
 See that the class balance is more or less the same:
 
 ```{r}
@@ -255,9 +259,13 @@ okcupid_train %>% count(pets) %>% mutate(pct = n / sum(n))
 okcupid_test %>% count(pets) %>% mutate(pct = n / sum(n))
 ```
 
-Good enough .font80percent[(we could also drop a few cat people at random if they're too much)].
+Good enough .font80percent[(we could also drop a few cat people at random if they're too much in the test group)].
 
 We stash our test data aside, kiss it good bye, we shall not see it again before the final assessment of our model.
+
+---
+
+#### That manager again.
 
 Manager mentions casually: oh, and by the way, this model thingy of yours. Yeah, we need it to run in, like 10 milliseconds per user. Marketing team needs that, don't ask me why, and we can't have the users wait.
 
@@ -265,13 +273,17 @@ You: penalized logistic regression it is `r emo::ji("smirking face")`
 
 No one mentioned cats/dogs recall/precision to be of any particular importance, so we decide to maximize AUC and take care of cutoff later.
 
+---
+
 We explore the training data (skipping here at least a couple of hours in which we actually explore the data, I'm assuming we already know quite a bit!):
 
 ```{r}
 glimpse(okcupid_train)
 ```
 
-```{r}
+---
+
+```{r Ok_Naniar, warning=FALSE, out.width="100%", fig.asp=0.5}
 library(naniar)
 
 vis_miss(okcupid_train %>%
@@ -279,7 +291,9 @@ vis_miss(okcupid_train %>%
            select(-starts_with("essay")))
 ```
 
-A few questions and answers:
+---
+
+#### Q & A
 
 Q: What type of variables do we have?
 A: Numeric: age, height income; Text: essays; Categorical: all others
@@ -304,11 +318,14 @@ A: Pretty imbalanced, 5 dogs people for every 1 cat person. Gonna have to take c
 
 ---
 
-Strategy: Divide training data into 5 samples for 5 main decision/steps/tunings:
+#### You have to have a strategy
+
+Strategy: Divide training data into 6 samples for 6 main decision/steps/tunings:
 
 1. Missing data imputation
 2. Class imbalance treatment
-3. Feature Engineering and Selection
+3. Feature Engineering for `essay` data
+4. Looking into interactions
 4. Model Tuning
 5. Cutoff choice
 
@@ -316,12 +333,14 @@ Strategy: Divide training data into 5 samples for 5 main decision/steps/tunings:
 `r emo::ji("bulb")` We assume these decisions are additive or independent of each other. Does it have to be and what can we do if we suspect not? (Remember we are a Statisticians!)
 ]
 
+---
+
 Looking at our strategy, we decide the 12.7K observations need not split evenly between steps.
 
 - Cutoff choice is "peanuts" compared to the other decisions, let's decide in advance that at this stage we would fit the chosen model on ~12K previously seen observations and choose a cutoff by looking at the remaining ~700 observations
-- Missing data imputation and class imbalance steps will each be given 2K observations
+- Missing data imputation, class imbalance and interaction steps will each be given 2K observations
 - Model tuning 3K observations
-- Text and Interactions Feature engineering and selection 5K observations
+- Text feature engineering and selection 3K observations
 - Total: 12,729 training observations
 
 ---
@@ -350,11 +369,19 @@ ok_tr_imbalance <- training(ok_imbalance_split)
 ok_train <- testing(ok_imbalance_split)
 
 set.seed(42)
+ok_interaction_split <- initial_split(ok_train,
+                                      strata = pets, prop = (2000 - 1)/10000)
+ok_tr_interaction <- training(ok_interaction_split)
+ok_train <- testing(ok_interaction_split)
+
+set.seed(42)
 ok_tuning_split <- initial_split(ok_train,
                                   strata = pets, prop = (3000 - 1)/8000)
 ok_tr_tuning <- training(ok_tuning_split)
 ok_tr_eng <- testing(ok_tuning_split)
 ```
+
+---
 
 ```{r, echo=FALSE}
 tibble(
@@ -395,9 +422,9 @@ class: section-slide
 
 ---
 
-Exploring percent missingness:
+Exploring percent missingness
 
-```{r}
+```{r Ok-Miss1, out.width="100%", fig.asp=0.5}
 gg_miss_var(ok_tr_missing %>%
               select(-starts_with("essay")),
             show_pct = TRUE)
@@ -405,9 +432,9 @@ gg_miss_var(ok_tr_missing %>%
 
 ---
 
-Exploring percent missingness by a predictor:
+Exploring percent missingness by a predictor
 
-```{r, warning=FALSE}
+```{r Ok-Miss2, out.width="100%", fig.asp=0.5, warning=FALSE}
 gg_miss_var(ok_tr_missing %>%
               select(-starts_with("essay")),
             facet = sex, show_pct = TRUE)
@@ -415,7 +442,7 @@ gg_miss_var(ok_tr_missing %>%
 
 ---
 
-Exploring missingness between a predictor and the response (categorical) variable:
+Exploring missingness between a predictor and the response (categorical) variable
 
 ```{r}
 ok_tr_missing %>%
@@ -429,9 +456,9 @@ ok_tr_missing %>%
 
 ---
 
-But we can do better:
+But we can do better
 
-```{r}
+```{r Ok-Miss3, out.width="100%", fig.asp=0.5, echo=FALSE}
 pct_missing <- function(predictor, pet) {
   ok_tr_missing %>%
     filter(pets == pet) %>%
@@ -459,9 +486,9 @@ tibble(predictor = predictors,
 
 ---
 
-Exploring missingness between two (categorical) predictors:
+Exploring missingness between two (categorical) predictors
 
-```{r}
+```{r Ok-Miss4, out.width="100%", fig.asp=0.5, warning=FALSE, message=FALSE}
 library(ggmosaic)
 
 ok_tr_missing %>%
@@ -473,6 +500,10 @@ ok_tr_missing %>%
   theme_light()
 ```
 
+---
+
+Girl, you don't always need a plot...
+
 ```{r}
 ok_tr_missing %>%
     mutate(body_type_missing = is.na(body_type)) %>%
@@ -482,6 +513,8 @@ ok_tr_missing %>%
               values_from = n) %>%
   mutate(pct_missing = `TRUE` / (`TRUE` + `FALSE`))
 ```
+
+The same with `body_type` missingness by `drugs`:
 
 ```{r}
 ok_tr_missing %>%
@@ -496,9 +529,9 @@ ok_tr_missing %>%
 
 ---
 
-But we can do better with a co-occurrence plot or a heatmap:
+But we can do better with a co-occurrence plot or a heatmap
 
-```{r}
+```{r Ok-Miss5, out.width="70%"}
 ok_tr_missing %>%
   count(drugs, body_type) %>%
   ggplot(aes(drugs, body_type)) +
@@ -508,9 +541,9 @@ ok_tr_missing %>%
 
 ---
 
-Exploring missingness between numerical and categorical predictors:
+Exploring missingness between numerical and categorical predictors
 
-```{r}
+```{r Ok-Miss6, out.width="100%", fig.asp=0.5}
 ok_tr_missing %>%
   mutate(bodytype_missing = is.na(body_type)) %>%
   ggplot(aes(bodytype_missing, age)) +
@@ -521,11 +554,11 @@ ok_tr_missing %>%
 
 ---
 
-Exploring missingness between two numerical predictors (borrowing data):
+Exploring missingness between two numerical predictors (borrowing `airquality` data)
 
-```{r}
+```{r Ok-Miss7, out.width="70%"}
 ggplot(airquality, aes(Ozone, Solar.R)) +
-  geom_miss_point() +
+  naniar::geom_miss_point() +
   theme_light()
 ```
 
@@ -533,7 +566,10 @@ ggplot(airquality, aes(Ozone, Solar.R)) +
 
 When the data is large you could perform PCA on the binary missing/non-missing matrix:
 
-```{r}
+
+---
+
+```{r Ok-Miss8, out.width="80%", echo=FALSE}
 binary_mat <- ok_tr_missing %>%
   select(-pets) %>%
   mutate_all(is.na)
@@ -557,7 +593,7 @@ prcomp(binary_mat) %>%
 
 ---
 
-### Definitely not in MCAR land
+#### Definitely not in MCAR land
 
 - Keep the data missing, drop it all or impute values?
   - Very much depends on the mechanism of missing data
@@ -595,8 +631,9 @@ Let's choose between 2 x 3 x 3 = 18 strategies:
 
 ---
 
+Add what you need
 ```{r}
-ok_tr_missing2 <- ok_tr_missing %>%
+ok_tr_missing <- ok_tr_missing %>%
   select(-starts_with("essay")) %>%
   bind_cols(
     ok_tr_missing %>%
@@ -618,10 +655,11 @@ ok_tr_missing2 <- ok_tr_missing %>%
 ```
 
 ---
-Defining recipes (without `prep()`!):
+
+Defining recipes (without `prep()`!), let's start with 2 to simplify.
 
 ```{r}
-rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, contains("essay"), new_role = "discarded") %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
@@ -630,30 +668,8 @@ rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, contains("essay"), new_role = "discarded") %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes(),
-             -has_role("discarded"), one_hot = FALSE)
-
-rec_miss_unk_mean_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
-  update_role(contains("essay"), new_role = "discarded") %>%
-  step_log(income, offset = 1) %>%
-  step_meanimpute(income) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_unknown(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes(),
-             -has_role("discarded"), one_hot = FALSE)
-
-rec_miss_mode_mean_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
-  update_role(contains("essay"), new_role = "discarded") %>%
-  step_log(income, offset = 1) %>%
-  step_meanimpute(income) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -664,18 +680,18 @@ rec_miss_mode_mean_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
 
 ---
 
-Defining resamples:
+Defining resamples
 
 ```{r}
 set.seed(42)
-cv_splits_missing <- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
+cv_splits_missing <- vfold_cv(ok_tr_missing, v = 10, strata = pets)
 
 cv_splits_missing
 ```
 
 ---
 
-Applying recipes to all models and fitting models
+Applying (two) recipes to all splits
 
 ```{r}
 cv_splits_missing$rec_miss_unk_none_none <- map(
@@ -693,14 +709,14 @@ cv_splits_missing$rec_miss_unk_none_none[[1]]$term_info %>%
 
 ---
 
-Defining the model:
+Defining the model specification
 
 ```{r}
 mod_lr <- logistic_reg() %>%
   set_engine("glmnet")
 ```
 
-Fitting the model:
+Fitting the model to all splits
 
 ```{r}
 fit_lr <- function(rec_obj) 
@@ -715,7 +731,7 @@ cv_splits_missing$mod_lr_mode <- map(
 
 ---
 
-Predicting on assessment data:
+Predicting on assessment data of each split
 
 ```{r}
 pred_lr <- function(split_obj, rec_obj, model_obj) {
@@ -738,16 +754,19 @@ cv_splits_missing$pred_unk <-
     ),
     pred_lr
   )
-cv_splits_missing$pred_mode <- 
-  pmap(
-    lst(
-      split_obj = cv_splits_missing$splits, 
-      rec_obj = cv_splits_missing$rec_miss_mode_none_none, 
-      model_obj = cv_splits_missing$mod_lr_mode
-    ),
-    pred_lr
-  )
+cv_splits_missing$pred_mode <- pmap(lst(
+  
+  split_obj = cv_splits_missing$splits,
+  rec_obj = cv_splits_missing$rec_miss_mode_none_none,
+  model_obj = cv_splits_missing$mod_lr_mode
+),
+pred_lr
+)
 ```
+
+---
+
+Measuring the AUC of each split
 
 ```{r}
 cv_splits_missing$step_unknown <- map_dfr(
@@ -756,8 +775,11 @@ cv_splits_missing$step_mode <- map_dfr(
   cv_splits_missing$pred_mode, roc_auc, pets, predicted)$.estimate
 ```
 
+---
 
-```{r}
+Comparing AUCs with a plot
+
+```{r Ok-Miss9, out.width="70%"}
 cv_splits_missing %>%
   select(id, step_unknown, step_mode) %>%
   pivot_longer(cols = c(step_unknown, step_mode),
@@ -769,12 +791,47 @@ cv_splits_missing %>%
   theme_light()
 ```
 
+---
+
+Comparing AUCs with a statistical test (paired T test)
+
 ```{r}
 t.test(cv_splits_missing$step_unknown,
        cv_splits_missing$step_mode, paired = TRUE)
 ```
 
-But we have multiple recipes, and we don't need to keep all data just final AUC for each recipe:
+
+---
+
+Let's move on to 2 x 2 recipes, adding 2 more recipes for treating the `income` variable with mean imputation, with `step_unknown()` and `step_modeimpute()`.
+
+```{r}
+rec_miss_unk_mean_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+  update_role(contains("essay"), new_role = "discarded") %>%
+  step_log(income, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_unknown(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+
+rec_miss_mode_mean_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+  update_role(contains("essay"), new_role = "discarded") %>%
+  step_log(income, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+```
+
+---
+
+Our approach with 2 recipes does not scale, and we don't need to keep all data just final AUC for each recipe. We are writing a `train_recipe()` function!
 
 ```{r}
 lst_recs <- list("unknown_none" = rec_miss_unk_none_none,
@@ -799,6 +856,10 @@ train_recipe <- function(rec, rec_name, splits) {
 }
 ```
 
+---
+
+Training multiple recipes, bottom-line saving the AUC for each recipe for each split
+
 ```{r}
 cv_splits_missing <- cv_splits_missing %>%
   bind_cols(
@@ -807,27 +868,23 @@ cv_splits_missing <- cv_splits_missing %>%
   )
 ```
 
+Processing the results into a nice table:
+
 ```{r}
 cv_res_missing <- cv_splits_missing %>%
     pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %>%
   select(id, recipe, AUC) %>%
   separate(recipe, c("categorical", "income"))
+
+cv_res_missing
 ```
 
-Repeated measures ANOVA:
+---
 
-```{r}
-aov_missing <- aov(
-  AUC ~ factor(categorical) * factor(income) + Error(factor(id)),
-  data = cv_res_missing)
-print(summary(aov_missing))
-with(cv_res_missing, interaction.plot(categorical, income, AUC))
-```
+Comparing AUCs with a plot
 
-Or you can look at the numbers...
-
-```{r}
+```{r Ok-Miss10, out.width="70%"}
 cv_res_missing %>%
   ggplot(aes(income, AUC, group = id, color = id)) +
     geom_line() +
@@ -836,8 +893,24 @@ cv_res_missing %>%
     theme_light()
 ```
 
-```{r}
-rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+---
+
+Comparing AUCs with a statistical test (2x2 Repeated measures ANOVA)
+
+```{r Ok-Miss11, out.width="50%"}
+aov_missing <- aov(
+  AUC ~ factor(categorical) * factor(income) + Error(factor(id)),
+  data = cv_res_missing)
+print(summary(aov_missing))
+with(cv_res_missing, interaction.plot(categorical, income, AUC))
+```
+
+---
+
+Ok, now let's go back to our original idea of 18 recipes... see code in slides Rmd file.
+
+```{r, echo=FALSE}
+rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_knnimpute(income,
@@ -851,7 +924,7 @@ rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_knnimpute(income,
@@ -865,7 +938,7 @@ rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, starts_with("isna"), new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -875,7 +948,7 @@ rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, starts_with("isna"), new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -885,7 +958,7 @@ rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -896,7 +969,7 @@ rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -907,7 +980,7 @@ rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
@@ -921,7 +994,7 @@ rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
@@ -937,7 +1010,7 @@ rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
 
 ###
 
-rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -947,7 +1020,7 @@ rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   update_role(income, new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -957,7 +1030,7 @@ rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -967,7 +1040,7 @@ rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -977,7 +1050,7 @@ rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
                  impute_with = imp_vars(
@@ -990,7 +1063,7 @@ rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
+rec_miss_mode_knn_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
                  impute_with = imp_vars(
@@ -1026,12 +1099,14 @@ lst_recs <- list("unknown_none_none" = rec_miss_unk_none_none,
                  )
 ```
 
-```{r}
-set.seed(42)
-cv_splits_missing <- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
-```
+---
 
 ```{r}
+set.seed(42)
+cv_splits_missing <- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+```
+
+```{r, eval=FALSE}
 cv_splits_missing <- cv_splits_missing %>%
   bind_cols(
     map2_dfc(lst_recs, names(lst_recs), train_recipe,
@@ -1039,7 +1114,11 @@ cv_splits_missing <- cv_splits_missing %>%
   )
 ```
 
-```{r}
+```{r, echo=FALSE}
+cv_res_missing <- read_rds("../data/Ok_missing_cv_res_auc.rds")
+```
+
+```{r, eval=FALSE}
 cv_res_missing <- cv_splits_missing %>%
     pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %>%
@@ -1047,19 +1126,11 @@ cv_res_missing <- cv_splits_missing %>%
   separate(recipe, c("categorical", "income", "essay"))
 ```
 
-Repeated measures ANOVA:
+---
 
-```{r}
-aov_missing <- aov(
-  AUC ~ factor(categorical) * factor(income) + factor(essay) + Error(factor(id)),
-  data = cv_res_missing)
-print(summary(aov_missing))
-# with(cv_res_missing, interaction.plot(categorical, income, essay, AUC))
-```
+Again, see the plot (think of how you'd plot the results of a 2x2x3 experiment).
 
-Or you can look at the numbers...
-
-```{r}
+```{r Ok-Miss12, out.width="70%"}
 cv_res_missing %>%
   group_by(id, income, essay) %>%
   summarise(AUC = mean(AUC)) %>%
@@ -1070,12 +1141,32 @@ cv_res_missing %>%
     theme_light()
 ```
 
+---
+
+Repeated measures ANOVA
+
+```{r}
+aov_missing <- aov(
+  AUC ~ factor(categorical) * factor(income) + factor(essay) + Error(factor(id)),
+  data = cv_res_missing)
+
+print(summary(aov_missing))
+```
+
+---
+
+Or you can just look at the mean numbers...
+
 ```{r}
 cv_res_missing %>%
   group_by(categorical, income, essay) %>%
   summarise(AUC = mean(AUC)) %>%
   arrange(-AUC)
 ```
+
+.insight[
+`r emo::ji("bulb")` So what would you do?
+]
 
 ---
 
@@ -1084,7 +1175,6 @@ class: section-slide
 # Class Imbalance
 
 ---
-
 
 ### Class Imbalance
 
@@ -1095,8 +1185,10 @@ We'll choose between 3 strategies:
 - Downsample
 - SMOTE and Downsample
 
+---
+
 ```{r}
-ok_tr_imbalance2 <- ok_tr_imbalance %>%
+ok_tr_imbalance <- ok_tr_imbalance %>%
   select(-starts_with("essay")) %>%
   bind_cols(
     ok_tr_imbalance %>%
@@ -1117,10 +1209,12 @@ ok_tr_imbalance2 <- ok_tr_imbalance %>%
   mutate_if(is.character, as.factor)
 ```
 
-```{r}
+---
+
+```{r, warning=FALSE, message=FALSE}
 library(themis)
 
-rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
+rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1132,7 +1226,7 @@ rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
              -has_role("discarded"), one_hot = FALSE) %>%
   step_upsample(pets, over_ratio = 1)
 
-rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
+rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1143,8 +1237,12 @@ rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_downsample(pets, under_ratio = 1)
+```
 
-rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
+---
+
+```{r, warning=FALSE, message=FALSE}
+rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1160,11 +1258,11 @@ rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
 
 ---
 
-CV splits:
+CV splits
 
 ```{r}
 set.seed(42)
-cv_splits_imbalance <- vfold_cv(ok_tr_imbalance2, v = 10, strata = pets)
+cv_splits_imbalance <- vfold_cv(ok_tr_imbalance, v = 10, strata = pets)
 
 cv_splits_imbalance
 ```
@@ -1183,6 +1281,8 @@ cv_splits_imbalance <- cv_splits_imbalance %>%
   )
 ```
 
+---
+
 ```{r}
 cv_res_imbalance <- cv_splits_imbalance %>%
     pivot_longer(cols = names(lst_recs),
@@ -1199,9 +1299,11 @@ aov_imbalance <- aov(
 print(summary(aov_imbalance))
 ```
 
-Or you can look at the numbers...
+---
 
-```{r}
+Plotting...
+
+```{r Ok-Imb1, out.width="70%"}
 cv_res_imbalance %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
     geom_line() +
@@ -1210,10 +1312,17 @@ cv_res_imbalance %>%
     theme_light()
 ```
 
+---
+
 ```{r}
-print(cv_res_imbalance %>% group_by(recipe) %>% summarise(mean_auc = mean(AUC)))
-cv_res_imbalance %>% arrange(-AUC)
+print(cv_res_imbalance %>%
+        group_by(recipe) %>%
+        summarise(mean_auc = mean(AUC)))
 ```
+
+.insight[
+`r emo::ji("bulb")` So what would you do?
+]
 
 ---
 
@@ -1251,6 +1360,8 @@ class: section-slide
 - Different Contrasts schemes .font80percent[(e.g. for ordered categorical variables ("low", "medium", "high"))]
 - Feature Hashing
 
+---
+
 ```{r}
 set.seed(42)
 df <- tibble(
@@ -1268,6 +1379,8 @@ non_one_hot <- recipe(y ~ x1, data = df) %>%
   prep(df) %>%
   juice()
 ```
+
+---
 
 ```{r}
 head(one_hot)
@@ -1290,6 +1403,8 @@ print(mean(df$y) + (mean(df$y[df$x1 == "a"]) - mean(df$y)))
 print(mean(df$y[df$x1 == "a"]))
 print(mean(df$y[df$x1 == "b"]) - mean(df$y[df$x1 == "a"]))
 ```
+
+---
 
 This is like:
 
@@ -1315,6 +1430,8 @@ This is like:
 summary(lm(y ~ . - 1, data = df))
 ```
 
+---
+
 Plot thickens (check your `options("contrasts")`!):
 
 ```{r}
@@ -1323,7 +1440,7 @@ summary(lm(y ~ ., data = df, contrasts = list(x1 = "contr.sum")))
 
 ---
 
-Two variables:
+Two variables...
 
 ```{r}
 set.seed(42)
@@ -1346,7 +1463,6 @@ non_one_hot <- recipe(y ~ x1 + x2, data = df) %>%
 
 ---
 
-
 ```{r}
 head(one_hot)
 ```
@@ -1366,6 +1482,8 @@ Same as:
 ```{r}
 summary(lm(y ~ ., data = df))
 ```
+
+---
 
 ```{r}
 print(mean(df$y) +
@@ -1389,6 +1507,8 @@ print(mean(df$y[df$x1 == "a"]) - mean(df$y[df$x1 == "b"]))
 print(mean(df$y[df$x2 == "c"]) - mean(df$y[df$x2 == "e"]))
 print(mean(df$y[df$x2 == "d"]) - mean(df$y[df$x2 == "e"]))
 ```
+
+---
 
 ```{r}
 summary(lm(y ~ . - 1, data = one_hot))
@@ -1451,7 +1571,7 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
 
 You can also insert some creativeness (or plain common sense) in your "Other" strategy:
 
-```{r}
+```{r, eval=FALSE}
 education2 = case_when(
            education == "graduated from high school" ~ "high_school",
            education == "graduated from two-year college" ~ "college",
@@ -1484,6 +1604,8 @@ The `sign` feature is also a great example:
 ok_tr_eng %>% count(sign)
 ```
 
+---
+
 ```{r}
 signs <- c("leo", "libra", "cancer", "virgo", "scorpio", "gemini",
            "taurus", "aries", "pisces", "aquarius", "sagittarius", "capricorn")
@@ -1510,16 +1632,20 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
   count(location)
 ```
 
+---
+
 ```{r}
 recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
-  step_mutate(locationA = factor(str_count(location, "l"))) %>%
-  step_dummy(locationA) %>%
+  step_mutate(locationL = factor(str_count(location, "l"))) %>%
+  step_dummy(locationL) %>%
   prep(ok_tr_eng) %>%
   juice() %>%
   select(starts_with("location"))
 ```
 
-It's not a good idea because:
+---
+
+It's not a good idea because
 - Differenet `location`s map to the same bin ("collision"), masking possible effect
 - The distribution isn't even
 
@@ -1534,7 +1660,7 @@ But there are advantages too!
 - Feature Hashing (or "hashing trick") does something similar more intelligently
 - It lets you choose the hashing algo and no. of features you'd like (the more - the less chance of collision)
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(textrecipes)
 
 recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
@@ -1543,6 +1669,8 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
   prep(ok_tr_eng) %>%
   juice()
 ```
+
+---
 
 - Particularly useful for fast and furious feature engineering of text (see later)
 - Beware of columns with zero variance, consider binning them to a "New" category
@@ -1565,7 +1693,7 @@ Here's another crazy idea for you:
 
 Thus, changing a categorical variable with many levels into a single numerical variable (or a few for a few classes).
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(embed)
 
 recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
@@ -1575,7 +1703,9 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
   juice()
 ```
 
-Make sure you get what just happened:
+---
+
+Make sure you get what just happened
 
 ```{r}
 mv <- ok_tr_eng$location == "mountain view, california"
@@ -1616,6 +1746,8 @@ recipe(pets ~ ., data = ok_tr_eng %>% select(pets, location)) %>%
   juice()
 ```
 
+---
+
 Alternatively you could use pre-trained embeddings for text variables such as `essay`s using `step_word_embedding()` from the `textrecipes` package (where `my_embeddings` are your pre-trained embeddings:
 
 ```{r, eval=FALSE}
@@ -1654,6 +1786,8 @@ ok_tr_eng2 <- ok_tr_eng %>%
             list(~paste("len", gsub("_len", "", .), sep = "_") ) )
 ```
 
+---
+
 ```{r}
 rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng2) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
@@ -1670,7 +1804,11 @@ str_count_na <- function(string, pattern = "") {
   n <- str_count(string, pattern)
   ifelse(is.na(n), 0, n)
 }
+```
 
+---
+
+```{r}
 rec_eng_catdog <- recipe(pets ~ ., data = ok_tr_eng2) %>%
   step_mutate(essays = pmap_chr(
     list(essay0, essay1, essay2, essay3, essay4, essay5,
@@ -1687,7 +1825,11 @@ rec_eng_catdog <- recipe(pets ~ ., data = ok_tr_eng2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_upsample(pets, over_ratio = 1)
+```
 
+---
+
+```{r, echo=FALSE}
 set.seed(42)
 cv_splits_eng <- vfold_cv(ok_tr_eng2, v = 10, strata = pets)
 
@@ -1702,7 +1844,7 @@ cv_splits_eng <- cv_splits_eng %>%
 ```
 
 
-```{r}
+```{r Ok-FES1, out.width="70%", echo=FALSE}
 cv_splits_eng %>%
     pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %>%
@@ -1749,17 +1891,21 @@ print(textfeatures:::sentiment_bing("I love cats! Hate dogs though."))
 print(textfeatures::word_dims("Why would Kim Jong-un insult me by calling me \"old,\""))
 ```
 
+---
+
 ```{r}
 ok_tr_eng2 <- ok_tr_eng2 %>%
   mutate(essays = pmap_chr(
     list(essay0, essay1, essay2, essay3, essay4, essay5,
          essay6, essay7, essay8, essay9), str_c))
-```
 
-```{r}
 my_text_funs <- c(textfeatures::count_functions,
                       "sent_bing" = textfeatures:::sentiment_bing)
+```
 
+---
+
+```{r}
 recipe(pets ~ ., data = ok_tr_eng2 %>% select(pets, essays)) %>%
   update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
@@ -1783,7 +1929,9 @@ We'll take [Kuhn & Johnson (2019)](http://www.feat.engineering/index.html) appro
 
 Then use resampling to see if these have any effect on AUC.
 
-```{r}
+---
+
+```{r, warning=FALSE, message=FALSE}
 library(tidytext)
 
 tidy_essays <- ok_tr_eng2 %>%
@@ -1793,6 +1941,12 @@ tidy_essays <- ok_tr_eng2 %>%
   filter(!word %in% stop_words$word,
          str_detect(word, "[a-z]"))
 
+tidy_essays %>% head()
+```
+
+---
+
+```{r}
 min_n_words <- tidy_essays %>%
   count(id, word) %>%
   count(word) %>%
@@ -1800,7 +1954,9 @@ min_n_words <- tidy_essays %>%
   pull(word)
 
 print(c("cat", "dog", "cats", "dogs") %in% min_n_words)
+```
 
+```{r}
 n_cats_people <- sum(ok_tr_eng2$pets == "cats")
 n_dogs_people <- sum(ok_tr_eng2$pets == "dogs")
 
@@ -1826,13 +1982,20 @@ or_res <- or_res %>%
   ) %>%
   mutate(fdr = p.adjust(p_val, method = "fdr"))
 
+or_res
+```
+
+---
+
+```{r}
 cd_words <- or_res %>%
   arrange(fdr) %>%
   filter(fdr < 10e-5)
 
 cd_words
-
 ```
+
+---
 
 ```{r}
 count_words <- function(essays) {
@@ -1849,6 +2012,8 @@ ok_tr_eng3 <- ok_tr_eng2 %>%
   bind_cols(ok_tr_eng2 %>% select(essays)) %>%
   mutate_if(is.character, as.factor)
 ```
+
+---
 
 ```{r}
 rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
@@ -1878,7 +2043,11 @@ rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_upsample(pets, over_ratio = 1)
+```
 
+---
+
+```{r}
 rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
@@ -1896,6 +2065,8 @@ rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_upsample(pets, over_ratio = 1)
 ```
 
+---
+
 ```{r}
 set.seed(42)
 cv_splits_eng <- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
@@ -1903,19 +2074,27 @@ cv_splits_eng <- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
 lst_recs <- list("notext" = rec_eng_notext,
                  "textfeat" = rec_eng_textfeat,
                  "fulltext" = rec_eng_fulltext)
+```
 
-cv_splits_eng <- cv_splits_eng %>%
+```{r, eval=FALSE}
+cv_res_eng <- cv_splits_eng %>%
   bind_cols(
     map2_dfc(lst_recs, names(lst_recs), train_recipe,
              splits = cv_splits_eng$splits)
-  )
+  ) %>%
+  pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %>%
+  select(id, recipe, AUC)
 ```
 
-```{r}
-cv_splits_eng %>%
-    pivot_longer(cols = names(lst_recs),
-                 names_to = "recipe", values_to = "AUC") %>%
-  select(id, recipe, AUC) %>%
+```{r, echo=FALSE}
+cv_res_eng <- read_rds("../data/Ok_eng_cv_res_auc.rds")
+```
+
+---
+
+```{r Ok-FES2, out.width="70%"}
+cv_res_eng %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
   geom_line() +
   geom_point() +

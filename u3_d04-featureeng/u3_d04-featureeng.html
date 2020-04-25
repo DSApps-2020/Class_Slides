@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-13" />
+    <meta name="date" content="2020-04-25" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-13
+### 2020-04-25
 
 ---
 
@@ -106,11 +106,12 @@ GBT-XGBOOST | 0.35 | 0.5
 
 - Classification Task
 
-Model  | AUC | Accuracy | Recall Dogs | Precision Dogs | Recall Cats | Precision Cats
--------|-----|----------|-------------|----------------|-------------|---------------
-GLM    | 0.74|  0.68    |  0.68       |  0.92          |  0.66       |  0.26
-GLM-EN | 0.74|  0.67    |  0.67       |  0.92          |  0.67       |  0.26
-CART   | 0.67|  0.75    |  0.79       |  0.9           |  0.49       |  0.28
+Model     | AUC | Accuracy | Recall Dogs | Precision Dogs | Recall Cats | Precision Cats
+----------|-----|----------|-------------|----------------|-------------|----------
+GLM       | 0.74|  0.68    |  0.68       |  0.92          |  0.66       |  0.26
+GLM-EN    | 0.74|  0.67    |  0.67       |  0.92          |  0.67       |  0.26
+CART      | 0.67|  0.75    |  0.79       |  0.9           |  0.49       |  0.28
+GBT+Cutoff| 0.74|  0.70    |  0.71       |  0.9           |  0.65       |  0.32
 
 And we were not impressed.
 
@@ -197,6 +198,2718 @@ But two most common:
 .insight[
 💡 What is the probability of entering a fold (at least once)?
 ]
+
+---
+
+class: section-slide
+
+# Let's Start from the Very Beginning
+
+---
+
+#### OkCupid from scratch
+
+
+```r
+okcupid &lt;- read_csv("../data/okcupid.csv.zip")
+```
+
+```
+## Parsed with column specification:
+## cols(
+##   .default = col_character(),
+##   age = col_double(),
+##   height = col_double(),
+##   income = col_double()
+## )
+```
+
+```
+## See spec(...) for full column specifications.
+```
+
+```r
+cats_categories &lt;- c("has cats", "likes cats", "dislikes dogs and has cats",
+                     "dislikes dogs and likes cats")
+dogs_categories &lt;- c("has dogs", "likes dogs", "has dogs and dislikes cats",
+                     "likes dogs and dislikes cats")
+
+okcupid &lt;- okcupid %&gt;%
+  mutate(pets = case_when(
+           pets %in% cats_categories ~ "cats",
+           pets %in% dogs_categories ~ "dogs",
+           TRUE ~ NA_character_)) %&gt;%
+  drop_na(pets) %&gt;%
+  na_if(-1) %&gt;%
+  select(-last_online)
+
+okcupid %&gt;% count(pets)
+```
+
+```
+## # A tibble: 2 x 2
+##   pets      n
+##   &lt;chr&gt; &lt;int&gt;
+## 1 cats   2790
+## 2 dogs  13939
+```
+
+---
+
+Using `rsample::initial_split(okcupid, strata = pets)` would have been better, but if we do it now we won't have the same test data to compare.
+
+
+```r
+idx &lt;- read_rds("../data/okcupid3_idx.rda")
+train_idx &lt;- idx$train_idx
+valid_idx &lt;- idx$valid_idx
+test_idx &lt;- idx$test_idx
+
+okcupid_train &lt;- okcupid[train_idx, ]
+okcupid_valid &lt;- okcupid[valid_idx, ]
+okcupid_test &lt;- okcupid[test_idx, ]
+```
+
+And let us bind `okcupid_train` and `okcupid_valid` together because we are going to use resampling anyway:
+
+
+```r
+okcupid_train &lt;- bind_rows(okcupid_train, okcupid_valid)
+
+glue("train no. of rows: {nrow(okcupid_train)}
+     test no. of rows: {nrow(okcupid_test)}")
+```
+
+```
+## train no. of rows: 12729
+## test no. of rows: 4000
+```
+
+---
+
+See that the class balance is more or less the same:
+
+
+```r
+okcupid_train %&gt;% count(pets) %&gt;% mutate(pct = n / sum(n))
+```
+
+```
+## # A tibble: 2 x 3
+##   pets      n   pct
+##   &lt;chr&gt; &lt;int&gt; &lt;dbl&gt;
+## 1 cats   2097 0.165
+## 2 dogs  10632 0.835
+```
+
+```r
+okcupid_test %&gt;% count(pets) %&gt;% mutate(pct = n / sum(n))
+```
+
+```
+## # A tibble: 2 x 3
+##   pets      n   pct
+##   &lt;chr&gt; &lt;int&gt; &lt;dbl&gt;
+## 1 cats    693 0.173
+## 2 dogs   3307 0.827
+```
+
+Good enough .font80percent[(we could also drop a few cat people at random if they're too much in the test group)].
+
+We stash our test data aside, kiss it good bye, we shall not see it again before the final assessment of our model.
+
+---
+
+#### That manager again.
+
+Manager mentions casually: oh, and by the way, this model thingy of yours. Yeah, we need it to run in, like 10 milliseconds per user. Marketing team needs that, don't ask me why, and we can't have the users wait.
+
+You: penalized logistic regression it is 😏
+
+No one mentioned cats/dogs recall/precision to be of any particular importance, so we decide to maximize AUC and take care of cutoff later.
+
+---
+
+We explore the training data (skipping here at least a couple of hours in which we actually explore the data, I'm assuming we already know quite a bit!):
+
+
+```r
+glimpse(okcupid_train)
+```
+
+```
+## Rows: 12,729
+## Columns: 30
+## $ age         &lt;dbl&gt; 39, 19, 27, 24, 29, 24, 25, 25, 21, 25, 28, 25, 21...
+## $ body_type   &lt;chr&gt; "fit", "curvy", NA, "fit", "fit", "fit", "athletic...
+## $ diet        &lt;chr&gt; "mostly anything", "mostly vegetarian", "mostly an...
+## $ drinks      &lt;chr&gt; "socially", "rarely", NA, "socially", "socially", ...
+## $ drugs       &lt;chr&gt; "never", "sometimes", NA, NA, "never", NA, "never"...
+## $ education   &lt;chr&gt; "graduated from college/university", NA, NA, "grad...
+## $ essay0      &lt;chr&gt; "i am a very positive person who loves to laugh an...
+## $ essay1      &lt;chr&gt; "i work in the health and wellness industry and i ...
+## $ essay2      &lt;chr&gt; "making people smile or laugh.", "ummmm everything...
+## $ essay3      &lt;chr&gt; "my eyes", "my boobs. definitely.&lt;br /&gt;\nand the f...
+## $ essay4      &lt;chr&gt; "i enjoy malcolm gladwell, blink, tipping point, o...
+## $ essay5      &lt;chr&gt; "water,steak,chocolate,comfy jeans,transportation,...
+## $ essay6      &lt;chr&gt; "food, naps, women, and health", "caffeine, my bab...
+## $ essay7      &lt;chr&gt; "doing whatever has come up or has been planned. d...
+## $ essay8      &lt;chr&gt; "i am totally deaf in my right ear", "i love anima...
+## $ essay9      &lt;chr&gt; "you enjoy having fun, love to laugh, have a posit...
+## $ ethnicity   &lt;chr&gt; "white", "white", NA, "white", "asian, pacific isl...
+## $ height      &lt;dbl&gt; 70, 60, 72, 65, 69, 72, 70, 67, 66, 67, 63, 63, 62...
+## $ income      &lt;dbl&gt; 8e+04, NA, NA, NA, 3e+04, 5e+04, 1e+05, NA, 2e+04,...
+## $ job         &lt;chr&gt; "medicine / health", "sales / marketing / biz dev"...
+## $ location    &lt;chr&gt; "mountain view, california", "pleasant hill, calif...
+## $ offspring   &lt;chr&gt; "doesn&amp;rsquo;t have kids, but might want them", NA...
+## $ orientation &lt;chr&gt; "straight", "straight", "straight", "straight", "s...
+## $ pets        &lt;chr&gt; "dogs", "dogs", "dogs", "dogs", "dogs", "dogs", "d...
+## $ religion    &lt;chr&gt; "atheism", "agnosticism and laughing about it", "a...
+## $ sex         &lt;chr&gt; "m", "f", "m", "f", "m", "m", "m", "m", "f", "m", ...
+## $ sign        &lt;chr&gt; "capricorn", "libra and it matters a lot", NA, NA,...
+## $ smokes      &lt;chr&gt; "no", "yes", NA, "no", "no", NA, "no", "sometimes"...
+## $ speaks      &lt;chr&gt; "english", "english (fluently)", "english", "engli...
+## $ status      &lt;chr&gt; "single", "seeing someone", "single", "single", "s...
+```
+
+---
+
+
+```r
+library(naniar)
+
+vis_miss(okcupid_train %&gt;%
+           sample_frac(0.2) %&gt;%
+           select(-starts_with("essay")))
+```
+
+&lt;img src="images/Ok_Naniar-1.png" width="100%" /&gt;
+
+---
+
+#### Q &amp; A
+
+Q: What type of variables do we have?
+A: Numeric: age, height income; Text: essays; Categorical: all others
+
+Q: Can our model(s) handle missing values?
+A: Probably gonna use `glmnet` so: NO.
+
+Q: Are missing values a serious issue here?
+A: Oh yes. `income` 80+% missing, `offspring` 50+% missing. Gonna have to take care of it.
+
+Q: Can our model(s) handle categorical values?
+A: Probably gonna use `glmnet` so: NO.
+
+Q: Categorical variables with many levels?
+A: Oh yes. `speaks` has over 2K. And there are those `essay`s.
+
+Q: Numeric variables skewed?
+A: Income, but all you need is log.
+
+Q: Classes imbalance scenario?
+A: Pretty imbalanced, 5 dogs people for every 1 cat person. Gonna have to take care of it.
+
+---
+
+#### You have to have a strategy
+
+Strategy: Divide training data into 6 samples for 6 main decision/steps/tunings:
+
+1. Missing data imputation
+2. Class imbalance treatment
+3. Feature Engineering for `essay` data
+4. Looking into interactions
+4. Model Tuning
+5. Cutoff choice
+
+.insight[
+💡 We assume these decisions are additive or independent of each other. Does it have to be and what can we do if we suspect not? (Remember we are a Statisticians!)
+]
+
+---
+
+Looking at our strategy, we decide the 12.7K observations need not split evenly between steps.
+
+- Cutoff choice is "peanuts" compared to the other decisions, let's decide in advance that at this stage we would fit the chosen model on ~12K previously seen observations and choose a cutoff by looking at the remaining ~700 observations
+- Missing data imputation, class imbalance and interaction steps will each be given 2K observations
+- Model tuning 3K observations
+- Text feature engineering and selection 3K observations
+- Total: 12,729 training observations
+
+---
+
+We wish to make sure our samples are stratified by `pets`, so we'll use `initial_split()` in stages:
+
+
+```r
+library(tidymodels)
+
+set.seed(42)
+ok_cutoff_split &lt;- initial_split(okcupid_train,
+                                 strata = pets, prop = (729 - 1)/12729)
+ok_tr_cutoff &lt;- training(ok_cutoff_split)
+ok_train &lt;- testing(ok_cutoff_split)
+
+set.seed(42)
+ok_missing_split &lt;- initial_split(ok_train,
+                                  strata = pets, prop = (2000 - 1)/12000)
+ok_tr_missing &lt;- training(ok_missing_split)
+ok_train &lt;- testing(ok_missing_split)
+
+set.seed(42)
+ok_imbalance_split &lt;- initial_split(ok_train,
+                                  strata = pets, prop = (2000 - 1)/10000)
+ok_tr_imbalance &lt;- training(ok_imbalance_split)
+ok_train &lt;- testing(ok_imbalance_split)
+
+set.seed(42)
+ok_interaction_split &lt;- initial_split(ok_train,
+                                      strata = pets, prop = (2000 - 1)/10000)
+ok_tr_interaction &lt;- training(ok_interaction_split)
+ok_train &lt;- testing(ok_interaction_split)
+
+set.seed(42)
+ok_tuning_split &lt;- initial_split(ok_train,
+                                  strata = pets, prop = (3000 - 1)/8000)
+ok_tr_tuning &lt;- training(ok_tuning_split)
+ok_tr_eng &lt;- testing(ok_tuning_split)
+```
+
+---
+
+
+```
+## # A tibble: 6 x 4
+##   name        df                    n_rows cats_rate
+##   &lt;chr&gt;       &lt;list&gt;                 &lt;dbl&gt;     &lt;dbl&gt;
+## 1 missing     &lt;tibble [2,000 x 30]&gt;   2000     0.165
+## 2 imbalance   &lt;tibble [2,000 x 30]&gt;   2000     0.165
+## 3 engineering &lt;tibble [4,000 x 30]&gt;   4000     0.164
+## 4 tuning      &lt;tibble [2,400 x 30]&gt;   2400     0.165
+## 5 cutoff      &lt;tibble [729 x 30]&gt;      729     0.165
+## 6 test        &lt;tibble [4,000 x 30]&gt;   4000     0.173
+```
+
+---
+
+class: section-slide
+
+# Dealing with Missing Data
+
+---
+
+
+### Missing Data
+
+.font80percent[We could fill an entire semester on this subject!]
+
+- What causes a missing datum?
+  - Survey data
+  - Merging data sources
+  - Failure of measurement
+
+- What is the missing data mechanism?
+  - See [Little &amp; Rubin (2019)](https://www.amazon.com/Statistical-Analysis-Missing-Probability-Statistics-ebook/dp/B07Q25CNSD/ref=sr_1_1?crid=2P6ERH22YRKUL&amp;dchild=1&amp;keywords=statistical+analysis+with+missing+data&amp;qid=1587103544&amp;s=books&amp;sprefix=statistical+ana%2Cstripbooks-intl-ship%2C286&amp;sr=1-1) seminal work
+  - MCAR: "on some days the weighing scale batteries drained and we couldn't take the mice weight"
+  - MAR: "on the 2024 elections poll a massive Facebook campaign called all women to refuse to cooperate with the Seker-Sheker company due to allegations of sexual harassment by the company's head Dani Marom"
+  - MNAR: "some of the drug addicts under study missed the final few meetings in the treatment group and their data were discarded"
+  
+.insight[
+💡 How would you asses the missing data mechanism in your dataset?
+]
+
+---
+
+Exploring percent missingness
+
+
+```r
+gg_miss_var(ok_tr_missing %&gt;%
+              select(-starts_with("essay")),
+            show_pct = TRUE)
+```
+
+&lt;img src="images/Ok-Miss1-1.png" width="100%" /&gt;
+
+---
+
+Exploring percent missingness by a predictor
+
+
+```r
+gg_miss_var(ok_tr_missing %&gt;%
+              select(-starts_with("essay")),
+            facet = sex, show_pct = TRUE)
+```
+
+&lt;img src="images/Ok-Miss2-1.png" width="100%" /&gt;
+
+---
+
+Exploring missingness between a predictor and the response (categorical) variable
+
+
+```r
+ok_tr_missing %&gt;%
+    mutate(income_missing = is.na(income)) %&gt;%
+    count(income_missing, pets) %&gt;%
+  pivot_wider(id_cols = pets,
+              names_from = income_missing,
+              values_from = n) %&gt;%
+  mutate(pct_missing = `TRUE` / (`TRUE` + `FALSE`))
+```
+
+```
+## # A tibble: 2 x 4
+##   pets  `FALSE` `TRUE` pct_missing
+##   &lt;chr&gt;   &lt;int&gt;  &lt;int&gt;       &lt;dbl&gt;
+## 1 cats       74    256       0.776
+## 2 dogs      305   1365       0.817
+```
+
+---
+
+But we can do better
+
+&lt;img src="images/Ok-Miss3-1.png" width="100%" /&gt;
+
+---
+
+Exploring missingness between two (categorical) predictors
+
+
+```r
+library(ggmosaic)
+
+ok_tr_missing %&gt;%
+  mutate(body_type_missing = is.na(body_type)) %&gt;%
+  ggplot() +
+  geom_mosaic(aes(x = product(body_type_missing, status),
+                  fill = body_type_missing)) +
+  labs(x = NULL, y = NULL) +
+  theme_light()
+```
+
+&lt;img src="images/Ok-Miss4-1.png" width="100%" /&gt;
+
+---
+
+Girl, you don't always need a plot...
+
+
+```r
+ok_tr_missing %&gt;%
+    mutate(body_type_missing = is.na(body_type)) %&gt;%
+    count(body_type_missing, status) %&gt;%
+  pivot_wider(id_cols = status,
+              names_from = body_type_missing,
+              values_from = n) %&gt;%
+  mutate(pct_missing = `TRUE` / (`TRUE` + `FALSE`))
+```
+
+```
+## # A tibble: 4 x 4
+##   status         `FALSE` `TRUE` pct_missing
+##   &lt;chr&gt;            &lt;int&gt;  &lt;int&gt;       &lt;dbl&gt;
+## 1 available           46      8      0.148 
+## 2 married              7      1      0.125 
+## 3 seeing someone      42      5      0.106 
+## 4 single            1738    153      0.0809
+```
+
+The same with `body_type` missingness by `drugs`:
+
+
+```r
+ok_tr_missing %&gt;%
+    mutate(body_type_missing = is.na(body_type),
+           drugs_missing = is.na(drugs)) %&gt;%
+    count(body_type_missing, drugs_missing) %&gt;%
+  pivot_wider(id_cols = drugs_missing,
+              names_from = body_type_missing,
+              values_from = n) %&gt;%
+  mutate(pct_missing = `TRUE` / (`TRUE` + `FALSE`))
+```
+
+```
+## # A tibble: 2 x 4
+##   drugs_missing `FALSE` `TRUE` pct_missing
+##   &lt;lgl&gt;           &lt;int&gt;  &lt;int&gt;       &lt;dbl&gt;
+## 1 FALSE            1440    122      0.0781
+## 2 TRUE              393     45      0.103
+```
+
+---
+
+But we can do better with a co-occurrence plot or a heatmap
+
+
+```r
+ok_tr_missing %&gt;%
+  count(drugs, body_type) %&gt;%
+  ggplot(aes(drugs, body_type)) +
+  geom_point(aes(size = n)) +
+  theme_light()
+```
+
+&lt;img src="images/Ok-Miss5-1.png" width="70%" /&gt;
+
+---
+
+Exploring missingness between numerical and categorical predictors
+
+
+```r
+ok_tr_missing %&gt;%
+  mutate(bodytype_missing = is.na(body_type)) %&gt;%
+  ggplot(aes(bodytype_missing, age)) +
+  geom_violin() +
+  facet_wrap(. ~ sex) +
+  theme_light()
+```
+
+&lt;img src="images/Ok-Miss6-1.png" width="100%" /&gt;
+
+---
+
+Exploring missingness between two numerical predictors (borrowing `airquality` data)
+
+
+```r
+ggplot(airquality, aes(Ozone, Solar.R)) +
+  naniar::geom_miss_point() +
+  theme_light()
+```
+
+&lt;img src="images/Ok-Miss7-1.png" width="70%" /&gt;
+
+---
+
+When the data is large you could perform PCA on the binary missing/non-missing matrix:
+
+
+---
+
+&lt;img src="images/Ok-Miss8-1.png" width="80%" /&gt;
+
+---
+
+#### Definitely not in MCAR land
+
+- Keep the data missing, drop it all or impute values?
+  - Very much depends on the mechanism of missing data
+  - "Drop it all" only if you're "data rich" and assume MCAR
+  - Keep or impute: can your model handle missing values?
+  - "It's not a bug, it's a feature!": a new category or an additional variable
+  - Use resampling to test the best strategy!
+
+- How to impute?
+  - Very much depends on the mechanism of missing data
+  - Mean/median value if MCAR
+  - kNN imputation
+  - Iterative Regression/Classification algos (EM algorithm)
+  - Use resampling to test the best strategy!
+
+- What do you do with missing values in the response variable?
+  - Semi-supervised Learning
+  - Active Learning
+  
+---
+
+Let's choose between 2 x 3 x 3 = 18 strategies:
+
+1. Missing categorical features
+  - adding an "unknown" category
+  - imputing the most common category
+2. The `income` feature:
+  - Dropping it (it is 80% missing!!)
+  - Log transofrmation, imputing the mean
+  - Log transformation, kNN Imputation
+3. The `essay` features:
+  - Dropping  them
+  - Adding `essay` length where a missing `essay` has length 0
+  - Adding `essay` length where a missing `essay` has length 0 and adding "is_missing" feature to each `essay`
+
+---
+
+Add what you need
+
+```r
+ok_tr_missing &lt;- ok_tr_missing %&gt;%
+  select(-starts_with("essay")) %&gt;%
+  bind_cols(
+    ok_tr_missing %&gt;%
+      transmute_at(vars(essay0:essay9),
+            list("len" = ~ifelse(is.na(.x), 0, str_length(.x))))
+  ) %&gt;%
+  bind_cols(
+    ok_tr_missing %&gt;%
+      transmute_at(vars(essay0:essay9),
+            list("isna" = ~ifelse(is.na(.x), 1, 0)))
+  ) %&gt;%
+  rename_at(vars(contains("_len")),
+            list(~paste("len", gsub("_len", "", .),
+                        sep = "_") ) ) %&gt;%
+  rename_at(vars(contains("_isna")),
+            list(~paste("isna", gsub("_isna", "", .),
+                        sep = "_") ) ) %&gt;%
+  mutate_if(is.character, as.factor)
+```
+
+---
+
+Defining recipes (without `prep()`!), let's start with 2 to simplify.
+
+
+```r
+rec_miss_unk_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+  update_role(income, contains("essay"), new_role = "discarded") %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_unknown(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+
+rec_miss_mode_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+  update_role(income, contains("essay"), new_role = "discarded") %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+```
+
+---
+
+Defining resamples
+
+
+```r
+set.seed(42)
+cv_splits_missing &lt;- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+
+cv_splits_missing
+```
+
+```
+## #  10-fold cross-validation using stratification 
+## # A tibble: 10 x 2
+##    splits             id    
+##    &lt;named list&gt;       &lt;chr&gt; 
+##  1 &lt;split [1.8K/200]&gt; Fold01
+##  2 &lt;split [1.8K/200]&gt; Fold02
+##  3 &lt;split [1.8K/200]&gt; Fold03
+##  4 &lt;split [1.8K/200]&gt; Fold04
+##  5 &lt;split [1.8K/200]&gt; Fold05
+##  6 &lt;split [1.8K/200]&gt; Fold06
+##  7 &lt;split [1.8K/200]&gt; Fold07
+##  8 &lt;split [1.8K/200]&gt; Fold08
+##  9 &lt;split [1.8K/200]&gt; Fold09
+## 10 &lt;split [1.8K/200]&gt; Fold10
+```
+
+---
+
+Applying (two) recipes to all splits
+
+
+```r
+cv_splits_missing$rec_miss_unk_none_none &lt;- map(
+  cv_splits_missing$splits, prepper, recipe = rec_miss_unk_none_none)
+cv_splits_missing$rec_miss_mode_none_none &lt;- map(
+  cv_splits_missing$splits, prepper, recipe = rec_miss_mode_none_none)
+
+map_dbl(cv_splits_missing$rec_miss_unk_none_none, ~nrow(.$term_info))
+```
+
+```
+##   1   2   3   4   5   6   7   8   9  10 
+## 112 113 113 113 113 113 113 112 112 112
+```
+
+
+```r
+cv_splits_missing$rec_miss_unk_none_none[[1]]$term_info %&gt;%
+  filter(str_detect(variable, "speaks"))
+```
+
+```
+## # A tibble: 4 x 4
+##   variable                  type    role      source 
+##   &lt;chr&gt;                     &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;  
+## 1 speaks_english..fluently. numeric predictor derived
+## 2 speaks_other1             numeric predictor derived
+## 3 speaks_new                numeric predictor derived
+## 4 speaks_unknown            numeric predictor derived
+```
+
+---
+
+Defining the model specification
+
+
+```r
+mod_lr &lt;- logistic_reg() %&gt;%
+  set_engine("glmnet")
+```
+
+Fitting the model to all splits
+
+
+```r
+fit_lr &lt;- function(rec_obj) 
+  fit(mod_lr, pets ~ .,
+      data = juice(rec_obj, all_predictors(), all_outcomes()))
+
+cv_splits_missing$mod_lr_unk &lt;- map(
+  cv_splits_missing$rec_miss_unk_none_none, fit_lr)
+cv_splits_missing$mod_lr_mode &lt;- map(
+  cv_splits_missing$rec_miss_mode_none_none, fit_lr)
+```
+
+---
+
+Predicting on assessment data of each split
+
+
+```r
+pred_lr &lt;- function(split_obj, rec_obj, model_obj) {
+  mod_data &lt;- bake(rec_obj,
+                   new_data = assessment(split_obj),
+                   all_predictors(), all_outcomes()) 
+  
+  out &lt;- mod_data %&gt;% select(pets)
+  out$predicted &lt;- predict(model_obj, mod_data, type = "prob",
+                           penalty = 0.0001)$.pred_cats
+  out
+}
+
+cv_splits_missing$pred_unk &lt;- 
+  pmap(
+    lst(
+      split_obj = cv_splits_missing$splits, 
+      rec_obj = cv_splits_missing$rec_miss_unk_none_none, 
+      model_obj = cv_splits_missing$mod_lr_unk
+    ),
+    pred_lr
+  )
+cv_splits_missing$pred_mode &lt;- pmap(lst(
+  
+  split_obj = cv_splits_missing$splits,
+  rec_obj = cv_splits_missing$rec_miss_mode_none_none,
+  model_obj = cv_splits_missing$mod_lr_mode
+),
+pred_lr
+)
+```
+
+---
+
+Measuring the AUC of each split
+
+
+```r
+cv_splits_missing$step_unknown &lt;- map_dfr(
+  cv_splits_missing$pred_unk, roc_auc, pets, predicted)$.estimate
+cv_splits_missing$step_mode &lt;- map_dfr(
+  cv_splits_missing$pred_mode, roc_auc, pets, predicted)$.estimate
+```
+
+---
+
+Comparing AUCs with a plot
+
+
+```r
+cv_splits_missing %&gt;%
+  select(id, step_unknown, step_mode) %&gt;%
+  pivot_longer(cols = c(step_unknown, step_mode),
+               names_to = "recipe", values_to = "auc") %&gt;%
+  ggplot(aes(recipe, auc, group = id, color = id)) +
+  geom_line() +
+  geom_point() +
+  guides(color = FALSE) +
+  theme_light()
+```
+
+&lt;img src="images/Ok-Miss9-1.png" width="70%" /&gt;
+
+---
+
+Comparing AUCs with a statistical test (paired T test)
+
+
+```r
+t.test(cv_splits_missing$step_unknown,
+       cv_splits_missing$step_mode, paired = TRUE)
+```
+
+```
+## 
+## 	Paired t-test
+## 
+## data:  cv_splits_missing$step_unknown and cv_splits_missing$step_mode
+## t = -0.31928, df = 9, p-value = 0.7568
+## alternative hypothesis: true difference in means is not equal to 0
+## 95 percent confidence interval:
+##  -0.01364404  0.01026897
+## sample estimates:
+## mean of the differences 
+##            -0.001687534
+```
+
+
+---
+
+Let's move on to 2 x 2 recipes, adding 2 more recipes for treating the `income` variable with mean imputation, with `step_unknown()` and `step_modeimpute()`.
+
+
+```r
+rec_miss_unk_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+  update_role(contains("essay"), new_role = "discarded") %&gt;%
+  step_log(income, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_unknown(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+
+rec_miss_mode_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+  update_role(contains("essay"), new_role = "discarded") %&gt;%
+  step_log(income, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE)
+```
+
+---
+
+Our approach with 2 recipes does not scale, and we don't need to keep all data just final AUC for each recipe. We are writing a `train_recipe()` function!
+
+
+```r
+lst_recs &lt;- list("unknown_none" = rec_miss_unk_none_none,
+                 "mode_none" = rec_miss_mode_none_none,
+                 "unknown_mean" = rec_miss_unk_mean_none,
+                 "mode_mean" = rec_miss_mode_mean_none)
+
+train_recipe &lt;- function(rec, rec_name, splits) {
+  splits_prepped &lt;- map(splits, prepper, recipe = rec)
+  splits_fit &lt;- map(splits_prepped, fit_lr)
+  splits_pred &lt;- pmap(
+    lst(
+      split_obj = splits, 
+      rec_obj = splits_prepped, 
+      model_obj = splits_fit
+    ),
+    pred_lr
+  )
+  res &lt;- map_dfr(splits_pred, roc_auc, pets, predicted)$.estimate
+  names(res) &lt;- rec_name
+  res
+}
+```
+
+---
+
+Training multiple recipes, bottom-line saving the AUC for each recipe for each split
+
+
+```r
+cv_splits_missing &lt;- cv_splits_missing %&gt;%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_missing$splits)
+  )
+```
+
+Processing the results into a nice table:
+
+
+```r
+cv_res_missing &lt;- cv_splits_missing %&gt;%
+    pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %&gt;%
+  select(id, recipe, AUC) %&gt;%
+  separate(recipe, c("categorical", "income"))
+
+cv_res_missing
+```
+
+```
+## # A tibble: 40 x 4
+##    id     categorical income   AUC
+##    &lt;chr&gt;  &lt;chr&gt;       &lt;chr&gt;  &lt;dbl&gt;
+##  1 Fold01 unknown     none   0.760
+##  2 Fold01 mode        none   0.751
+##  3 Fold01 unknown     mean   0.770
+##  4 Fold01 mode        mean   0.760
+##  5 Fold02 unknown     none   0.676
+##  6 Fold02 mode        none   0.670
+##  7 Fold02 unknown     mean   0.683
+##  8 Fold02 mode        mean   0.675
+##  9 Fold03 unknown     none   0.670
+## 10 Fold03 mode        none   0.693
+## # ... with 30 more rows
+```
+
+---
+
+Comparing AUCs with a plot
+
+
+```r
+cv_res_missing %&gt;%
+  ggplot(aes(income, AUC, group = id, color = id)) +
+    geom_line() +
+    geom_point() +
+    guides(color = FALSE) + facet_wrap(. ~ categorical) +
+    theme_light()
+```
+
+&lt;img src="images/Ok-Miss10-1.png" width="70%" /&gt;
+
+---
+
+Comparing AUCs with a statistical test (2x2 Repeated measures ANOVA)
+
+
+```r
+aov_missing &lt;- aov(
+  AUC ~ factor(categorical) * factor(income) + Error(factor(id)),
+  data = cv_res_missing)
+print(summary(aov_missing))
+```
+
+```
+## 
+## Error: factor(id)
+##           Df  Sum Sq Mean Sq F value Pr(&gt;F)
+## Residuals  9 0.03699 0.00411               
+## 
+## Error: Within
+##                                    Df    Sum Sq   Mean Sq F value Pr(&gt;F)
+## factor(categorical)                 1 0.0000178 1.779e-05   0.165  0.688
+## factor(income)                      1 0.0001487 1.487e-04   1.379  0.251
+## factor(categorical):factor(income)  1 0.0000013 1.250e-06   0.012  0.915
+## Residuals                          27 0.0029116 1.078e-04
+```
+
+```r
+with(cv_res_missing, interaction.plot(categorical, income, AUC))
+```
+
+&lt;img src="images/Ok-Miss11-1.png" width="50%" /&gt;
+
+---
+
+Ok, now let's go back to our original idea of 18 recipes... see code in slides Rmd file.
+
+
+
+
+```r
+lst_recs &lt;- list("unknown_none_none" = rec_miss_unk_none_none,
+                 "mode_none_none" = rec_miss_mode_none_none,
+                 "unknown_mean_none" = rec_miss_unk_mean_none,
+                 "mode_mean_none" = rec_miss_mode_mean_none,
+                 "unknown_knn_none" = rec_miss_unk_knn_none,
+                 "mode_knn_none" = rec_miss_mode_knn_none,
+                 "unknown_none_len" = rec_miss_unk_none_len,
+                 "mode_none_len" = rec_miss_mode_none_len,
+                 "unknown_mean_len" = rec_miss_unk_mean_len,
+                 "mode_mean_len" = rec_miss_mode_mean_len,
+                 "unknown_knn_len" = rec_miss_unk_knn_len,
+                 "mode_knn_len" = rec_miss_mode_knn_len,
+                 "unknown_none_isna" = rec_miss_unk_none_isna,
+                 "mode_none_isna" = rec_miss_mode_none_isna,
+                 "unknown_mean_isna" = rec_miss_unk_mean_isna,
+                 "mode_mean_isna" = rec_miss_mode_mean_isna,
+                 "unknown_knn_isna" = rec_miss_unk_knn_isna,
+                 "mode_knn_isna" = rec_miss_mode_knn_isna
+                 )
+```
+
+---
+
+
+```r
+set.seed(42)
+cv_splits_missing &lt;- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+```
+
+
+```r
+cv_splits_missing &lt;- cv_splits_missing %&gt;%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_missing$splits)
+  )
+```
+
+
+
+
+```r
+cv_res_missing &lt;- cv_splits_missing %&gt;%
+    pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %&gt;%
+  select(id, recipe, AUC) %&gt;%
+  separate(recipe, c("categorical", "income", "essay"))
+```
+
+---
+
+Again, see the plot (think of how you'd plot the results of a 2x2x3 experiment).
+
+
+```r
+cv_res_missing %&gt;%
+  group_by(id, income, essay) %&gt;%
+  summarise(AUC = mean(AUC)) %&gt;%
+  ggplot(aes(income, AUC, group = id, color = id)) +
+    geom_line() +
+    geom_point() +
+    guides(color = FALSE) + facet_wrap(. ~ essay) +
+    theme_light()
+```
+
+&lt;img src="images/Ok-Miss12-1.png" width="70%" /&gt;
+
+---
+
+Repeated measures ANOVA
+
+
+```r
+aov_missing &lt;- aov(
+  AUC ~ factor(categorical) * factor(income) + factor(essay) + Error(factor(id)),
+  data = cv_res_missing)
+
+print(summary(aov_missing))
+```
+
+```
+## 
+## Error: factor(id)
+##           Df Sum Sq Mean Sq F value Pr(&gt;F)
+## Residuals  9 0.1595 0.01772               
+## 
+## Error: Within
+##                                     Df   Sum Sq   Mean Sq F value  Pr(&gt;F)
+## factor(categorical)                  1 0.000191 0.0001911   1.975 0.16179
+## factor(income)                       2 0.000483 0.0002415   2.497 0.08549
+## factor(essay)                        2 0.001101 0.0005503   5.689 0.00409
+## factor(categorical):factor(income)   2 0.000007 0.0000036   0.038 0.96300
+## Residuals                          163 0.015766 0.0000967                
+##                                      
+## factor(categorical)                  
+## factor(income)                     . 
+## factor(essay)                      **
+## factor(categorical):factor(income)   
+## Residuals                            
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+---
+
+Or you can just look at the mean numbers...
+
+
+```r
+cv_res_missing %&gt;%
+  group_by(categorical, income, essay) %&gt;%
+  summarise(AUC = mean(AUC)) %&gt;%
+  arrange(-AUC)
+```
+
+```
+## # A tibble: 18 x 4
+## # Groups:   categorical, income [6]
+##    categorical income essay   AUC
+##    &lt;chr&gt;       &lt;chr&gt;  &lt;chr&gt; &lt;dbl&gt;
+##  1 mode        mean   len   0.719
+##  2 mode        knn    len   0.719
+##  3 unknown     knn    len   0.718
+##  4 unknown     mean   len   0.718
+##  5 mode        mean   none  0.716
+##  6 mode        none   len   0.716
+##  7 mode        mean   isna  0.715
+##  8 unknown     mean   none  0.715
+##  9 mode        knn    none  0.715
+## 10 unknown     none   len   0.715
+## 11 mode        knn    isna  0.713
+## 12 mode        none   none  0.713
+## 13 unknown     mean   isna  0.712
+## 14 unknown     knn    none  0.712
+## 15 unknown     none   none  0.711
+## 16 mode        none   isna  0.710
+## 17 unknown     knn    isna  0.710
+## 18 unknown     none   isna  0.707
+```
+
+.insight[
+💡 So what would you do?
+]
+
+---
+
+class: section-slide
+
+# Class Imbalance
+
+---
+
+### Class Imbalance
+
+.font80percent[(We already gave a decent review in [last class](https://dsapps-2020.github.io/Class_Slides/u3_d02-classtopics/u3_d02-classtopics.html))]
+
+We'll choose between 3 strategies:
+- Upsample
+- Downsample
+- SMOTE and Downsample
+
+---
+
+
+```r
+ok_tr_imbalance &lt;- ok_tr_imbalance %&gt;%
+  select(-starts_with("essay")) %&gt;%
+  bind_cols(
+    ok_tr_imbalance %&gt;%
+      transmute_at(vars(essay0:essay9),
+            list("len" = ~ifelse(is.na(.x), 0, str_length(.x))))
+  ) %&gt;%
+  bind_cols(
+    ok_tr_imbalance %&gt;%
+      transmute_at(vars(essay0:essay9),
+            list("isna" = ~ifelse(is.na(.x), 1, 0)))
+  ) %&gt;%
+  rename_at(vars(contains("_len")),
+            list(~paste("len", gsub("_len", "", .),
+                        sep = "_"))) %&gt;%
+  rename_at(vars(contains("_isna")),
+            list(~paste("isna", gsub("_isna", "", .),
+                        sep = "_"))) %&gt;%
+  mutate_if(is.character, as.factor)
+```
+
+---
+
+
+```r
+library(themis)
+
+rec_imb_upsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+  update_role(starts_with("isna"), new_role = "discarded") %&gt;%
+  step_log(income, starts_with("len"), offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+
+rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+  update_role(starts_with("isna"), new_role = "discarded") %&gt;%
+  step_log(income, starts_with("len"), offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_downsample(pets, under_ratio = 1)
+```
+
+---
+
+
+```r
+rec_imb_smote &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+  update_role(starts_with("isna"), new_role = "discarded") %&gt;%
+  step_log(income, starts_with("len"), offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_downsample(pets, under_ratio = 1.5) %&gt;%
+  step_smote(pets, over_ratio = 1)
+```
+
+---
+
+CV splits
+
+
+```r
+set.seed(42)
+cv_splits_imbalance &lt;- vfold_cv(ok_tr_imbalance, v = 10, strata = pets)
+
+cv_splits_imbalance
+```
+
+```
+## #  10-fold cross-validation using stratification 
+## # A tibble: 10 x 2
+##    splits             id    
+##    &lt;named list&gt;       &lt;chr&gt; 
+##  1 &lt;split [1.8K/200]&gt; Fold01
+##  2 &lt;split [1.8K/200]&gt; Fold02
+##  3 &lt;split [1.8K/200]&gt; Fold03
+##  4 &lt;split [1.8K/200]&gt; Fold04
+##  5 &lt;split [1.8K/200]&gt; Fold05
+##  6 &lt;split [1.8K/200]&gt; Fold06
+##  7 &lt;split [1.8K/200]&gt; Fold07
+##  8 &lt;split [1.8K/200]&gt; Fold08
+##  9 &lt;split [1.8K/200]&gt; Fold09
+## 10 &lt;split [1.8K/200]&gt; Fold10
+```
+
+
+```r
+lst_recs &lt;- list("upsample" = rec_imb_upsample,
+                 "downsample" = rec_imb_downsample,
+                 "smote" = rec_imb_smote)
+```
+
+
+```r
+cv_splits_imbalance &lt;- cv_splits_imbalance %&gt;%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_imbalance$splits)
+  )
+```
+
+---
+
+
+```r
+cv_res_imbalance &lt;- cv_splits_imbalance %&gt;%
+    pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %&gt;%
+  select(id, recipe, AUC)
+```
+
+Repeated measures ANOVA:
+
+
+```r
+aov_imbalance &lt;- aov(
+  AUC ~ factor(recipe) + Error(factor(id)),
+  data = cv_res_imbalance)
+print(summary(aov_imbalance))
+```
+
+```
+## 
+## Error: factor(id)
+##           Df  Sum Sq  Mean Sq F value Pr(&gt;F)
+## Residuals  9 0.06694 0.007438               
+## 
+## Error: Within
+##                Df   Sum Sq   Mean Sq F value Pr(&gt;F)
+## factor(recipe)  2 0.000527 0.0002637   0.946  0.407
+## Residuals      18 0.005016 0.0002787
+```
+
+---
+
+Plotting...
+
+
+```r
+cv_res_imbalance %&gt;%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+    geom_line() +
+    geom_point() +
+    guides(color = FALSE) +
+    theme_light()
+```
+
+&lt;img src="images/Ok-Imb1-1.png" width="70%" /&gt;
+
+---
+
+
+```r
+print(cv_res_imbalance %&gt;%
+        group_by(recipe) %&gt;%
+        summarise(mean_auc = mean(AUC)))
+```
+
+```
+## # A tibble: 3 x 2
+##   recipe     mean_auc
+##   &lt;chr&gt;         &lt;dbl&gt;
+## 1 downsample    0.724
+## 2 smote         0.724
+## 3 upsample      0.733
+```
+
+.insight[
+💡 So what would you do?
+]
+
+---
+
+class: section-slide
+
+# Feat. Engineering and Selection
+
+---
+
+### If anything, remember:
+
+1. Don't be lazy.
+2. Be creative.
+3. Use resampling!
+
+Let's divide to:
+1. Categorical Features
+2. Continuous Features
+3. Interactions
+
+---
+
+class: section-slide
+
+# Categorical Variables
+
+---
+
+### Making dummy variables
+
+.font80percent[(In the case your model can accept categorical levels, skip to the next section - Dealing with categorical variables with many levels)]
+
+- One hot encoding: `\(k\)` dummy vars for `\(k\)` levels
+- Non one hot encoding: `\(k - 1\)` dummy vars for `\(k\)` levels
+- Different Contrasts schemes .font80percent[(e.g. for ordered categorical variables ("low", "medium", "high"))]
+- Feature Hashing
+
+---
+
+
+```r
+set.seed(42)
+df &lt;- tibble(
+  x1 = factor(c(rep("a", 4), rep("b", 4))),
+  y = runif(8)
+)
+
+one_hot &lt;- recipe(y ~ x1, data = df) %&gt;%
+  step_dummy(all_nominal(), one_hot = TRUE) %&gt;%
+  prep(df) %&gt;%
+  juice()
+
+non_one_hot &lt;- recipe(y ~ x1, data = df) %&gt;%
+  step_dummy(all_nominal(), one_hot = FALSE) %&gt;%
+  prep(df) %&gt;%
+  juice()
+```
+
+---
+
+
+```r
+head(one_hot)
+```
+
+```
+## # A tibble: 6 x 3
+##       y  x1_a  x1_b
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 0.915     1     0
+## 2 0.937     1     0
+## 3 0.286     1     0
+## 4 0.830     1     0
+## 5 0.642     0     1
+## 6 0.519     0     1
+```
+
+
+```r
+head(non_one_hot)
+```
+
+```
+## # A tibble: 6 x 2
+##       y  x1_b
+##   &lt;dbl&gt; &lt;dbl&gt;
+## 1 0.915     0
+## 2 0.937     0
+## 3 0.286     0
+## 4 0.830     0
+## 5 0.642     1
+## 6 0.519     1
+```
+
+---
+
+When dealing with linear regression, you should be very careful what you input into the `lm` engine of your choice and how you interpret results!
+
+
+```r
+summary(lm(y ~ ., data = non_one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = non_one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)   0.7421     0.1434   5.177  0.00206 **
+## x1_b         -0.2341     0.2027  -1.155  0.29212   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.1818,	Adjusted R-squared:  0.04546 
+## F-statistic: 1.333 on 1 and 6 DF,  p-value: 0.2921
+```
+
+
+```r
+print(mean(df$y) + (mean(df$y[df$x1 == "a"]) - mean(df$y)))
+```
+
+```
+## [1] 0.7421172
+```
+
+```r
+print(mean(df$y[df$x1 == "a"]))
+```
+
+```
+## [1] 0.7421172
+```
+
+```r
+print(mean(df$y[df$x1 == "b"]) - mean(df$y[df$x1 == "a"]))
+```
+
+```
+## [1] -0.2340931
+```
+
+---
+
+This is like:
+
+
+```r
+summary(lm(y ~ ., data = df))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = df)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)   0.7421     0.1434   5.177  0.00206 **
+## x1b          -0.2341     0.2027  -1.155  0.29212   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.1818,	Adjusted R-squared:  0.04546 
+## F-statistic: 1.333 on 1 and 6 DF,  p-value: 0.2921
+```
+
+But:
+
+
+```r
+summary(lm(y ~ ., data = one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients: (1 not defined because of singularities)
+##             Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept)   0.5080     0.1434   3.544   0.0122 *
+## x1_a          0.2341     0.2027   1.155   0.2921  
+## x1_b              NA         NA      NA       NA  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.1818,	Adjusted R-squared:  0.04546 
+## F-statistic: 1.333 on 1 and 6 DF,  p-value: 0.2921
+```
+
+---
+
+
+```r
+summary(lm(y ~ . - 1, data = one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ . - 1, data = one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients:
+##      Estimate Std. Error t value Pr(&gt;|t|)   
+## x1_a   0.7421     0.1434   5.177  0.00206 **
+## x1_b   0.5080     0.1434   3.544  0.01216 * 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.8677,	Adjusted R-squared:  0.8236 
+## F-statistic: 19.68 on 2 and 6 DF,  p-value: 0.002314
+```
+
+This is like:
+
+
+```r
+summary(lm(y ~ . - 1, data = df))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ . - 1, data = df)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients:
+##     Estimate Std. Error t value Pr(&gt;|t|)   
+## x1a   0.7421     0.1434   5.177  0.00206 **
+## x1b   0.5080     0.1434   3.544  0.01216 * 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.8677,	Adjusted R-squared:  0.8236 
+## F-statistic: 19.68 on 2 and 6 DF,  p-value: 0.002314
+```
+
+---
+
+Plot thickens (check your `options("contrasts")`!):
+
+
+```r
+summary(lm(y ~ ., data = df, contrasts = list(x1 = "contr.sum")))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = df, contrasts = list(x1 = "contr.sum"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45598 -0.08504  0.11103  0.17826  0.22856 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   0.6251     0.1014   6.167 0.000835 ***
+## x11           0.1170     0.1014   1.155 0.292118    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2867 on 6 degrees of freedom
+## Multiple R-squared:  0.1818,	Adjusted R-squared:  0.04546 
+## F-statistic: 1.333 on 1 and 6 DF,  p-value: 0.2921
+```
+
+---
+
+Two variables...
+
+
+```r
+set.seed(42)
+df &lt;- tibble(
+  x1 = factor(c(rep("a", 6), rep("b", 6))),
+  x2 = factor(rep(c(rep("c", 2), rep("d", 2), rep("e", 2)), 2)),
+  y = runif(12)
+)
+
+one_hot &lt;- recipe(y ~ x1 + x2, data = df) %&gt;%
+  step_dummy(all_nominal(), one_hot = TRUE) %&gt;%
+  prep(df) %&gt;%
+  juice()
+
+non_one_hot &lt;- recipe(y ~ x1 + x2, data = df) %&gt;%
+  step_dummy(all_nominal(), one_hot = FALSE) %&gt;%
+  prep(df) %&gt;%
+  juice()
+```
+
+---
+
+
+```r
+head(one_hot)
+```
+
+```
+## # A tibble: 6 x 6
+##       y  x1_a  x1_b  x2_c  x2_d  x2_e
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 0.915     1     0     1     0     0
+## 2 0.937     1     0     1     0     0
+## 3 0.286     1     0     0     1     0
+## 4 0.830     1     0     0     1     0
+## 5 0.642     1     0     0     0     1
+## 6 0.519     1     0     0     0     1
+```
+
+
+```r
+head(non_one_hot)
+```
+
+```
+## # A tibble: 6 x 4
+##       y  x1_b  x2_d  x2_e
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 0.915     0     0     0
+## 2 0.937     0     0     0
+## 3 0.286     0     1     0
+## 4 0.830     0     1     0
+## 5 0.642     0     0     1
+## 6 0.519     0     0     1
+```
+
+---
+
+
+```r
+summary(lm(y ~ ., data = non_one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = non_one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.48619 -0.08138  0.10650  0.15667  0.19636 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)  0.74071    0.15610   4.745  0.00145 **
+## x1_b        -0.11986    0.15610  -0.768  0.46465   
+## x2_d        -0.06112    0.19118  -0.320  0.75738   
+## x2_e        -0.09636    0.19118  -0.504  0.62783   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2704 on 8 degrees of freedom
+## Multiple R-squared:  0.09602,	Adjusted R-squared:  -0.243 
+## F-statistic: 0.2832 on 3 and 8 DF,  p-value: 0.8362
+```
+
+Same as:
+
+
+```r
+summary(lm(y ~ ., data = df))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = df)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.48619 -0.08138  0.10650  0.15667  0.19636 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)  0.74071    0.15610   4.745  0.00145 **
+## x1b         -0.11986    0.15610  -0.768  0.46465   
+## x2d         -0.06112    0.19118  -0.320  0.75738   
+## x2e         -0.09636    0.19118  -0.504  0.62783   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2704 on 8 degrees of freedom
+## Multiple R-squared:  0.09602,	Adjusted R-squared:  -0.243 
+## F-statistic: 0.2832 on 3 and 8 DF,  p-value: 0.8362
+```
+
+---
+
+
+```r
+print(mean(df$y) +
+        (mean(df$y[df$x1 == "a"]) - mean(df$y)) +
+        (mean(df$y[df$x2 == "c"]) - mean(df$y)))
+```
+
+```
+## [1] 0.7407128
+```
+
+```r
+print(mean(df$y[df$x1 == "a"]) + mean(df$y[df$x2 == "c"]) - mean(df$y))
+```
+
+```
+## [1] 0.7407128
+```
+
+```r
+print(mean(df$y[df$x1 == "b"]) - mean(df$y[df$x1 == "a"]))
+```
+
+```
+## [1] -0.1198573
+```
+
+```r
+print(mean(df$y[df$x2 == "d"]) - mean(df$y[df$x2 == "c"]))
+```
+
+```
+## [1] -0.06112303
+```
+
+```r
+print(mean(df$y[df$x2 == "e"]) - mean(df$y[df$x2 == "c"]))
+```
+
+```
+## [1] -0.09636022
+```
+
+---
+
+
+```r
+summary(lm(y ~ ., data = one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ ., data = one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.48619 -0.08138  0.10650  0.15667  0.19636 
+## 
+## Coefficients: (2 not defined because of singularities)
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)  0.52450    0.15610   3.360  0.00993 **
+## x1_a         0.11986    0.15610   0.768  0.46465   
+## x1_b              NA         NA      NA       NA   
+## x2_c         0.09636    0.19118   0.504  0.62783   
+## x2_d         0.03524    0.19118   0.184  0.85836   
+## x2_e              NA         NA      NA       NA   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2704 on 8 degrees of freedom
+## Multiple R-squared:  0.09602,	Adjusted R-squared:  -0.243 
+## F-statistic: 0.2832 on 3 and 8 DF,  p-value: 0.8362
+```
+
+
+```r
+print(mean(df$y[df$x1 == "b"]) + mean(df$y[df$x2 == "e"]) - mean(df$y))
+```
+
+```
+## [1] 0.5244952
+```
+
+```r
+print(mean(df$y[df$x1 == "a"]) - mean(df$y[df$x1 == "b"]))
+```
+
+```
+## [1] 0.1198573
+```
+
+```r
+print(mean(df$y[df$x2 == "c"]) - mean(df$y[df$x2 == "e"]))
+```
+
+```
+## [1] 0.09636022
+```
+
+```r
+print(mean(df$y[df$x2 == "d"]) - mean(df$y[df$x2 == "e"]))
+```
+
+```
+## [1] 0.03523718
+```
+
+---
+
+
+```r
+summary(lm(y ~ . - 1, data = one_hot))
+```
+
+```
+## 
+## Call:
+## lm(formula = y ~ . - 1, data = one_hot)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.48619 -0.08138  0.10650  0.15667  0.19636 
+## 
+## Coefficients: (1 not defined because of singularities)
+##      Estimate Std. Error t value Pr(&gt;|t|)   
+## x1_a  0.64435    0.15610   4.128  0.00331 **
+## x1_b  0.52450    0.15610   3.360  0.00993 **
+## x2_c  0.09636    0.19118   0.504  0.62783   
+## x2_d  0.03524    0.19118   0.184  0.85836   
+## x2_e       NA         NA      NA       NA   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.2704 on 8 degrees of freedom
+## Multiple R-squared:  0.8914,	Adjusted R-squared:  0.8371 
+## F-statistic: 16.41 on 4 and 8 DF,  p-value: 0.0006356
+```
+
+
+```r
+print(mean(df$y[df$x1 == "a"]) + mean(df$y[df$x2 == "e"]) - mean(df$y))
+```
+
+```
+## [1] 0.6443525
+```
+
+```r
+print(mean(df$y[df$x1 == "b"]) + mean(df$y[df$x2 == "e"]) - mean(df$y))
+```
+
+```
+## [1] 0.5244952
+```
+
+```r
+print(mean(df$y[df$x2 == "c"]) - mean(df$y[df$x2 == "e"]))
+```
+
+```
+## [1] 0.09636022
+```
+
+```r
+print(mean(df$y[df$x2 == "d"]) - mean(df$y[df$x2 == "e"]))
+```
+
+```
+## [1] 0.03523718
+```
+
+---
+
+### Categorical variables with many levels
+
+
+```r
+ok_tr_eng %&gt;% count(location)
+```
+
+```
+## # A tibble: 72 x 2
+##    location                          n
+##    &lt;chr&gt;                         &lt;int&gt;
+##  1 alameda, california              73
+##  2 albany, california               12
+##  3 atherton, california              6
+##  4 belmont, california              14
+##  5 belvedere tiburon, california     7
+##  6 benicia, california              14
+##  7 berkeley, california            245
+##  8 brisbane, california              4
+##  9 burlingame, california           27
+## 10 canyon country, california        1
+## # ... with 62 more rows
+```
+
+Many dangers lurk:
+- OVERFITTING!
+- Unseen levels
+- Zero variance variables
+- Size of `\(p\)`
+
+---
+
+#### We'll talk about
+
+- The "Other" and "New" Strategy
+- Clustering
+- Feature Hashing
+- Supervised Numerical Encoding
+- Dimensionality Reduction (Embeddings)
+- Text Features
+
+---
+
+#### The "Other" and "New" Strategy
+
+- "Other": in many scenarios in which a categorical feature has many levels, some of these are so scarce it is doubtful if they have any predictive power - consider grouping them into one "Other" level
+- "New": therefore there might be many levels not seen during training, only during testing - consider adding a (zero variance) "New" level
+
+What % threshold should you use for "Other"?
+- `step_other()` default is 5% (i.e. any level with less than 5% occurrence is grouped into one super-level "Other")
+- or tune it!
+
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_other(all_nominal(), threshold = 0.05) %&gt;%
+  step_novel(all_nominal()) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice() %&gt;%
+  count(location)
+```
+
+```
+## # A tibble: 4 x 2
+##   location                      n
+##   &lt;fct&gt;                     &lt;int&gt;
+## 1 berkeley, california        245
+## 2 oakland, california         434
+## 3 san francisco, california  2164
+## 4 other                      1157
+```
+
+---
+
+You can also insert some creativeness (or plain common sense) in your "Other" strategy:
+
+
+```r
+education2 = case_when(
+           education == "graduated from high school" ~ "high_school",
+           education == "graduated from two-year college" ~ "college",
+           education == "graduated from college/university" ~ "degree1",
+           education == "graduated from masters program" ~ "degree2",
+           education == "graduated from ph.d program" ~ "degree3",
+           education == "working on two-year college" ~ "student0",
+           education == "working on college/university" ~ "student1",
+           education == "working on masters program" ~ "student2",
+           education == "working on ph.d program" ~ "student3",
+           is.na(education) ~ NA_character_,
+           TRUE ~ "other"
+)
+```
+
+---
+
+#### Clustering
+
+- Manual clustering, using expert knowledge and common sense
+- Unsupervised clustering, where it makes sense (e.g. Topic Modeling with [LDA](https://en.wikipedia.org/wiki/Latent_Dirichlet_allocation) on text data)
+
+.insight[
+💡 How would you cluster `location`?
+]
+
+The `sign` feature is also a great example:
+
+
+```r
+ok_tr_eng %&gt;% count(sign)
+```
+
+```
+## # A tibble: 47 x 2
+##    sign                                           n
+##    &lt;chr&gt;                                      &lt;int&gt;
+##  1 aquarius                                      72
+##  2 aquarius and it matters a lot                  2
+##  3 aquarius and it&amp;rsquo;s fun to think about   105
+##  4 aquarius but it doesn&amp;rsquo;t matter         107
+##  5 aries                                         77
+##  6 aries and it&amp;rsquo;s fun to think about      104
+##  7 aries but it doesn&amp;rsquo;t matter             98
+##  8 cancer                                        89
+##  9 cancer and it matters a lot                    6
+## 10 cancer and it&amp;rsquo;s fun to think about      96
+## # ... with 37 more rows
+```
+
+---
+
+
+```r
+signs &lt;- c("leo", "libra", "cancer", "virgo", "scorpio", "gemini",
+           "taurus", "aries", "pisces", "aquarius", "sagittarius", "capricorn")
+
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, sign)) %&gt;%
+  step_mutate(sign = str_extract(sign, str_c(signs, collapse = "|"))) %&gt;%
+  step_unknown(sign) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice() %&gt;%
+  count(sign)
+```
+
+```
+## # A tibble: 13 x 2
+##    sign            n
+##    &lt;fct&gt;       &lt;int&gt;
+##  1 libra         304
+##  2 taurus        304
+##  3 leo           308
+##  4 cancer        291
+##  5 capricorn     256
+##  6 pisces        258
+##  7 aries         279
+##  8 aquarius      286
+##  9 gemini        311
+## 10 scorpio       304
+## 11 sagittarius   236
+## 12 virgo         286
+## 13 unknown       577
+```
+
+---
+
+#### Feature Hashing
+
+Suppose I told you "God, just group the locations by the number of times the letter 'l' appears in them!"
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(location = factor(str_count(location, "l"))) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice() %&gt;%
+  count(location)
+```
+
+```
+## # A tibble: 5 x 2
+##   location     n
+##   &lt;fct&gt;    &lt;int&gt;
+## 1 1         2578
+## 2 2         1177
+## 3 3          206
+## 4 4           21
+## 5 5           18
+```
+
+---
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(locationL = factor(str_count(location, "l"))) %&gt;%
+  step_dummy(locationL) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice() %&gt;%
+  select(starts_with("location"))
+```
+
+```
+## # A tibble: 4,000 x 5
+##    location             locationL_X2 locationL_X3 locationL_X4 locationL_X5
+##    &lt;fct&gt;                       &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;
+##  1 oakland, california             1            0            0            0
+##  2 san francisco, cali~            0            0            0            0
+##  3 san pablo, californ~            1            0            0            0
+##  4 san francisco, cali~            0            0            0            0
+##  5 oakland, california             1            0            0            0
+##  6 san francisco, cali~            0            0            0            0
+##  7 san rafael, califor~            1            0            0            0
+##  8 san francisco, cali~            0            0            0            0
+##  9 oakland, california             1            0            0            0
+## 10 san francisco, cali~            0            0            0            0
+## # ... with 3,990 more rows
+```
+
+---
+
+It's not a good idea because
+- Differenet `location`s map to the same bin ("collision"), masking possible effect
+- The distribution isn't even
+
+But there are advantages too!
+- I *did* reduce the dimensionality from 100 to 6 dummy variables
+- Fast
+- Generalizes well: any new `location` can be mapped this way
+- Scales: I can do this for millions of `location`s, no dictionary needed to store in memory
+
+---
+
+- Feature Hashing (or "hashing trick") does something similar more intelligently
+- It lets you choose the hashing algo and no. of features you'd like (the more - the less chance of collision)
+
+
+```r
+library(textrecipes)
+
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_tokenize(location) %&gt;%
+  step_texthash(location, signed = FALSE, num_terms = 2^4) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice()
+```
+
+```
+## # A tibble: 4,000 x 17
+##    location_hash01 location_hash02 location_hash03 location_hash04
+##              &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;
+##  1               0               1               1               0
+##  2               0               0               1               0
+##  3               0               0               1               1
+##  4               0               0               1               0
+##  5               0               1               1               0
+##  6               0               0               1               0
+##  7               0               0               1               1
+##  8               0               0               1               0
+##  9               0               1               1               0
+## 10               0               0               1               0
+## # ... with 3,990 more rows, and 13 more variables: location_hash05 &lt;dbl&gt;,
+## #   location_hash06 &lt;dbl&gt;, location_hash07 &lt;dbl&gt;, location_hash08 &lt;dbl&gt;,
+## #   location_hash09 &lt;dbl&gt;, location_hash10 &lt;dbl&gt;, location_hash11 &lt;dbl&gt;,
+## #   location_hash12 &lt;dbl&gt;, location_hash13 &lt;dbl&gt;, location_hash14 &lt;dbl&gt;,
+## #   location_hash15 &lt;dbl&gt;, location_hash16 &lt;dbl&gt;, pets &lt;fct&gt;
+```
+
+---
+
+- Particularly useful for fast and furious feature engineering of text (see later)
+- Beware of columns with zero variance, consider binning them to a "New" category
+- Powerful methods like `xgboost` can handle 2^20+ no. of terms easily
+
+.inspect[
+💡 Why would this work in spite of collisions?
+
+What is still a major disadvantage? Hint: 🎁
+]
+
+---
+
+#### Supervised Numerical Encoding
+
+Here's another crazy idea for you:
+
+- For regression, replace a category with `\(y\)`'s mean in this category
+- For classification, replace a category with the log odds of `\(y\)` in this category
+
+Thus, changing a categorical variable with many levels into a single numerical variable (or a few for a few classes).
+
+
+```r
+library(embed)
+
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(location2 = location) %&gt;%
+  step_lencode_glm(location, outcome = vars(pets)) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice()
+```
+
+```
+## # A tibble: 4,000 x 3
+##    location pets  location2                
+##       &lt;dbl&gt; &lt;fct&gt; &lt;fct&gt;                    
+##  1   -1.29  dogs  oakland, california      
+##  2   -1.86  dogs  san francisco, california
+##  3  -16.6   dogs  san pablo, california    
+##  4   -1.86  dogs  san francisco, california
+##  5   -1.29  dogs  oakland, california      
+##  6   -1.86  dogs  san francisco, california
+##  7   -0.722 cats  san rafael, california   
+##  8   -1.86  dogs  san francisco, california
+##  9   -1.29  dogs  oakland, california      
+## 10   -1.86  dogs  san francisco, california
+## # ... with 3,990 more rows
+```
+
+---
+
+Make sure you get what just happened
+
+
+```r
+mv &lt;- ok_tr_eng$location == "mountain view, california"
+p &lt;- mean(ok_tr_eng$pets[mv] == "cats")
+log(p / (1 - p))
+```
+
+```
+## [1] -0.6931472
+```
+
+---
+
+But...
+- What if a specific location has just 1-2 samples in training set?
+- "self-fulfilling prophecy"
+
+The first issue can be somewhat alleviated using a Bayesian approach, *shrinking* somewhat coefficients towards their prior when n is small:
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(location2 = location) %&gt;%
+  step_lencode_bayes(location, outcome = vars(pets)) %&gt;%
+  prep(ok_tr_eng %&gt;% head(100)) %&gt;%
+  juice()
+```
+
+```
+## # A tibble: 100 x 3
+##    location pets  location2                
+##       &lt;dbl&gt; &lt;fct&gt; &lt;fct&gt;                    
+##  1    -1.54 dogs  oakland, california      
+##  2    -1.49 dogs  san francisco, california
+##  3    -1.51 dogs  san pablo, california    
+##  4    -1.49 dogs  san francisco, california
+##  5    -1.54 dogs  oakland, california      
+##  6    -1.49 dogs  san francisco, california
+##  7    -1.45 cats  san rafael, california   
+##  8    -1.49 dogs  san francisco, california
+##  9    -1.54 dogs  oakland, california      
+## 10    -1.49 dogs  san francisco, california
+## # ... with 90 more rows
+```
+
+---
+
+#### Dimensionality Reduction (Embeddings)
+
+See our `word2vec` detour when we learned about [Networks Community Detection](https://dsapps-2020.github.io/Class_Slides/u2_d04-community/u2_d04-community.html).
+
+If you have `tensorflow` and `keras` installed, you could train your own embeddings to turn each `location` into a `num_terms` long vector of features:
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(location2 = location) %&gt;%
+  step_embed(location, outcome = vars(pets), num_terms = 10,
+             options = embed_control(epochs = 10)) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice()
+```
+
+---
+
+Alternatively you could use pre-trained embeddings for text variables such as `essay`s using `step_word_embedding()` from the `textrecipes` package (where `my_embeddings` are your pre-trained embeddings:
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_tokenize(location) %&gt;%
+  step_word_embeddings(location, embeddings = my_embeddings) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice()
+```
+
+Or, perform PCA on the dummay variables matrix, keeping only a few of the firt PCs as features:
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
+  step_mutate(old_location = location) %&gt;%
+  step_dummy(location) %&gt;%
+  step_normalize(all_numeric()) %&gt;%
+  step_pca(starts_with("location"), num_comp = 10) %&gt;%
+  prep(ok_tr_eng) %&gt;%
+  juice()
+```
+
+```
+## # A tibble: 4,000 x 12
+##    pets  old_location  PC01    PC02    PC03     PC04     PC05      PC06
+##    &lt;fct&gt; &lt;fct&gt;        &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+##  1 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
+##  2 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
+##  3 dogs  san pablo, ~ -1.27 -0.676  -0.957   0.243   -0.600   -3.03e-12
+##  4 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
+##  5 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
+##  6 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
+##  7 cats  san rafael,~ -1.29 -0.739  -1.15    0.472   -1.41     7.31e+ 0
+##  8 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
+##  9 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
+## 10 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
+## # ... with 3,990 more rows, and 4 more variables: PC07 &lt;dbl&gt;, PC08 &lt;dbl&gt;,
+## #   PC09 &lt;dbl&gt;, PC10 &lt;dbl&gt;
+```
+
+---
+
+#### Text Features
+
+Extracting textual features could be the subject of an entire class or even a course.
+
+Just to demonstrate how worthwhile being creative can get here let us just add two textual features here, `n_cat` and `n_dog` in all `essay`s:
+
+
+```r
+ok_tr_eng2 &lt;- ok_tr_eng %&gt;%
+  mutate_at(vars(essay0:essay9),
+            list("len" = ~ifelse(is.na(.x), 0, str_length(.x)))) %&gt;%
+  rename_at(vars(contains("_len")),
+            list(~paste("len", gsub("_len", "", .), sep = "_") ) )
+```
+
+---
+
+
+```r
+rec_eng_notext &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
+  step_log(income, starts_with("len"), offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+
+str_count_na &lt;- function(string, pattern = "") {
+  n &lt;- str_count(string, pattern)
+  ifelse(is.na(n), 0, n)
+}
+```
+
+---
+
+
+```r
+rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
+  step_mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c),
+              n_cat = str_count_na(essays, "cat"),
+              n_dog = str_count_na(essays, "dog")) %&gt;%
+  update_role(starts_with("essay"), new_role = "discarded") %&gt;%
+  step_log(income, starts_with("len"), offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+
+
+&lt;img src="images/Ok-FES1-1.png" width="70%" /&gt;
+
+---
+
+#### Text Features: some ideas for you
+
+- not just words: do cat people tend to use more the letter "z"? no. of commas, no. of dot-dot-dots, no. of links, no. of hashtags, no. of extra spaces, no. of digits
+- to stem or not to stem?
+  - "plays", "playing", ["playa"](https://www.urbandictionary.com/define.php?term=Playa)
+- sentiment features
+  - not just no. of "hate" vs. love
+  - also no. of "you" and "I"
+- stop words or not to stop words?
+- TF-IDF or not to TF-IDF
+- Feature Hashing
+- n-grams: "I love my cats"
+- topics
+
+---
+
+#### Using `textrecipes` + `textfeatures`
+
+- The `textrecipes` package lets you calculate a few features with a single `step_textfeature()`
+- The `extract_functions` parameter accepts a named list of functions you wish to define on your text data
+- By default it will accept `count_functions` list from the [`textfeatures`](https://textfeatures.mikewk.com/reference/textfeatures.html) by Mike Kearney, which gets you basic counts like `n_words`, `n_digits` etc.
+
+But `textfeatures` also has via the `textfeatures()` function:
+  - basic sentiment features like `sent_bing`
+  - first word2vec 2-200 dimensions!
+
+
+```r
+print(textfeatures:::sentiment_bing("I hate cats!"))
+```
+
+```
+## [1] -1
+```
+
+```r
+print(textfeatures:::sentiment_bing("I love cats! Hate dogs though."))
+```
+
+```
+## [1] 0
+```
+
+```r
+print(textfeatures::word_dims("Why would Kim Jong-un insult me by calling me \"old,\""))
+```
+
+```
+## INFO  [21:55:39.293] early stopping at 20 iteration 
+##     w1 w2   w3   w4   w5 w6 w7 w8 w9 w10
+## 1 0.65  0 0.05 0.25 0.05  0  0  0  0   0
+```
+
+---
+
+
+```r
+ok_tr_eng2 &lt;- ok_tr_eng2 %&gt;%
+  mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c))
+
+my_text_funs &lt;- c(textfeatures::count_functions,
+                      "sent_bing" = textfeatures:::sentiment_bing)
+```
+
+---
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng2 %&gt;% select(pets, essays)) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  prep(ok_tr_eng2 %&gt;% head(10)) %&gt;%
+  juice() %&gt;%
+  select(t_essays_n_uq_words, t_essays_n_hashtags, t_essays_sent_bing)
+```
+
+```
+## # A tibble: 10 x 3
+##    t_essays_n_uq_words t_essays_n_hashtags t_essays_sent_bing
+##                  &lt;dbl&gt;               &lt;dbl&gt;              &lt;dbl&gt;
+##  1                   0                   0                  0
+##  2                 116                   0                 11
+##  3                 250                   0                 11
+##  4                 281                   0                 26
+##  5                 356                   0                  8
+##  6                 405                   0                 40
+##  7                   0                   0                  0
+##  8                 622                   0                 36
+##  9                   0                   0                  0
+## 10                   0                   0                  0
+```
+
+---
+
+#### Text Features: but the words are most important
+
+We'll take [Kuhn &amp; Johnson (2019)](http://www.feat.engineering/index.html) approach, and:
+
+1. Filter 1-gram tokens (words) with at least X occurrences
+2. Calculate the odds ratio `\(\frac{P(w|cats)}{1- P(w|cats)} / \frac{P(w|dogs)}{1- P(w|dogs)}\)` where `\(P(w|cats)\)` is the % of cats people who used the word `\(w\)` at least once in all essays
+3. Calculate a p-value with a FDR correction
+4. Choose words with OR of at least |2| and FDR value of maximum `\(10^{-5}\)`
+
+Then use resampling to see if these have any effect on AUC.
+
+---
+
+
+```r
+library(tidytext)
+
+tidy_essays &lt;- ok_tr_eng2 %&gt;%
+  mutate(id = 1:n()) %&gt;%
+  select(id, pets, essays) %&gt;%
+  unnest_tokens(word, essays) %&gt;%
+  filter(!word %in% stop_words$word,
+         str_detect(word, "[a-z]"))
+
+tidy_essays %&gt;% head()
+```
+
+```
+## # A tibble: 6 x 3
+##      id pets  word     
+##   &lt;int&gt; &lt;chr&gt; &lt;chr&gt;    
+## 1     2 dogs  lot      
+## 2     2 dogs  loving   
+## 3     2 dogs  person   
+## 4     2 dogs  everyday 
+## 5     2 dogs  worth    
+## 6     2 dogs  sarcastic
+```
+
+---
+
+
+```r
+min_n_words &lt;- tidy_essays %&gt;%
+  count(id, word) %&gt;%
+  count(word) %&gt;%
+  filter(n &gt; 100) %&gt;%
+  pull(word)
+
+print(c("cat", "dog", "cats", "dogs") %in% min_n_words)
+```
+
+```
+## [1]  TRUE  TRUE FALSE  TRUE
+```
+
+
+```r
+n_cats_people &lt;- sum(ok_tr_eng2$pets == "cats")
+n_dogs_people &lt;- sum(ok_tr_eng2$pets == "dogs")
+
+fisher_test &lt;- function(cats, dogs) {
+  cont_tab &lt;- matrix(c(cats, n_cats_people - cats,
+                       dogs, n_dogs_people - dogs),
+                     ncol = 2, nrow = 2)
+  ft &lt;- fisher.test(cont_tab)
+  list(OR = ft$estimate, p_val = ft$p.value)
+}
+
+or_res &lt;- tidy_essays %&gt;%
+  filter(word %in% min_n_words) %&gt;%
+  count(id, word, pets) %&gt;%
+  count(word, pets) %&gt;%
+  pivot_wider(id_cols = word, names_from = pets,
+              values_from = n, values_fill = list(cats = 0, dogs = 0)) %&gt;%
+  mutate(fisher_obj = map2(cats, dogs, fisher_test))
+
+or_res &lt;- or_res %&gt;%
+  bind_cols(
+    bind_rows(or_res$fisher_obj)
+  ) %&gt;%
+  mutate(fdr = p.adjust(p_val, method = "fdr"))
+
+or_res
+```
+
+```
+## # A tibble: 556 x 7
+##    word         cats  dogs fisher_obj          OR     p_val     fdr
+##    &lt;chr&gt;       &lt;int&gt; &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+##  1 absolutely     21    82 &lt;named list [2]&gt; 1.31  0.281     0.454  
+##  2 action         19   126 &lt;named list [2]&gt; 0.759 0.305     0.478  
+##  3 active         34   183 &lt;named list [2]&gt; 0.941 0.851     0.936  
+##  4 activities     24   115 &lt;named list [2]&gt; 1.06  0.816     0.914  
+##  5 admit          28   148 &lt;named list [2]&gt; 0.959 0.917     0.961  
+##  6 adventure      40   210 &lt;named list [2]&gt; 0.965 0.930     0.964  
+##  7 adventures     36   167 &lt;named list [2]&gt; 1.10  0.627     0.775  
+##  8 adventurous    24   130 &lt;named list [2]&gt; 0.935 0.825     0.920  
+##  9 afraid         21    85 &lt;named list [2]&gt; 1.26  0.352     0.526  
+## 10 age            47   118 &lt;named list [2]&gt; 2.10  0.0000914 0.00175
+## # ... with 546 more rows
+```
+
+---
+
+
+```r
+cd_words &lt;- or_res %&gt;%
+  arrange(fdr) %&gt;%
+  filter(fdr &lt; 10e-5)
+
+cd_words
+```
+
+```
+## # A tibble: 9 x 7
+##   word    cats  dogs fisher_obj          OR    p_val      fdr
+##   &lt;chr&gt;  &lt;int&gt; &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1 cat       67    42 &lt;named list [2]&gt; 8.90  5.33e-27 2.96e-24
+## 2 dog       12   328 &lt;named list [2]&gt; 0.171 1.61e-14 4.49e-12
+## 3 ilink     81   159 &lt;named list [2]&gt; 2.81  9.95e-12 1.84e- 9
+## 4 class    102   233 &lt;named list [2]&gt; 2.45  2.65e-11 3.69e- 9
+## 5 href      84   179 &lt;named list [2]&gt; 2.59  1.35e-10 1.50e- 8
+## 6 write     64   152 &lt;named list [2]&gt; 2.26  6.36e- 7 5.89e- 5
+## 7 feel     130   415 &lt;named list [2]&gt; 1.74  1.51e- 6 9.33e- 5
+## 8 moment    64   157 &lt;named list [2]&gt; 2.19  1.47e- 6 9.33e- 5
+## 9 sort      45    90 &lt;named list [2]&gt; 2.65  1.25e- 6 9.33e- 5
+```
+
+---
+
+
+```r
+count_words &lt;- function(essays) {
+  counts &lt;- map(cd_words$word, ~str_count_na(essays, .x))
+  names(counts) = str_c("w_", cd_words$word)
+  counts
+}
+
+ok_tr_eng3 &lt;- ok_tr_eng2 %&gt;%
+  bind_cols(
+    map_dfr(ok_tr_eng2$essays, count_words)
+  ) %&gt;%
+  select(-starts_with("essay"), -starts_with("len_essay")) %&gt;%
+  bind_cols(ok_tr_eng2 %&gt;% select(essays)) %&gt;%
+  mutate_if(is.character, as.factor)
+```
+
+---
+
+
+```r
+rec_eng_notext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
+  step_log(income, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+
+rec_eng_textfeat &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+rec_eng_fulltext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+set.seed(42)
+cv_splits_eng &lt;- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
+
+lst_recs &lt;- list("notext" = rec_eng_notext,
+                 "textfeat" = rec_eng_textfeat,
+                 "fulltext" = rec_eng_fulltext)
+```
+
+
+```r
+cv_res_eng &lt;- cv_splits_eng %&gt;%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_eng$splits)
+  ) %&gt;%
+  pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %&gt;%
+  select(id, recipe, AUC)
+```
+
+
+
+---
+
+
+```r
+cv_res_eng %&gt;%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+  geom_line() +
+  geom_point() +
+  guides(color = FALSE) +
+  theme_light()
+```
+
+&lt;img src="images/Ok-FES2-1.png" width="70%" /&gt;
+
+---
+
+class: section-slide
+
+# Numerical Variables
+
+---
+
+---
+
+class: section-slide
+
+# Interaction Effects
+
+---
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
