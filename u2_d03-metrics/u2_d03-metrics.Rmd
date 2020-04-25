@@ -507,7 +507,7 @@ $S(i, j) =r(i,j)=\frac{\sum_k(A_{ik}-\overline{A_i})(A_{jk}-\overline{A_j})}{\sq
 
 ### Jaccard Coefficient
 
-$S(i, j)=J(i,j)=\frac{neigh(i) \cap neigh(j)}{neigh(i) \cup neigh(j)}=\frac{n_{ij}}{k_i+k_j-n_{ij}}$
+$S(i, j)=J(i,j)=\frac{|neigh(i) \cap neigh(j)|}{|neigh(i) \cup neigh(j)|}=\frac{n_{ij}}{k_i+k_j-n_{ij}}$
 
 ```{python}
 sim_jaccard = nx.jaccard_coefficient(G)

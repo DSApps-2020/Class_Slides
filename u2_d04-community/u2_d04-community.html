@@ -4,7 +4,7 @@
     <title>Community Detection</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-23" />
+    <meta name="date" content="2020-04-25" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-23
+### 2020-04-25
 
 ---
 
@@ -187,7 +187,7 @@ communities[:10]
 ```
 
 ```
-## array([0, 0, 0, 0, 0, 1, 1, 0, 0, 1], dtype=int64)
+## array([1, 1, 1, 1, 1, 0, 0, 1, 1, 0], dtype=int64)
 ```
 
 ---
@@ -551,7 +551,7 @@ print(nx.community.modularity(G, communities))
 ```
 
 ```
-## 0.4761630142252972
+## 0.47616301422529733
 ```
 
 ```python
@@ -576,7 +576,7 @@ plt.show()
 2. For each node `\(i\)`, go over all its neighbors communities:
   Switch node `\(i\)`'s community with the community for which `\(max_j(\Delta Q)\)` is reached, s.t. `\(max_j(\Delta Q) &gt; 0\)` (otherwise leave node `\(i\)`). 
   Keep going (passing all nodes as many times necessary) until no improvement in `\(Q\)` is possible
-3. Build a new network: amalgamate each community into a single node, where all its within edges are are summed into a single self-loop edge with weight x 2
+3. Build a new network: amalgamate each community into a single node, where all its within edges are summed into a single self-loop edge with weight x 2
 4. Go back to 2 until no improvement in `\(Q\)` is possible
 
 ---
@@ -805,76 +805,63 @@ node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=1, 
 ```
 ## 
 Computing transition probabilities:   0%|          | 0/23 [00:00&lt;?, ?it/s]
-Computing transition probabilities: 100%|##########| 23/23 [00:00&lt;00:00, 4595.95it/s]
+Computing transition probabilities: 100%|##########| 23/23 [00:00&lt;00:00, 7669.05it/s]
 ## 
 Generating walks (CPU: 1):   0%|          | 0/200 [00:00&lt;?, ?it/s]
-Generating walks (CPU: 1):   2%|2         | 4/200 [00:00&lt;00:06, 30.08it/s]
-Generating walks (CPU: 1):   4%|3         | 7/200 [00:00&lt;00:06, 27.64it/s]
-Generating walks (CPU: 1):   5%|5         | 10/200 [00:00&lt;00:07, 26.87it/s]
-Generating walks (CPU: 1):   6%|6         | 13/200 [00:00&lt;00:06, 26.99it/s]
-Generating walks (CPU: 1):   8%|8         | 16/200 [00:00&lt;00:06, 26.71it/s]
-Generating walks (CPU: 1):  10%|9         | 19/200 [00:00&lt;00:07, 25.83it/s]
-Generating walks (CPU: 1):  11%|#1        | 22/200 [00:00&lt;00:07, 25.07it/s]
-Generating walks (CPU: 1):  12%|#2        | 25/200 [00:00&lt;00:07, 24.32it/s]
-Generating walks (CPU: 1):  14%|#4        | 28/200 [00:01&lt;00:07, 24.40it/s]
-Generating walks (CPU: 1):  16%|#5        | 31/200 [00:01&lt;00:06, 24.88it/s]
-Generating walks (CPU: 1):  17%|#7        | 34/200 [00:01&lt;00:06, 26.15it/s]
-Generating walks (CPU: 1):  18%|#8        | 37/200 [00:01&lt;00:06, 25.73it/s]
-Generating walks (CPU: 1):  20%|##        | 40/200 [00:01&lt;00:06, 26.45it/s]
-Generating walks (CPU: 1):  22%|##1       | 43/200 [00:01&lt;00:06, 24.53it/s]
-Generating walks (CPU: 1):  23%|##3       | 46/200 [00:01&lt;00:06, 23.68it/s]
-Generating walks (CPU: 1):  24%|##4       | 49/200 [00:01&lt;00:06, 24.23it/s]
-Generating walks (CPU: 1):  26%|##6       | 52/200 [00:02&lt;00:05, 25.07it/s]
-Generating walks (CPU: 1):  28%|##7       | 55/200 [00:02&lt;00:05, 25.83it/s]
-Generating walks (CPU: 1):  29%|##9       | 58/200 [00:02&lt;00:05, 26.24it/s]
-Generating walks (CPU: 1):  30%|###       | 61/200 [00:02&lt;00:05, 26.27it/s]
-Generating walks (CPU: 1):  32%|###2      | 64/200 [00:02&lt;00:05, 25.28it/s]
-Generating walks (CPU: 1):  34%|###3      | 67/200 [00:02&lt;00:05, 23.54it/s]
-Generating walks (CPU: 1):  35%|###5      | 70/200 [00:02&lt;00:05, 23.45it/s]
-Generating walks (CPU: 1):  36%|###6      | 73/200 [00:02&lt;00:05, 24.36it/s]
-Generating walks (CPU: 1):  38%|###8      | 76/200 [00:03&lt;00:04, 24.92it/s]
-Generating walks (CPU: 1):  40%|###9      | 79/200 [00:03&lt;00:05, 23.70it/s]
-Generating walks (CPU: 1):  41%|####1     | 82/200 [00:03&lt;00:05, 22.50it/s]
-Generating walks (CPU: 1):  42%|####2     | 85/200 [00:03&lt;00:04, 23.53it/s]
-Generating walks (CPU: 1):  44%|####4     | 88/200 [00:03&lt;00:04, 24.42it/s]
-Generating walks (CPU: 1):  46%|####5     | 91/200 [00:03&lt;00:04, 24.96it/s]
-Generating walks (CPU: 1):  47%|####6     | 94/200 [00:03&lt;00:04, 25.16it/s]
-Generating walks (CPU: 1):  48%|####8     | 97/200 [00:03&lt;00:03, 26.16it/s]
-Generating walks (CPU: 1):  50%|#####     | 100/200 [00:03&lt;00:03, 26.62it/s]
-Generating walks (CPU: 1):  52%|#####1    | 103/200 [00:04&lt;00:03, 26.74it/s]
-Generating walks (CPU: 1):  53%|#####3    | 106/200 [00:04&lt;00:03, 27.05it/s]
-Generating walks (CPU: 1):  55%|#####4    | 109/200 [00:04&lt;00:03, 27.11it/s]
-Generating walks (CPU: 1):  56%|#####6    | 112/200 [00:04&lt;00:03, 27.16it/s]
-Generating walks (CPU: 1):  57%|#####7    | 115/200 [00:04&lt;00:03, 27.12it/s]
-Generating walks (CPU: 1):  59%|#####8    | 118/200 [00:04&lt;00:03, 24.81it/s]
-Generating walks (CPU: 1):  60%|######    | 121/200 [00:04&lt;00:03, 23.86it/s]
-Generating walks (CPU: 1):  62%|######2   | 124/200 [00:04&lt;00:03, 23.29it/s]
-Generating walks (CPU: 1):  64%|######3   | 127/200 [00:05&lt;00:03, 23.17it/s]
-Generating walks (CPU: 1):  65%|######5   | 130/200 [00:05&lt;00:02, 24.15it/s]
-Generating walks (CPU: 1):  66%|######6   | 133/200 [00:05&lt;00:02, 23.87it/s]
-Generating walks (CPU: 1):  68%|######8   | 136/200 [00:05&lt;00:02, 22.51it/s]
-Generating walks (CPU: 1):  70%|######9   | 139/200 [00:05&lt;00:02, 22.32it/s]
-Generating walks (CPU: 1):  71%|#######1  | 142/200 [00:05&lt;00:02, 22.34it/s]
-Generating walks (CPU: 1):  72%|#######2  | 145/200 [00:05&lt;00:02, 23.46it/s]
-Generating walks (CPU: 1):  74%|#######4  | 148/200 [00:05&lt;00:02, 24.31it/s]
-Generating walks (CPU: 1):  76%|#######5  | 151/200 [00:06&lt;00:01, 25.32it/s]
-Generating walks (CPU: 1):  77%|#######7  | 154/200 [00:06&lt;00:01, 25.94it/s]
-Generating walks (CPU: 1):  78%|#######8  | 157/200 [00:06&lt;00:01, 25.99it/s]
-Generating walks (CPU: 1):  80%|########  | 160/200 [00:06&lt;00:01, 26.71it/s]
-Generating walks (CPU: 1):  82%|########1 | 163/200 [00:06&lt;00:01, 26.17it/s]
-Generating walks (CPU: 1):  83%|########2 | 166/200 [00:06&lt;00:01, 26.56it/s]
-Generating walks (CPU: 1):  84%|########4 | 169/200 [00:06&lt;00:01, 27.06it/s]
-Generating walks (CPU: 1):  86%|########6 | 172/200 [00:06&lt;00:01, 27.28it/s]
-Generating walks (CPU: 1):  88%|########7 | 175/200 [00:06&lt;00:00, 27.42it/s]
-Generating walks (CPU: 1):  89%|########9 | 178/200 [00:07&lt;00:00, 26.93it/s]
-Generating walks (CPU: 1):  90%|######### | 181/200 [00:07&lt;00:00, 26.05it/s]
-Generating walks (CPU: 1):  92%|#########2| 184/200 [00:07&lt;00:00, 25.14it/s]
-Generating walks (CPU: 1):  94%|#########3| 187/200 [00:07&lt;00:00, 24.43it/s]
-Generating walks (CPU: 1):  95%|#########5| 190/200 [00:07&lt;00:00, 24.36it/s]
-Generating walks (CPU: 1):  96%|#########6| 193/200 [00:07&lt;00:00, 24.91it/s]
-Generating walks (CPU: 1):  98%|#########8| 196/200 [00:07&lt;00:00, 24.39it/s]
-Generating walks (CPU: 1): 100%|#########9| 199/200 [00:07&lt;00:00, 23.64it/s]
-Generating walks (CPU: 1): 100%|##########| 200/200 [00:08&lt;00:00, 24.82it/s]
+Generating walks (CPU: 1):   2%|2         | 4/200 [00:00&lt;00:06, 32.26it/s]
+Generating walks (CPU: 1):   4%|3         | 7/200 [00:00&lt;00:06, 30.03it/s]
+Generating walks (CPU: 1):   5%|5         | 10/200 [00:00&lt;00:06, 28.72it/s]
+Generating walks (CPU: 1):   6%|6         | 13/200 [00:00&lt;00:06, 28.27it/s]
+Generating walks (CPU: 1):   8%|8         | 16/200 [00:00&lt;00:06, 28.69it/s]
+Generating walks (CPU: 1):  10%|#         | 20/200 [00:00&lt;00:06, 29.48it/s]
+Generating walks (CPU: 1):  12%|#2        | 24/200 [00:00&lt;00:05, 29.52it/s]
+Generating walks (CPU: 1):  14%|#4        | 28/200 [00:00&lt;00:05, 29.95it/s]
+Generating walks (CPU: 1):  16%|#6        | 32/200 [00:01&lt;00:05, 30.54it/s]
+Generating walks (CPU: 1):  18%|#8        | 36/200 [00:01&lt;00:05, 31.04it/s]
+Generating walks (CPU: 1):  20%|##        | 40/200 [00:01&lt;00:05, 31.69it/s]
+Generating walks (CPU: 1):  22%|##2       | 44/200 [00:01&lt;00:04, 32.88it/s]
+Generating walks (CPU: 1):  24%|##4       | 48/200 [00:01&lt;00:04, 33.01it/s]
+Generating walks (CPU: 1):  26%|##6       | 52/200 [00:01&lt;00:04, 33.86it/s]
+Generating walks (CPU: 1):  28%|##8       | 56/200 [00:01&lt;00:04, 34.76it/s]
+Generating walks (CPU: 1):  30%|###       | 60/200 [00:01&lt;00:03, 35.42it/s]
+Generating walks (CPU: 1):  32%|###2      | 64/200 [00:01&lt;00:03, 35.60it/s]
+Generating walks (CPU: 1):  34%|###4      | 68/200 [00:02&lt;00:03, 35.92it/s]
+Generating walks (CPU: 1):  36%|###6      | 72/200 [00:02&lt;00:03, 36.25it/s]
+Generating walks (CPU: 1):  38%|###8      | 76/200 [00:02&lt;00:03, 36.18it/s]
+Generating walks (CPU: 1):  40%|####      | 80/200 [00:02&lt;00:03, 33.51it/s]
+Generating walks (CPU: 1):  42%|####2     | 84/200 [00:02&lt;00:03, 29.79it/s]
+Generating walks (CPU: 1):  44%|####4     | 88/200 [00:02&lt;00:03, 28.90it/s]
+Generating walks (CPU: 1):  46%|####5     | 91/200 [00:02&lt;00:03, 28.31it/s]
+Generating walks (CPU: 1):  47%|####6     | 94/200 [00:03&lt;00:03, 26.87it/s]
+Generating walks (CPU: 1):  48%|####8     | 97/200 [00:03&lt;00:03, 26.28it/s]
+Generating walks (CPU: 1):  50%|#####     | 100/200 [00:03&lt;00:03, 26.29it/s]
+Generating walks (CPU: 1):  52%|#####1    | 103/200 [00:03&lt;00:03, 25.42it/s]
+Generating walks (CPU: 1):  53%|#####3    | 106/200 [00:03&lt;00:03, 25.69it/s]
+Generating walks (CPU: 1):  55%|#####4    | 109/200 [00:03&lt;00:03, 24.30it/s]
+Generating walks (CPU: 1):  56%|#####6    | 112/200 [00:03&lt;00:03, 24.57it/s]
+Generating walks (CPU: 1):  57%|#####7    | 115/200 [00:03&lt;00:03, 25.38it/s]
+Generating walks (CPU: 1):  60%|#####9    | 119/200 [00:03&lt;00:03, 26.68it/s]
+Generating walks (CPU: 1):  62%|######1   | 123/200 [00:04&lt;00:02, 27.91it/s]
+Generating walks (CPU: 1):  64%|######3   | 127/200 [00:04&lt;00:02, 29.34it/s]
+Generating walks (CPU: 1):  66%|######5   | 131/200 [00:04&lt;00:02, 30.57it/s]
+Generating walks (CPU: 1):  68%|######7   | 135/200 [00:04&lt;00:02, 31.73it/s]
+Generating walks (CPU: 1):  70%|######9   | 139/200 [00:04&lt;00:01, 32.82it/s]
+Generating walks (CPU: 1):  72%|#######1  | 143/200 [00:04&lt;00:01, 33.73it/s]
+Generating walks (CPU: 1):  74%|#######3  | 147/200 [00:04&lt;00:01, 34.39it/s]
+Generating walks (CPU: 1):  76%|#######5  | 151/200 [00:04&lt;00:01, 34.96it/s]
+Generating walks (CPU: 1):  78%|#######7  | 155/200 [00:05&lt;00:01, 34.63it/s]
+Generating walks (CPU: 1):  80%|#######9  | 159/200 [00:05&lt;00:01, 34.06it/s]
+Generating walks (CPU: 1):  82%|########1 | 163/200 [00:05&lt;00:01, 33.92it/s]
+Generating walks (CPU: 1):  84%|########3 | 167/200 [00:05&lt;00:00, 34.62it/s]
+Generating walks (CPU: 1):  86%|########5 | 171/200 [00:05&lt;00:00, 35.50it/s]
+Generating walks (CPU: 1):  88%|########7 | 175/200 [00:05&lt;00:00, 35.66it/s]
+Generating walks (CPU: 1):  90%|########9 | 179/200 [00:05&lt;00:00, 36.06it/s]
+Generating walks (CPU: 1):  92%|#########1| 183/200 [00:05&lt;00:00, 35.48it/s]
+Generating walks (CPU: 1):  94%|#########3| 187/200 [00:05&lt;00:00, 34.36it/s]
+Generating walks (CPU: 1):  96%|#########5| 191/200 [00:06&lt;00:00, 32.71it/s]
+Generating walks (CPU: 1):  98%|#########7| 195/200 [00:06&lt;00:00, 29.61it/s]
+Generating walks (CPU: 1): 100%|#########9| 199/200 [00:06&lt;00:00, 28.47it/s]
+Generating walks (CPU: 1): 100%|##########| 200/200 [00:06&lt;00:00, 30.86it/s]
 ```
 
 ---

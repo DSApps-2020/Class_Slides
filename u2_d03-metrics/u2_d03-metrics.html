@@ -4,7 +4,7 @@
     <title>Network Metrics</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-22" />
+    <meta name="date" content="2020-04-25" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-22
+### 2020-04-25
 
 ---
 
@@ -628,7 +628,7 @@ Cosine Distance and Pearson Correlation are two obvious choices:
 
 ### Jaccard Coefficient
 
-`\(S(i, j)=J(i,j)=\frac{neigh(i) \cap neigh(j)}{neigh(i) \cup neigh(j)}=\frac{n_{ij}}{k_i+k_j-n_{ij}}\)`
+`\(S(i, j)=J(i,j)=\frac{|neigh(i) \cap neigh(j)|}{|neigh(i) \cup neigh(j)|}=\frac{n_{ij}}{k_i+k_j-n_{ij}}\)`
 
 
 ```python
@@ -640,11 +640,11 @@ pretty_print(sim_jaccard_top5)
 ```
 
 ```
-## ('I, Robot', "Ender's Game"): 0.50
 ## ('The Lion, the Witch and the Wardrobe', 'The Princess Bride'): 0.50
-## ('Babel 17', '2001: A Space Odyssey'): 0.43
+## ('I, Robot', "Ender's Game"): 0.50
 ## ('Solaris', 'Brave New World'): 0.43
-## ('Journey to the Center of the Earth', 'The Lord of the Rings'): 0.43
+## ('2001: A Space Odyssey', 'Babel 17'): 0.43
+## ('Harry Potter Series', 'The Hunger Games'): 0.43
 ```
 
 ---

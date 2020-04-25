@@ -627,7 +627,7 @@ plt.show()
 2. For each node $i$, go over all its neighbors communities:
   Switch node $i$'s community with the community for which $max_j(\Delta Q)$ is reached, s.t. $max_j(\Delta Q) > 0$ (otherwise leave node $i$). 
   Keep going (passing all nodes as many times necessary) until no improvement in $Q$ is possible
-3. Build a new network: amalgamate each community into a single node, where all its within edges are are summed into a single self-loop edge with weight x 2
+3. Build a new network: amalgamate each community into a single node, where all its within edges are summed into a single self-loop edge with weight x 2
 4. Go back to 2 until no improvement in $Q$ is possible
 
 ---
