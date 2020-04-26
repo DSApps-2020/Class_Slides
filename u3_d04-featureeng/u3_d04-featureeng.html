@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-25" />
+    <meta name="date" content="2020-04-26" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-25
+### 2020-04-26
 
 ---
 
@@ -212,23 +212,7 @@ class: section-slide
 
 ```r
 okcupid &lt;- read_csv("../data/okcupid.csv.zip")
-```
 
-```
-## Parsed with column specification:
-## cols(
-##   .default = col_character(),
-##   age = col_double(),
-##   height = col_double(),
-##   income = col_double()
-## )
-```
-
-```
-## See spec(...) for full column specifications.
-```
-
-```r
 cats_categories &lt;- c("has cats", "likes cats", "dislikes dogs and has cats",
                      "dislikes dogs and likes cats")
 dogs_categories &lt;- c("has dogs", "likes dogs", "has dogs and dislikes cats",
@@ -242,16 +226,6 @@ okcupid &lt;- okcupid %&gt;%
   drop_na(pets) %&gt;%
   na_if(-1) %&gt;%
   select(-last_online)
-
-okcupid %&gt;% count(pets)
-```
-
-```
-## # A tibble: 2 x 2
-##   pets      n
-##   &lt;chr&gt; &lt;int&gt;
-## 1 cats   2790
-## 2 dogs  13939
 ```
 
 ---
@@ -330,7 +304,7 @@ No one mentioned cats/dogs recall/precision to be of any particular importance, 
 
 ---
 
-We explore the training data (skipping here at least a couple of hours in which we actually explore the data, I'm assuming we already know quite a bit!):
+We explore the training data .font80percent[(skipping here at least a couple of hours in which we actually explore the data, I'm assuming we already know quite a bit!)]:
 
 
 ```r
@@ -390,24 +364,40 @@ vis_miss(okcupid_train %&gt;%
 #### Q &amp; A
 
 Q: What type of variables do we have?
+
 A: Numeric: age, height income; Text: essays; Categorical: all others
 
+
 Q: Can our model(s) handle missing values?
+
 A: Probably gonna use `glmnet` so: NO.
+
 
 Q: Are missing values a serious issue here?
+
 A: Oh yes. `income` 80+% missing, `offspring` 50+% missing. Gonna have to take care of it.
 
+---
+
+#### Q &amp; A
+
 Q: Can our model(s) handle categorical values?
+
 A: Probably gonna use `glmnet` so: NO.
 
+
 Q: Categorical variables with many levels?
+
 A: Oh yes. `speaks` has over 2K. And there are those `essay`s.
 
+
 Q: Numeric variables skewed?
+
 A: Income, but all you need is log.
 
+
 Q: Classes imbalance scenario?
+
 A: Pretty imbalanced, 5 dogs people for every 1 cat person. Gonna have to take care of it.
 
 ---
@@ -462,33 +452,37 @@ ok_imbalance_split &lt;- initial_split(ok_train,
                                   strata = pets, prop = (2000 - 1)/10000)
 ok_tr_imbalance &lt;- training(ok_imbalance_split)
 ok_train &lt;- testing(ok_imbalance_split)
-
-set.seed(42)
-ok_interaction_split &lt;- initial_split(ok_train,
-                                      strata = pets, prop = (2000 - 1)/10000)
-ok_tr_interaction &lt;- training(ok_interaction_split)
-ok_train &lt;- testing(ok_interaction_split)
-
-set.seed(42)
-ok_tuning_split &lt;- initial_split(ok_train,
-                                  strata = pets, prop = (3000 - 1)/8000)
-ok_tr_tuning &lt;- training(ok_tuning_split)
-ok_tr_eng &lt;- testing(ok_tuning_split)
 ```
 
 ---
 
 
+```r
+set.seed(42)
+ok_interaction_split &lt;- initial_split(ok_train,
+                                      strata = pets, prop = (2000 - 1)/8000)
+ok_tr_interaction &lt;- training(ok_interaction_split)
+ok_train &lt;- testing(ok_interaction_split)
+
+set.seed(42)
+ok_tuning_split &lt;- initial_split(ok_train,
+                                  strata = pets, prop = (3000 - 1)/6000)
+ok_tr_tuning &lt;- training(ok_tuning_split)
+ok_tr_eng &lt;- testing(ok_tuning_split)
 ```
-## # A tibble: 6 x 4
+
+
+```
+## # A tibble: 7 x 4
 ##   name        df                    n_rows cats_rate
 ##   &lt;chr&gt;       &lt;list&gt;                 &lt;dbl&gt;     &lt;dbl&gt;
 ## 1 missing     &lt;tibble [2,000 x 30]&gt;   2000     0.165
 ## 2 imbalance   &lt;tibble [2,000 x 30]&gt;   2000     0.165
-## 3 engineering &lt;tibble [4,000 x 30]&gt;   4000     0.164
-## 4 tuning      &lt;tibble [2,400 x 30]&gt;   2400     0.165
-## 5 cutoff      &lt;tibble [729 x 30]&gt;      729     0.165
-## 6 test        &lt;tibble [4,000 x 30]&gt;   4000     0.173
+## 3 engineering &lt;tibble [3,000 x 30]&gt;   3000     0.164
+## 4 interaction &lt;tibble [2,000 x 30]&gt;   2000     0.165
+## 5 tuning      &lt;tibble [3,000 x 30]&gt;   3000     0.165
+## 6 cutoff      &lt;tibble [729 x 30]&gt;      729     0.165
+## 7 test        &lt;tibble [4,000 x 30]&gt;   4000     0.173
 ```
 
 ---
@@ -508,6 +502,8 @@ class: section-slide
   - Survey data
   - Merging data sources
   - Failure of measurement
+
+---
 
 - What is the missing data mechanism?
   - See [Little &amp; Rubin (2019)](https://www.amazon.com/Statistical-Analysis-Missing-Probability-Statistics-ebook/dp/B07Q25CNSD/ref=sr_1_1?crid=2P6ERH22YRKUL&amp;dchild=1&amp;keywords=statistical+analysis+with+missing+data&amp;qid=1587103544&amp;s=books&amp;sprefix=statistical+ana%2Cstripbooks-intl-ship%2C286&amp;sr=1-1) seminal work
@@ -587,11 +583,10 @@ ok_tr_missing %&gt;%
   ggplot() +
   geom_mosaic(aes(x = product(body_type_missing, status),
                   fill = body_type_missing)) +
-  labs(x = NULL, y = NULL) +
-  theme_light()
+  labs(x = NULL, y = NULL) + theme_light()
 ```
 
-&lt;img src="images/Ok-Miss4-1.png" width="100%" /&gt;
+&lt;img src="images/Ok-Miss4-1.png" width="90%" /&gt;
 
 ---
 
@@ -617,6 +612,8 @@ ok_tr_missing %&gt;%
 ## 3 seeing someone      42      5      0.106 
 ## 4 single            1738    153      0.0809
 ```
+
+---
 
 The same with `body_type` missingness by `drugs`:
 
@@ -653,7 +650,7 @@ ok_tr_missing %&gt;%
   theme_light()
 ```
 
-&lt;img src="images/Ok-Miss5-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Miss5-1.png" width="100%" /&gt;
 
 ---
 
@@ -682,12 +679,34 @@ ggplot(airquality, aes(Ozone, Solar.R)) +
   theme_light()
 ```
 
-&lt;img src="images/Ok-Miss7-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Miss7-1.png" width="50%" /&gt;
 
 ---
 
 When the data is large you could perform PCA on the binary missing/non-missing matrix:
 
+
+```r
+binary_mat &lt;- ok_tr_missing %&gt;%
+  select(-pets) %&gt;%
+  mutate_all(is.na)
+
+prcomp(binary_mat) %&gt;%
+  pluck("rotation") %&gt;%
+  as_tibble() %&gt;%
+  select(PC1, PC2) %&gt;%
+  bind_cols(
+    tibble(
+      predictor = colnames(binary_mat),
+      pct_missing = binary_mat %&gt;% colSums() / nrow(ok_tr_missing) 
+    )
+  ) %&gt;%
+  mutate(label = ifelse(PC1 &lt; -0.3 | PC2 &gt; 0.3, predictor, "")) %&gt;%
+  ggplot(aes(PC1, PC2)) +
+  geom_point(aes(size = pct_missing), color = "lightblue", alpha = 0.5) +
+  ggrepel::geom_text_repel(aes(label = label)) +
+  theme_light()
+```
 
 ---
 
@@ -703,6 +722,8 @@ When the data is large you could perform PCA on the binary missing/non-missing m
   - Keep or impute: can your model handle missing values?
   - "It's not a bug, it's a feature!": a new category or an additional variable
   - Use resampling to test the best strategy!
+
+---
 
 - How to impute?
   - Very much depends on the mechanism of missing data
@@ -733,7 +754,8 @@ Let's choose between 2 x 3 x 3 = 18 strategies:
 
 ---
 
-Add what you need
+Use `step_mutate_*()` or add what you need beforehand.
+
 
 ```r
 ok_tr_missing &lt;- ok_tr_missing %&gt;%
@@ -759,7 +781,7 @@ ok_tr_missing &lt;- ok_tr_missing %&gt;%
 
 ---
 
-Defining recipes (without `prep()`!), let's start with 2 to simplify.
+Defining recipes .font80percent[(without `prep()`!)], let's start with 2 to simplify.
 
 
 ```r
@@ -781,6 +803,8 @@ rec_miss_mode_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 ```
+
+.font80percent[(pretty sure there is a way to discard a predictor altogether)]
 
 ---
 
@@ -880,7 +904,6 @@ pred_lr &lt;- function(split_obj, rec_obj, model_obj) {
   mod_data &lt;- bake(rec_obj,
                    new_data = assessment(split_obj),
                    all_predictors(), all_outcomes()) 
-  
   out &lt;- mod_data %&gt;% select(pets)
   out$predicted &lt;- predict(model_obj, mod_data, type = "prob",
                            penalty = 0.0001)$.pred_cats
@@ -894,16 +917,13 @@ cv_splits_missing$pred_unk &lt;-
       rec_obj = cv_splits_missing$rec_miss_unk_none_none, 
       model_obj = cv_splits_missing$mod_lr_unk
     ),
-    pred_lr
-  )
+    pred_lr)
 cv_splits_missing$pred_mode &lt;- pmap(lst(
-  
   split_obj = cv_splits_missing$splits,
   rec_obj = cv_splits_missing$rec_miss_mode_none_none,
   model_obj = cv_splits_missing$mod_lr_mode
 ),
-pred_lr
-)
+pred_lr)
 ```
 
 ---
@@ -931,11 +951,10 @@ cv_splits_missing %&gt;%
   ggplot(aes(recipe, auc, group = id, color = id)) +
   geom_line() +
   geom_point() +
-  guides(color = FALSE) +
-  theme_light()
+  guides(color = FALSE) + theme_light()
 ```
 
-&lt;img src="images/Ok-Miss9-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Miss9-1.png" width="90%" /&gt;
 
 ---
 
@@ -960,7 +979,6 @@ t.test(cv_splits_missing$step_unknown,
 ## mean of the differences 
 ##            -0.001687534
 ```
-
 
 ---
 
@@ -1021,7 +1039,7 @@ train_recipe &lt;- function(rec, rec_name, splits) {
 
 ---
 
-Training multiple recipes, bottom-line saving the AUC for each recipe for each split
+Training multiple recipes, saving the AUC for each recipe, each split.
 
 
 ```r
@@ -1070,13 +1088,12 @@ Comparing AUCs with a plot
 ```r
 cv_res_missing %&gt;%
   ggplot(aes(income, AUC, group = id, color = id)) +
-    geom_line() +
-    geom_point() +
+    geom_line() + geom_point() +
     guides(color = FALSE) + facet_wrap(. ~ categorical) +
     theme_light()
 ```
 
-&lt;img src="images/Ok-Miss10-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Miss10-1.png" width="100%" /&gt;
 
 ---
 
@@ -1103,6 +1120,9 @@ print(summary(aov_missing))
 ## factor(categorical):factor(income)  1 0.0000013 1.250e-06   0.012  0.915
 ## Residuals                          27 0.0029116 1.078e-04
 ```
+
+---
+
 
 ```r
 with(cv_res_missing, interaction.plot(categorical, income, AUC))
@@ -1169,7 +1189,7 @@ cv_res_missing &lt;- cv_splits_missing %&gt;%
 
 ---
 
-Again, see the plot (think of how you'd plot the results of a 2x2x3 experiment).
+Again, see the plot .font80percent[(how would you plot a 2x3x3 experiment results?)].
 
 
 ```r
@@ -1183,7 +1203,7 @@ cv_res_missing %&gt;%
     theme_light()
 ```
 
-&lt;img src="images/Ok-Miss12-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Miss12-1.png" width="90%" /&gt;
 
 ---
 
@@ -1194,8 +1214,7 @@ Repeated measures ANOVA
 aov_missing &lt;- aov(
   AUC ~ factor(categorical) * factor(income) + factor(essay) + Error(factor(id)),
   data = cv_res_missing)
-
-print(summary(aov_missing))
+summary(aov_missing)
 ```
 
 ```
@@ -1230,11 +1249,12 @@ Or you can just look at the mean numbers...
 cv_res_missing %&gt;%
   group_by(categorical, income, essay) %&gt;%
   summarise(AUC = mean(AUC)) %&gt;%
-  arrange(-AUC)
+  arrange(-AUC) %&gt;%
+  head(10)
 ```
 
 ```
-## # A tibble: 18 x 4
+## # A tibble: 10 x 4
 ## # Groups:   categorical, income [6]
 ##    categorical income essay   AUC
 ##    &lt;chr&gt;       &lt;chr&gt;  &lt;chr&gt; &lt;dbl&gt;
@@ -1248,14 +1268,6 @@ cv_res_missing %&gt;%
 ##  8 unknown     mean   none  0.715
 ##  9 mode        knn    none  0.715
 ## 10 unknown     none   len   0.715
-## 11 mode        knn    isna  0.713
-## 12 mode        none   none  0.713
-## 13 unknown     mean   isna  0.712
-## 14 unknown     knn    none  0.712
-## 15 unknown     none   none  0.711
-## 16 mode        none   isna  0.710
-## 17 unknown     knn    isna  0.710
-## 18 unknown     none   isna  0.707
 ```
 
 .insight[
@@ -1362,28 +1374,6 @@ CV splits
 set.seed(42)
 cv_splits_imbalance &lt;- vfold_cv(ok_tr_imbalance, v = 10, strata = pets)
 
-cv_splits_imbalance
-```
-
-```
-## #  10-fold cross-validation using stratification 
-## # A tibble: 10 x 2
-##    splits             id    
-##    &lt;named list&gt;       &lt;chr&gt; 
-##  1 &lt;split [1.8K/200]&gt; Fold01
-##  2 &lt;split [1.8K/200]&gt; Fold02
-##  3 &lt;split [1.8K/200]&gt; Fold03
-##  4 &lt;split [1.8K/200]&gt; Fold04
-##  5 &lt;split [1.8K/200]&gt; Fold05
-##  6 &lt;split [1.8K/200]&gt; Fold06
-##  7 &lt;split [1.8K/200]&gt; Fold07
-##  8 &lt;split [1.8K/200]&gt; Fold08
-##  9 &lt;split [1.8K/200]&gt; Fold09
-## 10 &lt;split [1.8K/200]&gt; Fold10
-```
-
-
-```r
 lst_recs &lt;- list("upsample" = rec_imb_upsample,
                  "downsample" = rec_imb_downsample,
                  "smote" = rec_imb_smote)
@@ -1444,7 +1434,7 @@ cv_res_imbalance %&gt;%
     theme_light()
 ```
 
-&lt;img src="images/Ok-Imb1-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-Imb1-1.png" width="100%" /&gt;
 
 ---
 
@@ -1646,6 +1636,8 @@ summary(lm(y ~ ., data = df))
 ## F-statistic: 1.333 on 1 and 6 DF,  p-value: 0.2921
 ```
 
+---
+
 But:
 
 
@@ -1702,6 +1694,8 @@ summary(lm(y ~ . - 1, data = one_hot))
 ## Multiple R-squared:  0.8677,	Adjusted R-squared:  0.8236 
 ## F-statistic: 19.68 on 2 and 6 DF,  p-value: 0.002314
 ```
+
+---
 
 This is like:
 
@@ -1851,6 +1845,8 @@ summary(lm(y ~ ., data = non_one_hot))
 ## F-statistic: 0.2832 on 3 and 8 DF,  p-value: 0.8362
 ```
 
+---
+
 Same as:
 
 
@@ -1958,6 +1954,8 @@ summary(lm(y ~ ., data = one_hot))
 ## F-statistic: 0.2832 on 3 and 8 DF,  p-value: 0.8362
 ```
 
+---
+
 
 ```r
 print(mean(df$y[df$x1 == "b"]) + mean(df$y[df$x2 == "e"]) - mean(df$y))
@@ -2022,6 +2020,8 @@ summary(lm(y ~ . - 1, data = one_hot))
 ## F-statistic: 16.41 on 4 and 8 DF,  p-value: 0.0006356
 ```
 
+---
+
 
 ```r
 print(mean(df$y[df$x1 == "a"]) + mean(df$y[df$x2 == "e"]) - mean(df$y))
@@ -2065,29 +2065,29 @@ ok_tr_eng %&gt;% count(location)
 ```
 
 ```
-## # A tibble: 72 x 2
+## # A tibble: 71 x 2
 ##    location                          n
 ##    &lt;chr&gt;                         &lt;int&gt;
-##  1 alameda, california              73
-##  2 albany, california               12
-##  3 atherton, california              6
-##  4 belmont, california              14
-##  5 belvedere tiburon, california     7
-##  6 benicia, california              14
-##  7 berkeley, california            245
-##  8 brisbane, california              4
-##  9 burlingame, california           27
-## 10 canyon country, california        1
-## # ... with 62 more rows
+##  1 alameda, california              53
+##  2 albany, california                9
+##  3 ashland, california               1
+##  4 atherton, california              8
+##  5 belmont, california              12
+##  6 belvedere tiburon, california     7
+##  7 benicia, california              13
+##  8 berkeley, california            186
+##  9 brisbane, california              4
+## 10 burlingame, california           23
+## # ... with 61 more rows
 ```
 
-Many dangers lurk:
+---
+
+#### Many dangers lurk
 - OVERFITTING!
 - Unseen levels
 - Zero variance variables
 - Size of `\(p\)`
-
----
 
 #### We'll talk about
 
@@ -2105,10 +2105,11 @@ Many dangers lurk:
 - "Other": in many scenarios in which a categorical feature has many levels, some of these are so scarce it is doubtful if they have any predictive power - consider grouping them into one "Other" level
 - "New": therefore there might be many levels not seen during training, only during testing - consider adding a (zero variance) "New" level
 
+---
+
 What % threshold should you use for "Other"?
 - `step_other()` default is 5% (i.e. any level with less than 5% occurrence is grouped into one super-level "Other")
 - or tune it!
-
 
 
 ```r
@@ -2124,10 +2125,10 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ## # A tibble: 4 x 2
 ##   location                      n
 ##   &lt;fct&gt;                     &lt;int&gt;
-## 1 berkeley, california        245
-## 2 oakland, california         434
-## 3 san francisco, california  2164
-## 4 other                      1157
+## 1 berkeley, california        186
+## 2 oakland, california         312
+## 3 san francisco, california  1610
+## 4 other                       892
 ```
 
 ---
@@ -2173,16 +2174,16 @@ ok_tr_eng %&gt;% count(sign)
 ## # A tibble: 47 x 2
 ##    sign                                           n
 ##    &lt;chr&gt;                                      &lt;int&gt;
-##  1 aquarius                                      72
-##  2 aquarius and it matters a lot                  2
-##  3 aquarius and it&amp;rsquo;s fun to think about   105
-##  4 aquarius but it doesn&amp;rsquo;t matter         107
-##  5 aries                                         77
-##  6 aries and it&amp;rsquo;s fun to think about      104
-##  7 aries but it doesn&amp;rsquo;t matter             98
-##  8 cancer                                        89
-##  9 cancer and it matters a lot                    6
-## 10 cancer and it&amp;rsquo;s fun to think about      96
+##  1 aquarius                                      61
+##  2 aquarius and it&amp;rsquo;s fun to think about    77
+##  3 aquarius but it doesn&amp;rsquo;t matter          83
+##  4 aries                                         73
+##  5 aries and it&amp;rsquo;s fun to think about       68
+##  6 aries but it doesn&amp;rsquo;t matter             69
+##  7 cancer                                        59
+##  8 cancer and it matters a lot                    4
+##  9 cancer and it&amp;rsquo;s fun to think about      73
+## 10 cancer but it doesn&amp;rsquo;t matter            67
 ## # ... with 37 more rows
 ```
 
@@ -2205,19 +2206,19 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, sign)) %&gt;%
 ## # A tibble: 13 x 2
 ##    sign            n
 ##    &lt;fct&gt;       &lt;int&gt;
-##  1 libra         304
-##  2 taurus        304
-##  3 leo           308
-##  4 cancer        291
-##  5 capricorn     256
-##  6 pisces        258
-##  7 aries         279
-##  8 aquarius      286
-##  9 gemini        311
-## 10 scorpio       304
-## 11 sagittarius   236
-## 12 virgo         286
-## 13 unknown       577
+##  1 capricorn     192
+##  2 libra         218
+##  3 taurus        247
+##  4 leo           226
+##  5 aries         210
+##  6 aquarius      221
+##  7 pisces        223
+##  8 sagittarius   176
+##  9 scorpio       214
+## 10 cancer        203
+## 11 gemini        218
+## 12 virgo         214
+## 13 unknown       438
 ```
 
 ---
@@ -2236,14 +2237,15 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ```
 
 ```
-## # A tibble: 5 x 2
+## # A tibble: 6 x 2
 ##   location     n
 ##   &lt;fct&gt;    &lt;int&gt;
-## 1 1         2578
-## 2 2         1177
-## 3 3          206
-## 4 4           21
-## 5 5           18
+## 1 0            2
+## 2 1         1934
+## 3 2          871
+## 4 3          155
+## 5 4           23
+## 6 5           15
 ```
 
 ---
@@ -2259,20 +2261,20 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ```
 
 ```
-## # A tibble: 4,000 x 5
-##    location             locationL_X2 locationL_X3 locationL_X4 locationL_X5
-##    &lt;fct&gt;                       &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;
-##  1 oakland, california             1            0            0            0
-##  2 san francisco, cali~            0            0            0            0
-##  3 san pablo, californ~            1            0            0            0
-##  4 san francisco, cali~            0            0            0            0
-##  5 oakland, california             1            0            0            0
-##  6 san francisco, cali~            0            0            0            0
-##  7 san rafael, califor~            1            0            0            0
-##  8 san francisco, cali~            0            0            0            0
-##  9 oakland, california             1            0            0            0
-## 10 san francisco, cali~            0            0            0            0
-## # ... with 3,990 more rows
+## # A tibble: 3,000 x 6
+##    location locationL_X1 locationL_X2 locationL_X3 locationL_X4
+##    &lt;fct&gt;           &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;
+##  1 mountai~            1            0            0            0
+##  2 oakland~            0            1            0            0
+##  3 san fra~            1            0            0            0
+##  4 san pab~            0            1            0            0
+##  5 oakland~            0            1            0            0
+##  6 san fra~            1            0            0            0
+##  7 san raf~            0            1            0            0
+##  8 san fra~            1            0            0            0
+##  9 san fra~            1            0            0            0
+## 10 alameda~            0            1            0            0
+## # ... with 2,990 more rows, and 1 more variable: locationL_X5 &lt;dbl&gt;
 ```
 
 ---
@@ -2304,20 +2306,20 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ```
 
 ```
-## # A tibble: 4,000 x 17
+## # A tibble: 3,000 x 17
 ##    location_hash01 location_hash02 location_hash03 location_hash04
 ##              &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;
-##  1               0               1               1               0
-##  2               0               0               1               0
-##  3               0               0               1               1
-##  4               0               0               1               0
+##  1               0               0               1               0
+##  2               0               1               1               0
+##  3               0               0               1               0
+##  4               0               0               1               1
 ##  5               0               1               1               0
 ##  6               0               0               1               0
 ##  7               0               0               1               1
 ##  8               0               0               1               0
-##  9               0               1               1               0
+##  9               0               0               1               0
 ## 10               0               0               1               0
-## # ... with 3,990 more rows, and 13 more variables: location_hash05 &lt;dbl&gt;,
+## # ... with 2,990 more rows, and 13 more variables: location_hash05 &lt;dbl&gt;,
 ## #   location_hash06 &lt;dbl&gt;, location_hash07 &lt;dbl&gt;, location_hash08 &lt;dbl&gt;,
 ## #   location_hash09 &lt;dbl&gt;, location_hash10 &lt;dbl&gt;, location_hash11 &lt;dbl&gt;,
 ## #   location_hash12 &lt;dbl&gt;, location_hash13 &lt;dbl&gt;, location_hash14 &lt;dbl&gt;,
@@ -2330,10 +2332,10 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 - Beware of columns with zero variance, consider binning them to a "New" category
 - Powerful methods like `xgboost` can handle 2^20+ no. of terms easily
 
-.inspect[
+.insight[
 💡 Why would this work in spite of collisions?
 
-What is still a major disadvantage? Hint: 🎁
+What is still a major disadvantage? Hint: 🎁.
 ]
 
 ---
@@ -2344,6 +2346,8 @@ Here's another crazy idea for you:
 
 - For regression, replace a category with `\(y\)`'s mean in this category
 - For classification, replace a category with the log odds of `\(y\)` in this category
+
+---
 
 Thus, changing a categorical variable with many levels into a single numerical variable (or a few for a few classes).
 
@@ -2359,20 +2363,20 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ```
 
 ```
-## # A tibble: 4,000 x 3
+## # A tibble: 3,000 x 3
 ##    location pets  location2                
 ##       &lt;dbl&gt; &lt;fct&gt; &lt;fct&gt;                    
-##  1   -1.29  dogs  oakland, california      
-##  2   -1.86  dogs  san francisco, california
-##  3  -16.6   dogs  san pablo, california    
-##  4   -1.86  dogs  san francisco, california
-##  5   -1.29  dogs  oakland, california      
-##  6   -1.86  dogs  san francisco, california
-##  7   -0.722 cats  san rafael, california   
-##  8   -1.86  dogs  san francisco, california
-##  9   -1.29  dogs  oakland, california      
-## 10   -1.86  dogs  san francisco, california
-## # ... with 3,990 more rows
+##  1   -0.539 dogs  mountain view, california
+##  2   -1.20  dogs  oakland, california      
+##  3   -1.84  dogs  san francisco, california
+##  4   -2.40  dogs  san pablo, california    
+##  5   -1.20  dogs  oakland, california      
+##  6   -1.84  dogs  san francisco, california
+##  7   -0.571 cats  san rafael, california   
+##  8   -1.84  dogs  san francisco, california
+##  9   -1.84  dogs  san francisco, california
+## 10   -0.930 cats  alameda, california      
+## # ... with 2,990 more rows
 ```
 
 ---
@@ -2387,7 +2391,7 @@ log(p / (1 - p))
 ```
 
 ```
-## [1] -0.6931472
+## [1] -0.5389965
 ```
 
 ---
@@ -2411,16 +2415,16 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ## # A tibble: 100 x 3
 ##    location pets  location2                
 ##       &lt;dbl&gt; &lt;fct&gt; &lt;fct&gt;                    
-##  1    -1.54 dogs  oakland, california      
-##  2    -1.49 dogs  san francisco, california
-##  3    -1.51 dogs  san pablo, california    
-##  4    -1.49 dogs  san francisco, california
-##  5    -1.54 dogs  oakland, california      
-##  6    -1.49 dogs  san francisco, california
-##  7    -1.45 cats  san rafael, california   
-##  8    -1.49 dogs  san francisco, california
-##  9    -1.54 dogs  oakland, california      
-## 10    -1.49 dogs  san francisco, california
+##  1    -1.50 dogs  mountain view, california
+##  2    -1.72 dogs  oakland, california      
+##  3    -1.99 dogs  san francisco, california
+##  4    -1.78 dogs  san pablo, california    
+##  5    -1.72 dogs  oakland, california      
+##  6    -1.99 dogs  san francisco, california
+##  7    -1.35 cats  san rafael, california   
+##  8    -1.99 dogs  san francisco, california
+##  9    -1.99 dogs  san francisco, california
+## 10    -1.36 cats  alameda, california      
 ## # ... with 90 more rows
 ```
 
@@ -2455,6 +2459,8 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
   juice()
 ```
 
+---
+
 Or, perform PCA on the dummay variables matrix, keeping only a few of the firt PCs as features:
 
 
@@ -2469,20 +2475,20 @@ recipe(pets ~ ., data = ok_tr_eng %&gt;% select(pets, location)) %&gt;%
 ```
 
 ```
-## # A tibble: 4,000 x 12
-##    pets  old_location  PC01    PC02    PC03     PC04     PC05      PC06
-##    &lt;fct&gt; &lt;fct&gt;        &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-##  1 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
-##  2 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
-##  3 dogs  san pablo, ~ -1.27 -0.676  -0.957   0.243   -0.600   -3.03e-12
-##  4 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
-##  5 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
-##  6 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
-##  7 cats  san rafael,~ -1.29 -0.739  -1.15    0.472   -1.41     7.31e+ 0
-##  8 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
-##  9 dogs  oakland, ca~ -1.61  2.59    0.638  -0.0395   0.0802   2.54e-13
-## 10 dogs  san francis~  1.14  0.0577  0.0396 -0.00342  0.00710  1.23e-14
-## # ... with 3,990 more rows, and 4 more variables: PC07 &lt;dbl&gt;, PC08 &lt;dbl&gt;,
+## # A tibble: 3,000 x 12
+##    pets  old_location   PC01    PC02    PC03     PC04     PC05     PC06
+##    &lt;fct&gt; &lt;fct&gt;         &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+##  1 dogs  mountain vi~ -1.27  -0.634  -0.985   0.433   -9.37e-2  0.538  
+##  2 dogs  oakland, ca~ -1.58   2.66    0.711  -0.0657   9.48e-3 -0.0482 
+##  3 dogs  san francis~  1.15   0.0528  0.0410 -0.00550  8.27e-4 -0.00425
+##  4 dogs  san pablo, ~ -1.26  -0.617  -0.937   0.372   -7.59e-2  0.427  
+##  5 dogs  oakland, ca~ -1.58   2.66    0.711  -0.0657   9.48e-3 -0.0482 
+##  6 dogs  san francis~  1.15   0.0528  0.0410 -0.00550  8.27e-4 -0.00425
+##  7 cats  san rafael,~ -1.28  -0.678  -1.13    0.720   -2.19e-1  1.50   
+##  8 dogs  san francis~  1.15   0.0528  0.0410 -0.00550  8.27e-4 -0.00425
+##  9 dogs  san francis~  1.15   0.0528  0.0410 -0.00550  8.27e-4 -0.00425
+## 10 cats  alameda, ca~ -0.447 -0.0513 -0.0430  0.00613 -9.29e-4  0.00478
+## # ... with 2,990 more rows, and 4 more variables: PC07 &lt;dbl&gt;, PC08 &lt;dbl&gt;,
 ## #   PC09 &lt;dbl&gt;, PC10 &lt;dbl&gt;
 ```
 
@@ -2551,7 +2557,7 @@ rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
 
 
 
-&lt;img src="images/Ok-FES1-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-FES1-1.png" width="100%" /&gt;
 
 ---
 
@@ -2577,6 +2583,8 @@ rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
 - The `extract_functions` parameter accepts a named list of functions you wish to define on your text data
 - By default it will accept `count_functions` list from the [`textfeatures`](https://textfeatures.mikewk.com/reference/textfeatures.html) by Mike Kearney, which gets you basic counts like `n_words`, `n_digits` etc.
 
+---
+
 But `textfeatures` also has via the `textfeatures()` function:
   - basic sentiment features like `sent_bing`
   - first word2vec 2-200 dimensions!
@@ -2599,13 +2607,14 @@ print(textfeatures:::sentiment_bing("I love cats! Hate dogs though."))
 ```
 
 ```r
-print(textfeatures::word_dims("Why would Kim Jong-un insult me by calling me \"old,\""))
+print(textfeatures::word_dims(
+  "Why would Kim Jong-un insult me by calling me \"old,\""))
 ```
 
 ```
-## INFO  [21:55:39.293] early stopping at 20 iteration 
-##     w1 w2   w3   w4   w5 w6 w7 w8 w9 w10
-## 1 0.65  0 0.05 0.25 0.05  0  0  0  0   0
+## INFO  [10:27:41.208] early stopping at 20 iteration 
+##   w1   w2 w3   w4 w5 w6   w7   w8 w9 w10
+## 1  0 0.35  0 0.45  0  0 0.05 0.15  0   0
 ```
 
 ---
@@ -2639,16 +2648,16 @@ recipe(pets ~ ., data = ok_tr_eng2 %&gt;% select(pets, essays)) %&gt;%
 ## # A tibble: 10 x 3
 ##    t_essays_n_uq_words t_essays_n_hashtags t_essays_sent_bing
 ##                  &lt;dbl&gt;               &lt;dbl&gt;              &lt;dbl&gt;
-##  1                   0                   0                  0
-##  2                 116                   0                 11
-##  3                 250                   0                 11
-##  4                 281                   0                 26
+##  1                 114                   0                 18
+##  2                   0                   0                  0
+##  3                 116                   0                 11
+##  4                 250                   0                 11
 ##  5                 356                   0                  8
 ##  6                 405                   0                 40
 ##  7                   0                   0                  0
 ##  8                 622                   0                 36
 ##  9                   0                   0                  0
-## 10                   0                   0                  0
+## 10                 465                   0                 23
 ```
 
 ---
@@ -2682,14 +2691,14 @@ tidy_essays %&gt;% head()
 
 ```
 ## # A tibble: 6 x 3
-##      id pets  word     
-##   &lt;int&gt; &lt;chr&gt; &lt;chr&gt;    
-## 1     2 dogs  lot      
-## 2     2 dogs  loving   
-## 3     2 dogs  person   
-## 4     2 dogs  everyday 
-## 5     2 dogs  worth    
-## 6     2 dogs  sarcastic
+##      id pets  word    
+##   &lt;int&gt; &lt;chr&gt; &lt;chr&gt;   
+## 1     1 dogs  positive
+## 2     1 dogs  person  
+## 3     1 dogs  loves   
+## 4     1 dogs  laugh   
+## 5     1 dogs  enjoy   
+## 6     1 dogs  life
 ```
 
 ---
@@ -2699,14 +2708,14 @@ tidy_essays %&gt;% head()
 min_n_words &lt;- tidy_essays %&gt;%
   count(id, word) %&gt;%
   count(word) %&gt;%
-  filter(n &gt; 100) %&gt;%
+  filter(n &gt; 50) %&gt;%
   pull(word)
 
 print(c("cat", "dog", "cats", "dogs") %in% min_n_words)
 ```
 
 ```
-## [1]  TRUE  TRUE FALSE  TRUE
+## [1] TRUE TRUE TRUE TRUE
 ```
 
 
@@ -2721,7 +2730,12 @@ fisher_test &lt;- function(cats, dogs) {
   ft &lt;- fisher.test(cont_tab)
   list(OR = ft$estimate, p_val = ft$p.value)
 }
+```
 
+---
+
+
+```r
 or_res &lt;- tidy_essays %&gt;%
   filter(word %in% min_n_words) %&gt;%
   count(id, word, pets) %&gt;%
@@ -2740,20 +2754,20 @@ or_res
 ```
 
 ```
-## # A tibble: 556 x 7
-##    word         cats  dogs fisher_obj          OR     p_val     fdr
-##    &lt;chr&gt;       &lt;int&gt; &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
-##  1 absolutely     21    82 &lt;named list [2]&gt; 1.31  0.281     0.454  
-##  2 action         19   126 &lt;named list [2]&gt; 0.759 0.305     0.478  
-##  3 active         34   183 &lt;named list [2]&gt; 0.941 0.851     0.936  
-##  4 activities     24   115 &lt;named list [2]&gt; 1.06  0.816     0.914  
-##  5 admit          28   148 &lt;named list [2]&gt; 0.959 0.917     0.961  
-##  6 adventure      40   210 &lt;named list [2]&gt; 0.965 0.930     0.964  
-##  7 adventures     36   167 &lt;named list [2]&gt; 1.10  0.627     0.775  
-##  8 adventurous    24   130 &lt;named list [2]&gt; 0.935 0.825     0.920  
-##  9 afraid         21    85 &lt;named list [2]&gt; 1.26  0.352     0.526  
-## 10 age            47   118 &lt;named list [2]&gt; 2.10  0.0000914 0.00175
-## # ... with 546 more rows
+## # A tibble: 808 x 7
+##    word        cats  dogs fisher_obj          OR  p_val   fdr
+##    &lt;chr&gt;      &lt;int&gt; &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+##  1 ability       17    46 &lt;named list [2]&gt; 1.91  0.0369 0.112
+##  2 absolutely    18    62 &lt;named list [2]&gt; 1.49  0.167  0.317
+##  3 accent        14    38 &lt;named list [2]&gt; 1.90  0.0561 0.148
+##  4 action        23    96 &lt;named list [2]&gt; 1.23  0.378  0.559
+##  5 active        21   134 &lt;named list [2]&gt; 0.788 0.373  0.557
+##  6 activities    16    91 &lt;named list [2]&gt; 0.891 0.791  0.892
+##  7 add           17    46 &lt;named list [2]&gt; 1.91  0.0369 0.112
+##  8 admit         17    92 &lt;named list [2]&gt; 0.937 0.896  0.950
+##  9 adult         13    38 &lt;named list [2]&gt; 1.76  0.0861 0.195
+## 10 adventure     25   145 &lt;named list [2]&gt; 0.870 0.595  0.749
+## # ... with 798 more rows
 ```
 
 ---
@@ -2769,17 +2783,17 @@ cd_words
 
 ```
 ## # A tibble: 9 x 7
-##   word    cats  dogs fisher_obj          OR    p_val      fdr
-##   &lt;chr&gt;  &lt;int&gt; &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
-## 1 cat       67    42 &lt;named list [2]&gt; 8.90  5.33e-27 2.96e-24
-## 2 dog       12   328 &lt;named list [2]&gt; 0.171 1.61e-14 4.49e-12
-## 3 ilink     81   159 &lt;named list [2]&gt; 2.81  9.95e-12 1.84e- 9
-## 4 class    102   233 &lt;named list [2]&gt; 2.45  2.65e-11 3.69e- 9
-## 5 href      84   179 &lt;named list [2]&gt; 2.59  1.35e-10 1.50e- 8
-## 6 write     64   152 &lt;named list [2]&gt; 2.26  6.36e- 7 5.89e- 5
-## 7 feel     130   415 &lt;named list [2]&gt; 1.74  1.51e- 6 9.33e- 5
-## 8 moment    64   157 &lt;named list [2]&gt; 2.19  1.47e- 6 9.33e- 5
-## 9 sort      45    90 &lt;named list [2]&gt; 2.65  1.25e- 6 9.33e- 5
+##   word     cats  dogs fisher_obj           OR    p_val      fdr
+##   &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;list&gt;            &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1 cat        55    37 &lt;named list [2]&gt;  8.37  1.06e-21 8.53e-19
+## 2 cats       43    21 &lt;named list [2]&gt; 11.3   5.37e-20 2.17e-17
+## 3 class      73   151 &lt;named list [2]&gt;  2.71  4.72e-10 9.54e- 8
+## 4 href       59   106 &lt;named list [2]&gt;  3.08  4.40e-10 9.54e- 8
+## 5 ilink      57   101 &lt;named list [2]&gt;  3.11  6.79e-10 1.10e- 7
+## 6 dog        12   247 &lt;named list [2]&gt;  0.228 2.19e- 9 2.95e- 7
+## 7 writing    62   127 &lt;named list [2]&gt;  2.69  1.08e- 8 1.25e- 6
+## 8 strange    24    28 &lt;named list [2]&gt;  4.53  4.03e- 7 4.07e- 5
+## 9 dr         24    29 &lt;named list [2]&gt;  4.37  6.26e- 7 5.62e- 5
 ```
 
 ---
@@ -2886,6 +2900,7 @@ cv_res_eng &lt;- cv_splits_eng %&gt;%
 
 ```r
 cv_res_eng %&gt;%
+  mutate(recipe = fct_relevel(recipe, c("notext", "textfeat", "fulltext"))) %&gt;%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
   geom_line() +
   geom_point() +
@@ -2893,7 +2908,7 @@ cv_res_eng %&gt;%
   theme_light()
 ```
 
-&lt;img src="images/Ok-FES2-1.png" width="70%" /&gt;
+&lt;img src="images/Ok-FES2-1.png" width="100%" /&gt;
 
 ---
 
