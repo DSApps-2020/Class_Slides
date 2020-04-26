@@ -1085,10 +1085,13 @@ cv_res_missing
 Comparing AUCs with a plot
 
 
+
+
 ```r
 cv_res_missing %&gt;%
   ggplot(aes(income, AUC, group = id, color = id)) +
-    geom_line() + geom_point() +
+  geom_line() + geom_line(data = cv_res_missing_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_missing_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) + facet_wrap(. ~ categorical) +
     theme_light()
 ```
@@ -1192,13 +1195,15 @@ cv_res_missing &lt;- cv_splits_missing %&gt;%
 Again, see the plot .font80percent[(how would you plot a 2x3x3 experiment results?)].
 
 
+
+
 ```r
 cv_res_missing %&gt;%
   group_by(id, income, essay) %&gt;%
   summarise(AUC = mean(AUC)) %&gt;%
   ggplot(aes(income, AUC, group = id, color = id)) +
-    geom_line() +
-    geom_point() +
+    geom_line() + geom_line(data = cv_res_missing_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_missing_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) + facet_wrap(. ~ essay) +
     theme_light()
 ```
@@ -1425,11 +1430,13 @@ print(summary(aov_imbalance))
 Plotting...
 
 
+
+
 ```r
 cv_res_imbalance %&gt;%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
-    geom_line() +
-    geom_point() +
+    geom_line() + geom_line(data = cv_res_imbalance_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_imbalance_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) +
     theme_light()
 ```
@@ -2557,6 +2564,8 @@ rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
 
 
 
+
+
 &lt;img src="images/Ok-FES1-1.png" width="100%" /&gt;
 
 ---
@@ -2612,9 +2621,10 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [10:27:41.208] early stopping at 20 iteration 
-##   w1   w2 w3   w4 w5 w6   w7   w8 w9 w10
-## 1  0 0.35  0 0.45  0  0 0.05 0.15  0   0
+## INFO  [21:55:09.299] early stopping at 20 iteration 
+## INFO  [21:55:09.345] early stopping at 20 iteration 
+##   w1   w2  w3 w4 w5  w6   w7 w8  w9 w10
+## 1  0 0.05 0.3  0  0 0.5 0.05  0 0.1   0
 ```
 
 ---
@@ -2776,25 +2786,36 @@ or_res
 ```r
 cd_words &lt;- or_res %&gt;%
   arrange(fdr) %&gt;%
-  filter(fdr &lt; 10e-5)
+  filter(fdr &lt; 10e-4)
 
 cd_words
 ```
 
 ```
-## # A tibble: 9 x 7
-##   word     cats  dogs fisher_obj           OR    p_val      fdr
-##   &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;list&gt;            &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
-## 1 cat        55    37 &lt;named list [2]&gt;  8.37  1.06e-21 8.53e-19
-## 2 cats       43    21 &lt;named list [2]&gt; 11.3   5.37e-20 2.17e-17
-## 3 class      73   151 &lt;named list [2]&gt;  2.71  4.72e-10 9.54e- 8
-## 4 href       59   106 &lt;named list [2]&gt;  3.08  4.40e-10 9.54e- 8
-## 5 ilink      57   101 &lt;named list [2]&gt;  3.11  6.79e-10 1.10e- 7
-## 6 dog        12   247 &lt;named list [2]&gt;  0.228 2.19e- 9 2.95e- 7
-## 7 writing    62   127 &lt;named list [2]&gt;  2.69  1.08e- 8 1.25e- 6
-## 8 strange    24    28 &lt;named list [2]&gt;  4.53  4.03e- 7 4.07e- 5
-## 9 dr         24    29 &lt;named list [2]&gt;  4.37  6.26e- 7 5.62e- 5
+## # A tibble: 37 x 7
+##    word     cats  dogs fisher_obj           OR    p_val      fdr
+##    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;list&gt;            &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+##  1 cat        55    37 &lt;named list [2]&gt;  8.37  1.06e-21 8.53e-19
+##  2 cats       43    21 &lt;named list [2]&gt; 11.3   5.37e-20 2.17e-17
+##  3 class      73   151 &lt;named list [2]&gt;  2.71  4.72e-10 9.54e- 8
+##  4 href       59   106 &lt;named list [2]&gt;  3.08  4.40e-10 9.54e- 8
+##  5 ilink      57   101 &lt;named list [2]&gt;  3.11  6.79e-10 1.10e- 7
+##  6 dog        12   247 &lt;named list [2]&gt;  0.228 2.19e- 9 2.95e- 7
+##  7 writing    62   127 &lt;named list [2]&gt;  2.69  1.08e- 8 1.25e- 6
+##  8 strange    24    28 &lt;named list [2]&gt;  4.53  4.03e- 7 4.07e- 5
+##  9 dr         24    29 &lt;named list [2]&gt;  4.37  6.26e- 7 5.62e- 5
+## 10 dogs        5   138 &lt;named list [2]&gt;  0.176 1.31e- 6 1.03e- 4
+## # ... with 27 more rows
 ```
+
+---
+
+So these will be our four options for handling text:
+
+1. Not
+2. Text features (zero for `NA`)
+3. Text features + our flagged words counts (zero for `NA`)
+4. Feature Hashing
 
 ---
 
@@ -2838,7 +2859,7 @@ rec_eng_textfeat &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_zv(all_numeric()) %&gt;%
   step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -2859,7 +2880,23 @@ rec_eng_fulltext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+
+rec_eng_hashtext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
+  step_tokenize(essays) %&gt;%
+  step_tokenfilter(essays, min_times = 10) %&gt;%
+  step_texthash(essays, num_terms = 2^11) %&gt;%
+  step_log(income, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
   step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -2878,7 +2915,8 @@ cv_splits_eng &lt;- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
 
 lst_recs &lt;- list("notext" = rec_eng_notext,
                  "textfeat" = rec_eng_textfeat,
-                 "fulltext" = rec_eng_fulltext)
+                 "fulltext" = rec_eng_fulltext,
+                 "hashtext" = rec_eng_hashtext)
 ```
 
 
@@ -2891,6 +2929,10 @@ cv_res_eng &lt;- cv_splits_eng %&gt;%
   pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %&gt;%
   select(id, recipe, AUC)
+
+cv_res_eng_meds &lt;- cv_res_eng %&gt;%
+  group_by(recipe) %&gt;%
+  summarise(AUC = median(AUC), id = "All")
 ```
 
 
@@ -2900,12 +2942,12 @@ cv_res_eng &lt;- cv_splits_eng %&gt;%
 
 ```r
 cv_res_eng %&gt;%
-  mutate(recipe = fct_relevel(recipe, c("notext", "textfeat", "fulltext"))) %&gt;%
+  mutate(recipe = fct_relevel(recipe,
+                              c("notext", "textfeat", "fulltext", "hashtext"))) %&gt;%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
-  geom_line() +
-  geom_point() +
-  guides(color = FALSE) +
-  theme_light()
+  geom_line() + geom_line(data = cv_res_eng_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_eng_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
+  guides(color = FALSE) + theme_light()
 ```
 
 &lt;img src="images/Ok-FES2-1.png" width="100%" /&gt;

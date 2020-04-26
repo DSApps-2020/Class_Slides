@@ -924,10 +924,17 @@ cv_res_missing
 
 Comparing AUCs with a plot
 
+```{r, echo=FALSE}
+cv_res_missing_meds <- cv_res_missing %>%
+  group_by(income, categorical) %>%
+  summarise(AUC = mean(AUC), id = "All")
+```
+
 ```{r Ok-Miss10, out.width="100%", fig.asp=0.5}
 cv_res_missing %>%
   ggplot(aes(income, AUC, group = id, color = id)) +
-    geom_line() + geom_point() +
+  geom_line() + geom_line(data = cv_res_missing_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_missing_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) + facet_wrap(. ~ categorical) +
     theme_light()
 ```
@@ -1174,13 +1181,19 @@ cv_res_missing <- cv_splits_missing %>%
 
 Again, see the plot .font80percent[(how would you plot a 2x3x3 experiment results?)].
 
+```{r, echo=FALSE}
+cv_res_missing_meds <- cv_res_missing %>%
+  group_by(income, essay) %>%
+  summarise(AUC = median(AUC), id = "All")
+```
+
 ```{r Ok-Miss12, out.width="90%", fig.asp=0.5}
 cv_res_missing %>%
   group_by(id, income, essay) %>%
   summarise(AUC = mean(AUC)) %>%
   ggplot(aes(income, AUC, group = id, color = id)) +
-    geom_line() +
-    geom_point() +
+    geom_line() + geom_line(data = cv_res_missing_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_missing_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) + facet_wrap(. ~ essay) +
     theme_light()
 ```
@@ -1343,11 +1356,17 @@ print(summary(aov_imbalance))
 
 Plotting...
 
+```{r, echo=FALSE}
+cv_res_imbalance_meds <- cv_res_imbalance %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
+```
+
 ```{r Ok-Imb1, out.width="100%", fig.asp=0.5}
 cv_res_imbalance %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
-    geom_line() +
-    geom_point() +
+    geom_line() + geom_line(data = cv_res_imbalance_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_imbalance_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
     guides(color = FALSE) +
     theme_light()
 ```
@@ -1884,7 +1903,7 @@ rec_eng_catdog <- recipe(pets ~ ., data = ok_tr_eng2) %>%
 
 ---
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=FALSE}
 set.seed(42)
 cv_splits_eng <- vfold_cv(ok_tr_eng2, v = 10, strata = pets)
 
@@ -1899,7 +1918,7 @@ cv_splits_eng <- cv_splits_eng %>%
 ```
 
 
-```{r Ok-FES1, out.width="100%", fig.asp = 0.5, echo=FALSE}
+```{r Ok-FES1-Cache, out.width="100%", fig.asp = 0.5, eval=FALSE, echo=FALSE}
 cv_splits_eng %>%
     pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %>%
@@ -1907,6 +1926,25 @@ cv_splits_eng %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
   geom_line() +
   geom_point() +
+  guides(color = FALSE) +
+  theme_light()
+```
+
+```{r, Ok-FES1, out.width="100%", fig.asp = 0.5, echo=FALSE}
+cv_res_catdog <- read_rds("../data/Ok_catdog_cv_res_auc.rds")
+
+cv_res_catdog_meds <- cv_res_catdog %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
+
+cv_res_catdog %>%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+  geom_line() +
+  geom_line(data = cv_res_catdog_meds, color = "black",
+            alpha = 0.2, lwd = 2) +
+  geom_point() +
+  geom_point(data = cv_res_catdog_meds, color = "black",
+             alpha = 0.2, size = 5, pch = 17) +
   guides(color = FALSE) +
   theme_light()
 ```
@@ -2052,10 +2090,19 @@ or_res
 ```{r}
 cd_words <- or_res %>%
   arrange(fdr) %>%
-  filter(fdr < 10e-5)
+  filter(fdr < 10e-4)
 
 cd_words
 ```
+
+---
+
+So these will be our four options for handling text:
+
+1. Not
+2. Text features (zero for `NA`)
+3. Text features + our flagged words counts (zero for `NA`)
+4. Feature Hashing
 
 ---
 
@@ -2097,7 +2144,7 @@ rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_zv(all_numeric()) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2117,7 +2164,23 @@ rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_zv(all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+
+rec_eng_hashtext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
+  update_role(starts_with("w_"), essays, new_role = "discarded") %>%
+  step_tokenize(essays) %>%
+  step_tokenfilter(essays, min_times = 10) %>%
+  step_texthash(essays, num_terms = 2^11) %>%
+  step_log(income, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2135,7 +2198,8 @@ cv_splits_eng <- vfold_cv(ok_tr_eng3, v = 10, strata = pets)
 
 lst_recs <- list("notext" = rec_eng_notext,
                  "textfeat" = rec_eng_textfeat,
-                 "fulltext" = rec_eng_fulltext)
+                 "fulltext" = rec_eng_fulltext,
+                 "hashtext" = rec_eng_hashtext)
 ```
 
 ```{r, eval=FALSE}
@@ -2147,22 +2211,30 @@ cv_res_eng <- cv_splits_eng %>%
   pivot_longer(cols = names(lst_recs),
                  names_to = "recipe", values_to = "AUC") %>%
   select(id, recipe, AUC)
+
+cv_res_eng_meds <- cv_res_eng %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
 ```
 
 ```{r, echo=FALSE}
 cv_res_eng <- read_rds("../data/Ok_eng_cv_res_auc.rds")
+
+cv_res_eng_meds <- cv_res_eng %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
 ```
 
 ---
 
 ```{r Ok-FES2, out.width="100%", fig.asp=0.5}
 cv_res_eng %>%
-  mutate(recipe = fct_relevel(recipe, c("notext", "textfeat", "fulltext"))) %>%
+  mutate(recipe = fct_relevel(recipe,
+                              c("notext", "textfeat", "fulltext", "hashtext"))) %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
-  geom_line() +
-  geom_point() +
-  guides(color = FALSE) +
-  theme_light()
+  geom_line() + geom_line(data = cv_res_eng_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_eng_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
+  guides(color = FALSE) + theme_light()
 ```
 
 ---
