@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-26" />
+    <meta name="date" content="2020-04-29" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-26
+### 2020-04-29
 
 ---
 
@@ -804,7 +804,7 @@ rec_miss_mode_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
              -has_role("discarded"), one_hot = FALSE)
 ```
 
-.font80percent[(pretty sure there is a way to discard a predictor altogether)]
+.font80percent[(pretty sure `step_rm` is a way to discard predictors altogether)]
 
 ---
 
@@ -2621,8 +2621,8 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [21:55:09.299] early stopping at 20 iteration 
-## INFO  [21:55:09.345] early stopping at 20 iteration 
+## INFO  [19:02:43.021] early stopping at 20 iteration 
+## INFO  [19:02:43.095] early stopping at 20 iteration 
 ##   w1   w2  w3 w4 w5  w6   w7 w8  w9 w10
 ## 1  0 0.05 0.3  0  0 0.5 0.05  0 0.1   0
 ```
@@ -2960,11 +2960,404 @@ class: section-slide
 
 ---
 
+### What could the problem be?
+
+The problem almost always depends on the combination between models and variables:
+
+- Varied scale (and kNN, SVM) --&gt; `step_center()`, `step_scale()`, `step_normalize()`, `step_range()`
+- Bounded range of outcome (e.g. percentage and, well, almost any model) --&gt; `step_logit()`
+- Skewed data and outliers (and linear regression, NN, kNN, SVM, but less for Trees)
+- Non-linearity (and LR)
+- Co-linearity (and LR, NN)
+
+---
+
+### Skewed Data: Common Transformations
+
+#### Box-Cox
+
+In its simplified form:
+
+`$$x_i^{(\lambda)} = \begin{cases}
+   \frac{x_i^{\lambda} - 1}{\lambda} &amp; \mbox{if }\lambda \ne 0\\
+   \ln{x_i} &amp; \mbox{if }\lambda = 0
+ \end{cases}$$`
+
+---
+
+Originally the Box-Cox transformation was developed to transform a dependent `\(y\)` variable by maximizing the log-likelihood of seeing `\(y^{(\lambda)}\)` in a `lm` against some `\(X\)`. 
+
+But `\(\lambda\)` could be estimated in an unsupervised way as well:
+
+
+```r
+MASS::boxcox(ok_tr_eng$age ~ 1)
+```
+
+&lt;img src="images/Age-BoxCox-1.png" width="50%" /&gt;
+
+---
+
+
+```r
+tibble(age = ok_tr_eng$age,
+       age_bc = -1/age) %&gt;%
+  pivot_longer(starts_with("age"), names_to = "age") %&gt;%
+  ggplot(aes(value)) +
+  geom_histogram(bins = 30, fill = "red", alpha = 0.5) +
+  facet_wrap(~ age, scales = "free") + theme_light()
+```
+
+&lt;img src="images/Age-BoxCox2-1.png" width="100%" /&gt;
+
+---
+
+#### Yeo-Johnson
+
+Revised Box-Cox to allow for zero and negative values:
+
+`$$x_i^{(\lambda)} = \begin{cases}
+   \frac{(x_i + 1)^{\lambda} - 1}{\lambda} &amp; \mbox{if }\lambda \ne 0,y \ge 0\\
+   \ln{(x_i + 1)} &amp; \mbox{if }\lambda = 0, y \ge 0 \\
+   \frac{-[(-x_i + 1)^{2-\lambda} - 1]}{2 - \lambda} &amp; \mbox{if }\lambda \ne 0,y &lt; 0\\
+   -\ln{(-x_i + 1)} &amp; \mbox{if }\lambda = 0, y &lt; 0 \\
+ \end{cases}$$`
+
+Both transformations have `step`s in `recipes`:
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng) %&gt;%
+  step_BoxCox(income)
+```
+
+
+```r
+recipe(pets ~ ., data = ok_tr_eng) %&gt;%
+  step_YeoJohnson(income)
+```
+
+---
+
+### Non-Linearity: Basis Expansions and Splines
+
+Let's borrow a continuous `\(y\)` variable like `log(income)` to simplify:
+
+
+```r
+ggplot(ok_tr_eng, aes(age, log(income))) +
+  geom_point() +
+  theme_light()
+```
+
+&lt;img src="images/Income-Age-Scatter-1.png" width="100%" /&gt;
+
+Remember MARS?
+
+Perhaps you'd like to *expand* age to two variables: `max(45 - age, 0)` and `max(age - 45, 0)`?
+
+---
+
+You could do this manually in `lm()` like so
+
+
+```r
+mod_lm &lt;- lm(log(income) ~ I(pmax(0, 45 - age)) + I(pmax(0, age - 45)),
+             data = ok_tr_eng)
+
+summary(mod_lm)
+```
+
+```
+## 
+## Call:
+## lm(formula = log(income) ~ I(pmax(0, 45 - age)) + I(pmax(0, age - 
+##     45)), data = ok_tr_eng)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.3331 -0.6472 -0.0632  0.3654  3.2316 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)          11.414705   0.093229 122.437  &lt; 2e-16 ***
+## I(pmax(0, 45 - age)) -0.033230   0.005738  -5.791 1.16e-08 ***
+## I(pmax(0, age - 45)) -0.029685   0.013992  -2.122   0.0343 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.856 on 562 degrees of freedom
+##   (2435 observations deleted due to missingness)
+## Multiple R-squared:  0.05805,	Adjusted R-squared:  0.05469 
+## F-statistic: 17.32 on 2 and 562 DF,  p-value: 5.038e-08
+```
+
+---
+
+Or use `splines::bs()` with `degree = 1` and `knots = 45`.
+
+
+```r
+library(splines)
+mod_lm_bs &lt;- lm(log(income) ~ bs(age, degree = 1, knots = 45),
+             data = ok_tr_eng)
+
+summary(mod_lm_bs)
+```
+
+```
+## 
+## Call:
+## lm(formula = log(income) ~ bs(age, degree = 1, knots = 45), data = ok_tr_eng)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.3331 -0.6472 -0.0632  0.3654  3.2316 
+## 
+## Coefficients:
+##                                  Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)                      10.51749    0.07891 133.280  &lt; 2e-16 ***
+## bs(age, degree = 1, knots = 45)1  0.89722    0.15492   5.791 1.16e-08 ***
+## bs(age, degree = 1, knots = 45)2  0.21447    0.27510   0.780    0.436    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.856 on 562 degrees of freedom
+##   (2435 observations deleted due to missingness)
+## Multiple R-squared:  0.05805,	Adjusted R-squared:  0.05469 
+## F-statistic: 17.32 on 2 and 562 DF,  p-value: 5.038e-08
+```
+
+---
+
+How will the variables look like?
+
+
+```r
+X &lt;- model.matrix(mod_lm)
+
+age_no_na &lt;- ok_tr_eng$age[!is.na(ok_tr_eng$income)]
+
+head(cbind(age_no_na, X), 4)
+```
+
+```
+##    age_no_na (Intercept) I(pmax(0, 45 - age)) I(pmax(0, age - 45))
+## 1         39           1                    6                    0
+## 4         29           1                   16                    0
+## 12        32           1                   13                    0
+## 15        22           1                   23                    0
+```
+
+
+```r
+X &lt;- model.matrix(mod_lm_bs)
+colnames(X)[2:3] &lt;- c("age1", "age2")
+
+head(cbind(age_no_na, X), 4)
+```
+
+```
+##    age_no_na (Intercept)      age1 age2
+## 1         39           1 0.7777778    0
+## 4         29           1 0.4074074    0
+## 12        32           1 0.5185185    0
+## 15        22           1 0.1481481    0
+```
+
+`splines::bs()` re-parametrizes the variables but it is the same model!
+
+---
+
+How will the fit look like?
+
+
+```r
+ggplot(ok_tr_eng[!is.na(ok_tr_eng$income), ]) +
+  geom_point(aes(age, log(income))) +
+  geom_line(aes(age, mod_lm_bs$fit), color = "red", lwd = 2, alpha = 0.4) +
+  theme_light()
+```
+
+&lt;img src="images/Income-Age-Scatter2-1.png" width="100%" /&gt;
+
+---
+
+Or with a simple cubic spline with one knot in `bs()`
+
+&lt;img src="images/Income-Age-Scatter3-1.png" width="100%" /&gt;
+
+---
+
+Manually with `step_relu()`
+
+
+```r
+recipe(income ~ age, ok_tr_eng) %&gt;%
+  step_naomit(income) %&gt;%
+  step_relu(age, shift = 45, reverse = TRUE) %&gt;%
+  step_relu(age, shift = 45) %&gt;%
+  prep() %&gt;%
+  juice() %&gt;%
+  head()
+```
+
+```
+## # A tibble: 6 x 4
+##     age  income left_relu_age right_relu_age
+##   &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;          &lt;dbl&gt;
+## 1    39   80000             6              0
+## 2    29   30000            16              0
+## 3    32 1000000            13              0
+## 4    22   20000            23              0
+## 5    51 1000000             0              6
+## 6    40   30000             5              0
+```
+
+---
+
+For splines and polynomial regression use `step_bs()`, `step_ns()` and `step_poly()`
+
+
+```r
+recipe(income ~ age, ok_tr_eng) %&gt;%
+  step_naomit(income) %&gt;%
+  step_bs(age, degree = 3) %&gt;%
+  prep() %&gt;%
+  juice() %&gt;%
+  head()
+```
+
+```
+## # A tibble: 6 x 4
+##    income age_bs_1 age_bs_2 age_bs_3
+##     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1   80000    0.420   0.315  0.0787  
+## 2   30000    0.405   0.117  0.0113  
+## 3 1000000    0.437   0.175  0.0233  
+## 4   20000    0.207   0.0184 0.000544
+## 5 1000000    0.215   0.444  0.305   
+## 6   30000    0.409   0.333  0.0905
+```
+
+---
+
+### Co-linearity: Consider reducing dimensionality
+
+&gt; A conventional thought process is that the more predictors that are included, the better chance the model will have to find the signal. But this is not the case; including irrelevant predictors can have detrimental effects on the final model. The negative impacts include:
+- increasing the computational time required for training a model
+- decreasing the predictive performance
+- complicating the predictor importance calculation.
+By including any potential predictor, we end up with a sub-optimal model.
+
+[Kuhn &amp; Johnson (2019)](http://www.feat.engineering/index.html)
+
+---
+
+Common *dimensionality reduction* methods (some of which we've talked about!):
+- PCA, Kernel PCA, Sparse PCA --&gt; `step_pca()`, `step_kpca()`
+- NMF --&gt; `step_nnmf()`
+- PLS --&gt; `step_pls()`
+
+All of these will find some projection matrix `\(B_{pxk}\)` where `\(k\)` is the number of columns (e.g. PCs) to choose and would typically be much lower than `\(p\)`, the original dimension.
+
+You would then project your `\(X\)` matrix like so: `\(X^* = XB\)` (in most methods `\(X^*\)` columns would also be linearly independent, or "close" to it), and you would fit your data on this transformed `\(X^*\)`
+
+.warning[
+⚠️ No guarantee for improvement in performance! In fact...
+]
+
+.insight[
+💡 What is an alternative to reduce dimensionality?
+]
+
 ---
 
 class: section-slide
 
 # Interaction Effects
+
+---
+
+### What is Interaction?
+
+&lt;img src = "images/interaction.png" style="width: 100%"&gt;
+
+---
+
+### But seriously
+
+
+```r
+lm_int &lt;- lm(log(income) ~ sex + height + sex:height,
+             data = ok_tr_interaction %&gt;% filter(between(height, 60, 80)))
+summary(lm_int)
+```
+
+```
+## 
+## Call:
+## lm(formula = log(income) ~ sex + height + sex:height, data = ok_tr_interaction %&gt;% 
+##     filter(between(height, 60, 80)))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.16063 -0.71711 -0.02872  0.46308  3.06165 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)  6.36464    2.23738   2.845  0.00468 **
+## sexm         4.33800    2.61968   1.656  0.09855 . 
+## height       0.06753    0.03421   1.974  0.04912 * 
+## sexm:height -0.06277    0.03929  -1.597  0.11098   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.9044 on 386 degrees of freedom
+##   (1593 observations deleted due to missingness)
+## Multiple R-squared:  0.02639,	Adjusted R-squared:  0.01883 
+## F-statistic: 3.488 on 3 and 386 DF,  p-value: 0.0159
+```
+
+---
+
+
+```r
+ok_tr_interaction %&gt;%
+  filter(between(height, 60, 80)) %&gt;%
+  ggplot(aes(height, log(income), color = sex)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+&lt;img src="images/Height-Sex-Interaction-1.png" width="100%" /&gt;
+
+.insight[
+💡 How would you visualize an interaction between two continuous features? Two categorical? Three?...
+]
+
+---
+
+#### You get an interaction! You get an interaction!
+
+With the last `rec_eng_fulltext` recipe we reached over 130 features.
+
+So all two-way interactions would mean adding... over 8K features. All three-way interactions would mean adding... over 350K features.
+
+.insight[
+💡 What danger comes to mind? How would you defend yourself?
+
+Which models surface interactions naturally? What about our model?
+
+Should you include interaction terms before or after pre-processing?
+]
+
+Obviously, we need some control for this exploding no. of features:
+- Expert knowledge (e.g. when it comes to income most variables probably interact with...?)
+- Heredity principle
+- Resampling, Penalize
+- When `\(p\)` is huge: Two-Stage Modeling combined with your favorite Feature Selection approach
+- Whatever you choose, visualize!
 
 ---
     </textarea>

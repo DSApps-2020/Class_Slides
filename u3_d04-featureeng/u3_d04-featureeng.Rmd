@@ -722,7 +722,7 @@ rec_miss_mode_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
              -has_role("discarded"), one_hot = FALSE)
 ```
 
-.font80percent[(pretty sure there is a way to discard a predictor altogether)]
+.font80percent[(pretty sure `step_rm` is a way to discard predictors altogether)]
 
 ---
 
@@ -2245,6 +2245,216 @@ class: section-slide
 
 ---
 
+### What could the problem be?
+
+The problem almost always depends on the combination between models and variables:
+
+- Varied scale (and kNN, SVM) --> `step_center()`, `step_scale()`, `step_normalize()`, `step_range()`
+- Bounded range of outcome (e.g. percentage and, well, almost any model) --> `step_logit()`
+- Skewed data and outliers (and linear regression, NN, kNN, SVM, but less for Trees)
+- Non-linearity (and LR)
+- Co-linearity (and LR, NN)
+
+---
+
+### Skewed Data: Common Transformations
+
+#### Box-Cox
+
+In its simplified form:
+
+$$x_i^{(\lambda)} = \begin{cases}
+   \frac{x_i^{\lambda} - 1}{\lambda} & \mbox{if }\lambda \ne 0\\
+   \ln{x_i} & \mbox{if }\lambda = 0
+ \end{cases}$$
+
+---
+
+Originally the Box-Cox transformation was developed to transform a dependent $y$ variable by maximizing the log-likelihood of seeing $y^{(\lambda)}$ in a `lm` against some $X$. 
+
+But $\lambda$ could be estimated in an unsupervised way as well:
+
+```{r Age-BoxCox, out.width="50%"}
+MASS::boxcox(ok_tr_eng$age ~ 1)
+```
+
+---
+
+```{r Age-BoxCox2, out.width="100%", fig.asp=0.5}
+tibble(age = ok_tr_eng$age,
+       age_bc = -1/age) %>%
+  pivot_longer(starts_with("age"), names_to = "age") %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins = 30, fill = "red", alpha = 0.5) +
+  facet_wrap(~ age, scales = "free") + theme_light()
+```
+
+---
+
+#### Yeo-Johnson
+
+Revised Box-Cox to allow for zero and negative values:
+
+$$x_i^{(\lambda)} = \begin{cases}
+   \frac{(x_i + 1)^{\lambda} - 1}{\lambda} & \mbox{if }\lambda \ne 0,y \ge 0\\
+   \ln{(x_i + 1)} & \mbox{if }\lambda = 0, y \ge 0 \\
+   \frac{-[(-x_i + 1)^{2-\lambda} - 1]}{2 - \lambda} & \mbox{if }\lambda \ne 0,y < 0\\
+   -\ln{(-x_i + 1)} & \mbox{if }\lambda = 0, y < 0 \\
+ \end{cases}$$
+
+Both transformations have `step`s in `recipes`:
+
+```{r, eval=FALSE}
+recipe(pets ~ ., data = ok_tr_eng) %>%
+  step_BoxCox(income)
+```
+
+```{r, eval=FALSE}
+recipe(pets ~ ., data = ok_tr_eng) %>%
+  step_YeoJohnson(income)
+```
+
+---
+
+### Non-Linearity: Basis Expansions and Splines
+
+Let's borrow a continuous $y$ variable like `log(income)` to simplify:
+
+```{r Income-Age-Scatter, warning=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(ok_tr_eng, aes(age, log(income))) +
+  geom_point() +
+  theme_light()
+```
+
+Remember MARS?
+
+Perhaps you'd like to *expand* age to two variables: `max(45 - age, 0)` and `max(age - 45, 0)`?
+
+---
+
+You could do this manually in `lm()` like so
+
+```{r}
+mod_lm <- lm(log(income) ~ I(pmax(0, 45 - age)) + I(pmax(0, age - 45)),
+             data = ok_tr_eng)
+
+summary(mod_lm)
+```
+
+---
+
+Or use `splines::bs()` with `degree = 1` and `knots = 45`.
+
+```{r}
+library(splines)
+mod_lm_bs <- lm(log(income) ~ bs(age, degree = 1, knots = 45),
+             data = ok_tr_eng)
+
+summary(mod_lm_bs)
+```
+
+---
+
+How will the variables look like?
+
+```{r}
+X <- model.matrix(mod_lm)
+
+age_no_na <- ok_tr_eng$age[!is.na(ok_tr_eng$income)]
+
+head(cbind(age_no_na, X), 4)
+```
+
+```{r}
+X <- model.matrix(mod_lm_bs)
+colnames(X)[2:3] <- c("age1", "age2")
+
+head(cbind(age_no_na, X), 4)
+```
+
+`splines::bs()` re-parametrizes the variables but it is the same model!
+
+---
+
+How will the fit look like?
+
+```{r Income-Age-Scatter2, warning=FALSE, out.width="100%", fig.asp=0.5}
+ggplot(ok_tr_eng[!is.na(ok_tr_eng$income), ]) +
+  geom_point(aes(age, log(income))) +
+  geom_line(aes(age, mod_lm_bs$fit), color = "red", lwd = 2, alpha = 0.4) +
+  theme_light()
+```
+
+---
+
+Or with a simple cubic spline with one knot in `bs()`
+
+```{r Income-Age-Scatter3, warning=FALSE, out.width="100%", fig.asp=0.5, echo=F}
+mod_lm_bs2 <- lm(log(income) ~ bs(age, knots = 45), data = ok_tr_eng)
+ggplot(ok_tr_eng[!is.na(ok_tr_eng$income), ]) +
+  geom_point(aes(age, log(income))) +
+  geom_line(aes(age, mod_lm_bs2$fit), color = "red", lwd = 2, alpha = 0.4) +
+  theme_light()
+```
+
+---
+
+Manually with `step_relu()`
+
+```{r}
+recipe(income ~ age, ok_tr_eng) %>%
+  step_naomit(income) %>%
+  step_relu(age, shift = 45, reverse = TRUE) %>%
+  step_relu(age, shift = 45) %>%
+  prep() %>%
+  juice() %>%
+  head()
+```
+
+---
+
+For splines and polynomial regression use `step_bs()`, `step_ns()` and `step_poly()`
+
+```{r}
+recipe(income ~ age, ok_tr_eng) %>%
+  step_naomit(income) %>%
+  step_bs(age, degree = 3) %>%
+  prep() %>%
+  juice() %>%
+  head()
+```
+
+---
+
+### Co-linearity: Consider reducing dimensionality
+
+> A conventional thought process is that the more predictors that are included, the better chance the model will have to find the signal. But this is not the case; including irrelevant predictors can have detrimental effects on the final model. The negative impacts include:
+- increasing the computational time required for training a model
+- decreasing the predictive performance
+- complicating the predictor importance calculation.
+By including any potential predictor, we end up with a sub-optimal model.
+
+[Kuhn & Johnson (2019)](http://www.feat.engineering/index.html)
+
+---
+
+Common *dimensionality reduction* methods (some of which we've talked about!):
+- PCA, Kernel PCA, Sparse PCA --> `step_pca()`, `step_kpca()`
+- NMF --> `step_nnmf()`
+- PLS --> `step_pls()`
+
+All of these will find some projection matrix $B_{pxk}$ where $k$ is the number of columns (e.g. PCs) to choose and would typically be much lower than $p$, the original dimension.
+
+You would then project your $X$ matrix like so: $X^* = XB$ (in most methods $X^*$ columns would also be linearly independent, or "close" to it), and you would fit your data on this transformed $X^*$
+
+.warning[
+`r emo::ji("warning")` No guarantee for improvement in performance! In fact...
+]
+
+.insight[
+`r emo::ji("bulb")` What is an alternative to reduce dimensionality?
+]
+
 ---
 
 class: section-slide
@@ -2252,3 +2462,184 @@ class: section-slide
 # Interaction Effects
 
 ---
+
+### What is Interaction?
+
+<img src = "images/interaction.png" style="width: 100%">
+
+---
+
+### But seriously
+
+```{r}
+lm_int <- lm(log(income) ~ sex + height + sex:height,
+             data = ok_tr_interaction %>% filter(between(height, 60, 80)))
+summary(lm_int)
+```
+
+---
+
+```{r Height-Sex-Interaction, warning=FALSE, message = FALSE, out.width="100%", fig.asp=0.5}
+ok_tr_interaction %>% filter(between(height, 60, 80)) %>%
+  ggplot(aes(height, log(income), color = sex)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+.insight[
+`r emo::ji("bulb")` How would you visualize an interaction between two continuous features? Two categorical? Three?...
+]
+
+---
+
+#### You get an interaction! You get an interaction!
+
+With the last `rec_eng_fulltext` recipe we reached over 130 features.
+
+So all two-way interactions would mean adding... over 8K features. All three-way interactions would mean adding... over 350K features.
+
+.insight[
+`r emo::ji("bulb")` What danger comes to mind? How would you defend yourself?
+
+Which models surface interactions naturally? What about our model?
+
+Should you include interaction terms before or after pre-processing?
+]
+
+---
+
+Obviously, we need some control for this exploding no. of features:
+- Expert knowledge .font80percent[(e.g. when it comes to income most variables probably interact with...?)]
+- Heredity principle
+- Resampling, Penalize
+- When $p$ is huge: Two-Stage Modeling combined with your favorite Feature Selection approach
+- Whatever you choose, visualize!
+
+---
+
+So these will be our four options for handling interactions:
+
+1. Not
+2. Adding only interactions between `sex` and everything
+3. Two Stage: Screening all features selected by `glmnet` then all two-ways interactions
+4. All two-ways interactions `r emo::ji("sunglasses")` .font80percent[(with a `step_nzv()` though)]
+
+---
+
+```{r, echo=FALSE}
+ok_tr_interaction2 <- ok_tr_interaction %>%
+  mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c))
+ok_tr_interaction2 <- ok_tr_interaction2 %>%
+  bind_cols(
+    map_dfr(ok_tr_interaction2$essays, count_words)
+  ) %>%
+  select(-starts_with("essay")) %>%
+  bind_cols(ok_tr_interaction2 %>% select(essays)) %>%
+  mutate_if(is.character, as.factor)
+```
+
+```{r}
+rec_int_noint <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+
+rec_int_sex <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_interact(~starts_with("sex"):all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_nzv(all_numeric(), freq_cut = 95/5) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+rec_int_all <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_interact(~all_numeric():all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_nzv(all_numeric(), freq_cut = 95/5) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+set.seed(42)
+cv_splits_int <- vfold_cv(ok_tr_interaction2, v = 10, strata = pets)
+
+lst_recs <- list("noint" = rec_int_noint,
+                 "sex" = rec_int_sex,
+                 "all" = rec_int_all)
+```
+
+```{r, eval=FALSE}
+cv_res_int <- cv_splits_int %>%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_int$splits)
+  ) %>%
+  pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %>%
+  select(id, recipe, AUC)
+
+cv_res_int_meds <- cv_res_int %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
+```
+
+```{r, echo=FALSE}
+cv_res_eng <- read_rds("../data/Ok_int_cv_res_auc.rds")
+
+cv_res_eng_meds <- cv_res_eng %>%
+  group_by(recipe) %>%
+  summarise(AUC = median(AUC), id = "All")
+```
+
+---
+
+```{r Ok-FES2, out.width="100%", fig.asp=0.5}
+cv_res_int %>%
+  mutate(recipe = fct_relevel(recipe, c("noint", "sex", "all"))) %>%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+  geom_line() + geom_line(data = cv_res_int_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_int_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
+  guides(color = FALSE) + theme_light()
+```
+
