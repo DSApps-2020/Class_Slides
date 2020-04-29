@@ -52,6 +52,7 @@ class: section-slide
 ### What's the No. 1 complaint about LR?
 
 ```{r Bad-LR, echo=FALSE, out.width="50%"}
+set.seed(42)
 x1 <- seq(0, 3, 0.1)
 y1 <- 9 * x1 + rnorm(length(x1), sd = 3)
 x2 <- seq(3, 8, 0.1)
@@ -63,7 +64,30 @@ plot(x, y)
 abline(lm1$coef, col = "red")
 ```
 
-$\hat{y} = 12 + 1.5x$
+$\hat{y} = 13 + 1.5x$
+
+---
+
+### We could use polynomial regression
+
+```{r Bad-Poly, echo=FALSE, out.width="50%"}
+lm2 <- lm(y ~ x + I(x^2) + I(x^3))
+plot(x, y)
+lines(x, lm2$fit, col = "red")
+```
+
+$\hat{y} = -0.5 + 13.9x - 2.4x^2 + 0.1x^3$
+
+---
+
+### But...
+
+```{r Bad-Poly2, echo=FALSE, out.width="50%"}
+x_wide <- seq(-5, 20, 0.1)
+y_wide <- lm2$coef[1] + lm2$coef[2] * x_wide + lm2$coef[3] * x_wide ^ 2 + lm2$coef[4] * x_wide ^ 3
+plot(x, y, xlab = "x", ylab = "y", xlim = range(x_wide), ylim = range(y_wide))
+lines(x_wide, y_wide, col = "red")
+```
 
 ---
 
@@ -127,7 +151,7 @@ summary(mod_mars)
 ### This is exactly like
 
 ```{r}
-X <- data.frame(y, h1 = pmax(0, x - 3.1), h2 = pmax(0, 3.1 - x))
+X <- data.frame(y, h1 = pmax(0, 3.1 - x), h2 = pmax(0, x - 3.1))
 
 head(X)
 
@@ -160,7 +184,7 @@ lines(x2, rep(mean(y2), length(x2)), col = "red")
 
 ### From CART to MARS
 
-Let $B_m(X)= \prod_{k=1}^{K_m}I(X_{v(km)} - t_{km} \ge 0)$
+Let $B_m(X)= \prod_{k=1}^{K_m}I(X_{v(km)} \in R_{km}) = \prod_{k=1}^{K_m}I(\pm X_{v(km)} \mp t_{km} \ge 0)$
 
 Following [Friedman (1991)](https://projecteuclid.org/euclid.aos/1176347963), let:
 
@@ -172,7 +196,7 @@ $$H(z) =
 
 So: $B_m(X)= \prod_{k=1}^{K_m}H[s_{km}(X_{v(km)} - t_{km})]$ where $s_{km}=\pm 1$
 
-And: $\hat{y} = g(X)$
+And: $\hat{y} = g(X) = \sum_m \beta_mB_m(X)$
 
 And: $LOF(g)$ is the Lack of Fit function for $g(X)$, typically the $SSE$ critetion
 
@@ -286,6 +310,189 @@ Cons:
 - Greedy
 - The resulting fitted function may not be smooth (not differentiable along hinges)
 - No built-in CI for variables params
+
+---
+
+class: section-slide
+
+# Intro to Splines
+
+---
+
+We've seen that if we know the knot we could fit MARS via `lm()`
+
+```{r, echo=FALSE}
+set.seed(42)
+x1 <- seq(0, 3, 0.1)
+y1 <- 9 * x1 + rnorm(length(x1), sd = 1)
+x2 <- seq(3, 8, 0.1)
+y2 <- 33 - 2 * x2 + rnorm(length(x2), sd = 1)
+x <- c(x1, x2)
+y <- c(y1, y2)
+```
+
+```{r}
+lm_manual <- lm(y ~ I(pmax(0, 3.1 - x)) + I(pmax(0, x - 3.1)))
+head(model.matrix(lm_manual), 4)
+lm_manual
+```
+
+---
+
+Another function could do this, slightly different.
+
+```{r, warning=FALSE}
+library(splines)
+
+lm_bs <- lm(y ~ bs(x, degree = 1, knots = 3.1))
+mm_bs <- model.matrix(lm_bs)
+colnames(mm_bs) <- c("intercept", "base1", "base2")
+head(mm_bs, 4)
+lm_bs
+```
+
+---
+
+But wait, the `model.matrix()` looks different and so are the coefficients! And yet...
+
+```{r}
+head(lm_manual$fit)
+head(lm_bs$fit)
+```
+
+The `splines::bs()` will parametrize `x` slightly differently:
+
+```{r}
+mm_bs_manual <- as.matrix(
+  cbind(1,
+        (x - 0) / (3.1 - 0) * ifelse(x > 0 & x <= 3.1, 1, 0) +
+          (8 - x) / (8 - 3.1) * ifelse(x > 3.1 & x <= 8, 1, 0),
+        (x - 3.1) / (8 - 3.1) * ifelse(x > 3.1 & x <= 8, 1, 0)))
+max(abs(mm_bs - mm_bs_manual))
+```
+
+---
+
+But `splines::bs()` is much more flexible
+
+```{r}
+lm_bs2 <- lm(y ~ bs(x, degree = 2, knots = 3.1))
+mm_bs2 <- model.matrix(lm_bs2)
+colnames(mm_bs2) <- c("intercept", "base1", "base2", "base3")
+head(mm_bs2, 4)
+lm_bs2
+```
+
+---
+
+```{r B-Splines, echo=FALSE, out.width="50%"}
+plot(x, y)
+lines(x, lm_bs2$fit, col = "red")
+```
+
+Now that I got your attention...
+
+---
+
+### Splines
+
+We've seen a tree or MARS could be generalized to this form:
+
+$\hat{y} = g(X) = \sum_m \beta_mB_m(X)$
+
+In general, $B_m(X)$ are sometimes called *basis functions* or *basis expansions* of $X$.
+
+.insight[
+`r emo::ji("bulb")` What would $B_m(X)$ be for polynomial regression?
+]
+
+For splines, **for a univariate $X$**, define a set of knots $\tau_1, ..., \tau_K$ in the range of $X$. Let each $B_k(X)$ be a polynomial of degree $d$ in the range $\tau_{k-1} < X \le \tau_k$ .font80percent[(where for the first and last knots we'll use the minimum and maximum of X for now)]
+
+---
+
+And we can write
+
+$$\hat{y} = g(X) = \sum_{k = 1}^{K + 1} \beta_kB_k(X) = \\
+\sum_{k = 1}^{K + 1} \beta_k[\alpha_{0k} + \alpha_{1k}x + ... +\alpha_{dk}x^d]I(\tau_{k-1} < x \le \tau_k)$$
+
+Such that $\beta_{k - 1}B_{k - 1}(\tau_k) = \beta_{k}B_{k}(\tau_k)$
+
+(i.e. $g(X)$ is continuous, it is a sequence of polynomials tied together at the knots)
+
+---
+
+Example:
+
+Spline with $K = 2$ knots, $d = 2$ and $0 < X \le 3$:
+
+$$B_1(X) = -1 + 4X - X^2, 0 < X \le 1 \\
+B_2(X) = 4X, 1 < X \le 2 \\
+B_3(X) = 2 - X + X^2, 2 < X \le 3 \\
+y = 1 \cdot B_1(X) + \frac{1}{2} \cdot B_2(X) + 1 \cdot B_3(X)$$
+
+---
+
+```{r Spline-Example, out.width="50%"}
+x1 <- seq(0, 1, 0.1); x2 <- seq(1, 2, 0.1); x3 <- seq(2, 3, 0.1)
+y1 <- -1 + 4 * x1 - x1^2; y2 <- 4 *x2; y3 <- 2 - x3 + x3^2
+x_all <- c(x1, x2, x3)
+y_all <- c(1 * y1, 0.5 * y2, 1 * y3)
+plot(x_all, y_all, xlab = "x", ylab = "y")
+```
+
+---
+
+But we do not have $(K + 1) \cdot (d + 1)$ free params! It can be shown we actually have $K \cdot d$ constraints, so $(K + 1) \cdot (d + 1) - K \cdot d = K + d + 1$ degrees of freedom.
+
+Our model matrix will look like this:
+
+$$\begin{bmatrix}
+1 & x & x^2 & ... & x^d & (x-\tau_1)^d_+ & (x-\tau_2)^d_+ & ... & (x-\tau_K)^d_+
+\end{bmatrix}$$
+
+Starting with a "basic" polynomial of degree $d$, deviations from the basic polynomial are successively added to the spline function to the right of each of $K$ knots, where remember the $(x-c)_+$ is the hinge function $max(0, x - c)$.
+
+---
+
+We see this in the no. of columns of the the matrix returned by `bs()`:
+
+```{r}
+ncol(bs(x, degree = 1, knots = 3.1))
+ncol(bs(x, degree = 2, knots = 3.1))
+ncol(bs(x, degree = 2, knots = c(3.1, 5)))
+ncol(bs(x, degree = 3, knots = c(3.1, 5)))
+```
+
+---
+
+But the matrix itself is slightly different than we would have expected.
+
+```{r}
+head(mm_bs2)
+```
+
+
+We saw this for $d = 1; K = 1$ and were able to reconstruct the matrix.
+
+---
+
+In general, `bs()` fits B-splines, which is a special paramterization of the simple spline defined above.
+
+<img src="images/B-splines.png" style="width: 100%" />
+
+.font90percent[([de Boore (1978)](https://www.springer.com/gp/book/9780387953663))]
+
+---
+
+### Splines - this was just a taste
+
+- It looks like there are many params to tune here, however in practice `bs()` defaults work quite well with few knots (1-3) to avoid overfitting
+- By default `bs()` will fit a cubic spline (`degree = 3`)
+- It is custom to control the `df` parameter, e.g.:
+  - `df = 4` would produce `degree = 3` and one knot, the median
+  - `df = 6` would produce `degree = 3` and 3 knots, Q1, Q2 and Q3
+- There are other splines: Natural splines (see `splines::ns()`), Penalized splines
+- For retrieving the regression formula for a `lm()` object fitted on `bs()` see the [SplinesUtils](https://github.com/ZheyuanLi/SplinesUtils) package and [this](https://stackoverflow.com/questions/44739192/export-fitted-regression-splines-constructed-by-bs-or-ns-as-piecewise-poly) SO answer.
 
 ---
 
