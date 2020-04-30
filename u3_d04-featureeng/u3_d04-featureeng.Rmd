@@ -677,7 +677,7 @@ Let's choose between 2 x 3 x 3 = 18 strategies:
 Use `step_mutate_*()` or add what you need beforehand.
 
 ```{r}
-ok_tr_missing <- ok_tr_missing %>%
+ok_tr_missing2 <- ok_tr_missing %>%
   select(-starts_with("essay")) %>%
   bind_cols(
     ok_tr_missing %>%
@@ -703,7 +703,7 @@ ok_tr_missing <- ok_tr_missing %>%
 Defining recipes .font80percent[(without `prep()`!)], let's start with 2 to simplify.
 
 ```{r}
-rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, contains("essay"), new_role = "discarded") %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
@@ -712,7 +712,7 @@ rec_miss_unk_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_none_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, contains("essay"), new_role = "discarded") %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
@@ -730,7 +730,7 @@ Defining resamples
 
 ```{r}
 set.seed(42)
-cv_splits_missing <- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+cv_splits_missing <- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
 
 cv_splits_missing
 ```
@@ -846,7 +846,7 @@ t.test(cv_splits_missing$step_unknown,
 Let's move on to 2 x 2 recipes, adding 2 more recipes for treating the `income` variable with mean imputation, with `step_unknown()` and `step_modeimpute()`.
 
 ```{r}
-rec_miss_unk_mean_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_mean_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
@@ -857,7 +857,7 @@ rec_miss_unk_mean_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_mean_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
@@ -961,7 +961,7 @@ with(cv_res_missing, interaction.plot(categorical, income, AUC))
 Ok, now let's go back to our original idea of 18 recipes... see code in slides Rmd file.
 
 ```{r, echo=FALSE}
-rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_knnimpute(income,
@@ -975,7 +975,7 @@ rec_miss_unk_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(contains("essay"), new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_knnimpute(income,
@@ -989,7 +989,7 @@ rec_miss_mode_knn_none <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, starts_with("isna"), new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -999,7 +999,7 @@ rec_miss_unk_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, starts_with("isna"), new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -1009,7 +1009,7 @@ rec_miss_mode_none_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1020,7 +1020,7 @@ rec_miss_unk_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1031,7 +1031,7 @@ rec_miss_mode_mean_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
@@ -1045,7 +1045,7 @@ rec_miss_unk_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
@@ -1061,7 +1061,7 @@ rec_miss_mode_knn_len <- recipe(pets ~ ., data = ok_tr_missing) %>%
 
 ###
 
-rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -1071,7 +1071,7 @@ rec_miss_unk_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   update_role(income, new_role = "discarded") %>%
   step_log(starts_with("len"), offset = 1) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -1081,7 +1081,7 @@ rec_miss_mode_none_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -1091,7 +1091,7 @@ rec_miss_unk_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
@@ -1101,7 +1101,7 @@ rec_miss_mode_mean_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
                  impute_with = imp_vars(
@@ -1114,7 +1114,7 @@ rec_miss_unk_knn_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_knn_isna <- recipe(pets ~ ., data = ok_tr_missing) %>%
+rec_miss_mode_knn_isna <- recipe(pets ~ ., data = ok_tr_missing2) %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_knnimpute(income,
                  impute_with = imp_vars(
@@ -1154,7 +1154,7 @@ lst_recs <- list("unknown_none_none" = rec_miss_unk_none_none,
 
 ```{r}
 set.seed(42)
-cv_splits_missing <- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+cv_splits_missing <- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
 ```
 
 ```{r, eval=FALSE}
@@ -1245,7 +1245,7 @@ We'll choose between 3 strategies:
 ---
 
 ```{r}
-ok_tr_imbalance <- ok_tr_imbalance %>%
+ok_tr_imbalance2 <- ok_tr_imbalance %>%
   select(-starts_with("essay")) %>%
   bind_cols(
     ok_tr_imbalance %>%
@@ -1271,7 +1271,7 @@ ok_tr_imbalance <- ok_tr_imbalance %>%
 ```{r, warning=FALSE, message=FALSE}
 library(themis)
 
-rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
+rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1283,7 +1283,7 @@ rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
              -has_role("discarded"), one_hot = FALSE) %>%
   step_upsample(pets, over_ratio = 1)
 
-rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
+rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1299,7 +1299,7 @@ rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
 ---
 
 ```{r, warning=FALSE, message=FALSE}
-rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance) %>%
+rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
   step_log(income, starts_with("len"), offset = 1) %>%
   step_meanimpute(income) %>%
@@ -1319,7 +1319,7 @@ CV splits
 
 ```{r}
 set.seed(42)
-cv_splits_imbalance <- vfold_cv(ok_tr_imbalance, v = 10, strata = pets)
+cv_splits_imbalance <- vfold_cv(ok_tr_imbalance2, v = 10, strata = pets)
 
 lst_recs <- list("upsample" = rec_imb_upsample,
                  "downsample" = rec_imb_downsample,
@@ -2521,8 +2521,170 @@ So these will be our four options for handling interactions:
 
 1. Not
 2. Adding only interactions between `sex` and everything
-3. Two Stage: Screening all features selected by `glmnet` then all two-ways interactions
-4. All two-ways interactions `r emo::ji("sunglasses")` .font80percent[(with a `step_nzv()` though)]
+3. Two Stage: Screening all "main effects" features selected by a single `glmnet` stage then all two-way interactions of those features
+4. Two Stage: Screening all two-way interactions by multiple comparisons of a `glm` main effects model vs. main effects + interaction, combined with FDR adjustment for the p-value
+5. All two-way interactions `r emo::ji("sunglasses")` .font80percent[(with a `step_nzv()` though)]
+
+---
+
+For stages 3 and 4 let's use previously available data.
+
+```{r}
+ok_tr_combined <- bind_rows(
+  ok_tr_missing,
+  ok_tr_imbalance,
+  ok_tr_eng
+  ) %>%
+  mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c))
+
+ok_tr_combined <- ok_tr_combined %>%
+  bind_cols(
+    map_dfr(ok_tr_combined$essays, count_words)
+  ) %>%
+  select(-starts_with("essay")) %>%
+  bind_cols(ok_tr_combined %>% select(essays)) %>%
+  mutate_if(is.character, as.factor)
+```
+
+---
+
+For stage 3 need to screen out "main effects" features which passed `glmnet`
+
+```{r}
+rec_base <- recipe(pets ~ ., data = ok_tr_combined) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+main_data <- rec_base %>% prep() %>% juice()
+
+mod_lr_res <- mod_lr %>%
+  fit(pets ~ ., data = main_data) %>%
+  pluck("fit") %>%
+  tidy()
+
+mod_lr_res
+```
+
+---
+
+We can plot no. of features selected by `glmnet` by lambda
+
+```{r Interaction-Stage3-Glmnet, out.width="100%", fig.asp=0.5}
+mod_lr_res %>%
+  count(lambda) %>%
+  ggplot(aes(lambda, n)) +
+  geom_line(lwd = 2, color = "red", alpha = 0.5) +
+  labs(y = "N features selected by glmnet") +
+  theme_light()
+```
+
+---
+
+We see a plateau around 12-15 features, let's choose those.
+
+```{r}
+mod_lr_res %>%
+  filter(step == 6) %>%
+  select(term, estimate) %>%
+  head(14)
+```
+
+---
+
+These make sense, let's choose them as our main effects from which we pick all two-way interactions.
+
+```{r}
+main_effects <- mod_lr_res %>%
+  filter(step == 6, term != "(Intercept)") %>%
+  pull(term)
+```
+
+---
+
+For stage 4 we need to iterate over all possible two-way interactions, each time adding one into a full main effects `glm` model, getting the p-value, and applying FDR adjustment.
+
+```{r, eval=FALSE}
+extract_interaction_p_val <- function(var1, var2) {
+  pb$tick()$print()
+  int_term <- str_c(var1, ":", var2)
+  mod_formula <- formula(str_c("pets ~ . + ", int_term))
+  mod_glm <- glm(mod_formula,
+                 data = main_data %>% select(-ends_with("_new")),
+                 family = "binomial")
+  mod_summary <- summary(mod_glm)
+  p_val <- tidy(mod_glm) %>%
+    filter(term == int_term) %>%
+    pull(p.value)
+  if (length(p_val) == 0) {
+    return(NA_real_)
+  }
+  p_val
+}
+
+all_vars <- colnames(main_data %>% select(-ends_with("_new")))
+all_ints <- t(combn(all_vars[-which(all_vars == "pets")], 2))
+colnames(all_ints) <- c("var1", "var2")
+all_ints <- as_tibble(all_ints)
+
+pb <- progress_estimated(nrow(all_ints))
+all_ints <- all_ints %>%
+  mutate(p_val = map2_dbl(var1, var2, extract_interaction_p_val),
+         fdr = p.adjust(p_val, method = "fdr"))
+```
+
+```{r, echo=FALSE}
+all_ints <- read_rds("../data/Ok_interaction_fdr.rds")
+```
+
+---
+
+Let's filter only the *most* convincing interactions:
+
+```{r}
+pairwise_ints <- all_ints %>%
+  arrange(fdr) %>%
+  filter(fdr < 10e-7)
+
+pairwise_ints
+```
+
+---
+
+Let's visualize the top pairwise interaction.
+
+```{r W_Dog-Interaction, out.width="100%", fig.asp=0.5}
+main_data %>%
+  group_by(sex_m, pets) %>%
+  summarise(mean_w_dog = mean(w_dog)) %>%
+  ungroup() %>%
+  mutate(gender = factor(ifelse(sex_m == 0, "women", "men"))) %>%
+  ggplot(aes(pets, mean_w_dog, color = gender)) +
+  geom_line(aes(group = gender)) +
+  geom_point() +
+  theme_light()
+```
+
+.insight[
+`r emo::ji("bulb")` Try stating what you see in words.
+]
 
 ---
 
@@ -2572,7 +2734,80 @@ rec_int_sex <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
              -has_role("discarded"), one_hot = FALSE) %>%
   step_interact(~starts_with("sex"):all_numeric()) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_nzv(all_numeric(), freq_cut = 95/5) %>%
+  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+# pairwise interactions string code from Max Kuhn's workshop: https://github.com/topepo/FES/blob/master/07_Detecting_Interaction_Effects/7_04_The_Brute-Force_Approach_to_Identifying_Predictive_Interactions/ames_glmnet.R
+
+topmain_ints <- t(combn(main_effects, 2))
+colnames(topmain_ints) <- c("var1", "var2")
+topmain_ints <- topmain_ints %>% 
+  as_tibble() %>% 
+  mutate(
+    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+  ) %>% 
+  pull(term) %>% 
+  paste(collapse = "+")
+
+topmain_ints <- str_c("~", topmain_ints)
+topmain_ints <- as.formula(topmain_ints)
+
+rec_int_topmain <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_interact(topmain_ints) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_nzv(all_numeric(), freq_cut = 99/1) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+topint_ints <- pairwise_ints %>% 
+  as_tibble() %>% 
+  mutate(
+    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+  ) %>% 
+  pull(term) %>% 
+  paste(collapse = "+")
+
+topint_ints <- str_c("~", topint_ints)
+topint_ints <- as.formula(topint_ints)
+
+rec_int_topints <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  {if (!"religion_agnosticism.and.laughing.about.it"
+       %in% .$var_info$variable)
+    step_mutate(., religion_agnosticism.and.laughing.about.it = 0)} %>%
+  step_interact(topint_ints) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_nzv(all_numeric(), freq_cut = 99/1) %>%
   step_upsample(pets, over_ratio = 1)
 ```
 
@@ -2606,6 +2841,8 @@ cv_splits_int <- vfold_cv(ok_tr_interaction2, v = 10, strata = pets)
 
 lst_recs <- list("noint" = rec_int_noint,
                  "sex" = rec_int_sex,
+                 "topmain" = rec_int_topmain,
+                 "topints" = rec_int_topints,
                  "all" = rec_int_all)
 ```
 
@@ -2624,19 +2861,21 @@ cv_res_int_meds <- cv_res_int %>%
   summarise(AUC = median(AUC), id = "All")
 ```
 
-```{r, echo=FALSE}
-cv_res_eng <- read_rds("../data/Ok_int_cv_res_auc.rds")
+---
 
-cv_res_eng_meds <- cv_res_eng %>%
+```{r, echo=FALSE}
+cv_res_int <- read_rds("../data/Ok_int_cv_res_auc.rds")
+
+cv_res_int_meds <- cv_res_int %>%
   group_by(recipe) %>%
   summarise(AUC = median(AUC), id = "All")
 ```
 
 ---
 
-```{r Ok-FES2, out.width="100%", fig.asp=0.5}
+```{r Ok-Int, out.width="100%", fig.asp=0.5}
 cv_res_int %>%
-  mutate(recipe = fct_relevel(recipe, c("noint", "sex", "all"))) %>%
+  mutate(recipe = fct_relevel(recipe, c("noint", "sex", "topmain", "topints", "all"))) %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
   geom_line() + geom_line(data = cv_res_int_meds, color = "black", alpha = 0.2, lwd = 2) +
   geom_point() + geom_point(data = cv_res_int_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +

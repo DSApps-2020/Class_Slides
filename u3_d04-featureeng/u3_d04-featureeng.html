@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-04-29" />
+    <meta name="date" content="2020-04-30" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-04-29
+### 2020-04-30
 
 ---
 
@@ -758,7 +758,7 @@ Use `step_mutate_*()` or add what you need beforehand.
 
 
 ```r
-ok_tr_missing &lt;- ok_tr_missing %&gt;%
+ok_tr_missing2 &lt;- ok_tr_missing %&gt;%
   select(-starts_with("essay")) %&gt;%
   bind_cols(
     ok_tr_missing %&gt;%
@@ -785,7 +785,7 @@ Defining recipes .font80percent[(without `prep()`!)], let's start with 2 to simp
 
 
 ```r
-rec_miss_unk_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+rec_miss_unk_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing2) %&gt;%
   update_role(income, contains("essay"), new_role = "discarded") %&gt;%
   step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
@@ -794,7 +794,7 @@ rec_miss_unk_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+rec_miss_mode_none_none &lt;- recipe(pets ~ ., data = ok_tr_missing2) %&gt;%
   update_role(income, contains("essay"), new_role = "discarded") %&gt;%
   step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
@@ -813,7 +813,7 @@ Defining resamples
 
 ```r
 set.seed(42)
-cv_splits_missing &lt;- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+cv_splits_missing &lt;- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
 
 cv_splits_missing
 ```
@@ -986,7 +986,7 @@ Let's move on to 2 x 2 recipes, adding 2 more recipes for treating the `income` 
 
 
 ```r
-rec_miss_unk_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+rec_miss_unk_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing2) %&gt;%
   update_role(contains("essay"), new_role = "discarded") %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
@@ -997,7 +997,7 @@ rec_miss_unk_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE)
 
-rec_miss_mode_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing) %&gt;%
+rec_miss_mode_mean_none &lt;- recipe(pets ~ ., data = ok_tr_missing2) %&gt;%
   update_role(contains("essay"), new_role = "discarded") %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
@@ -1167,7 +1167,7 @@ lst_recs &lt;- list("unknown_none_none" = rec_miss_unk_none_none,
 
 ```r
 set.seed(42)
-cv_splits_missing &lt;- vfold_cv(ok_tr_missing, v = 10, strata = pets)
+cv_splits_missing &lt;- vfold_cv(ok_tr_missing2, v = 10, strata = pets)
 ```
 
 
@@ -1300,7 +1300,7 @@ We'll choose between 3 strategies:
 
 
 ```r
-ok_tr_imbalance &lt;- ok_tr_imbalance %&gt;%
+ok_tr_imbalance2 &lt;- ok_tr_imbalance %&gt;%
   select(-starts_with("essay")) %&gt;%
   bind_cols(
     ok_tr_imbalance %&gt;%
@@ -1327,7 +1327,7 @@ ok_tr_imbalance &lt;- ok_tr_imbalance %&gt;%
 ```r
 library(themis)
 
-rec_imb_upsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+rec_imb_upsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   update_role(starts_with("isna"), new_role = "discarded") %&gt;%
   step_log(income, starts_with("len"), offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
@@ -1339,7 +1339,7 @@ rec_imb_upsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
              -has_role("discarded"), one_hot = FALSE) %&gt;%
   step_upsample(pets, over_ratio = 1)
 
-rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   update_role(starts_with("isna"), new_role = "discarded") %&gt;%
   step_log(income, starts_with("len"), offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
@@ -1356,7 +1356,7 @@ rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
 
 
 ```r
-rec_imb_smote &lt;- recipe(pets ~ ., data = ok_tr_imbalance) %&gt;%
+rec_imb_smote &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   update_role(starts_with("isna"), new_role = "discarded") %&gt;%
   step_log(income, starts_with("len"), offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
@@ -1377,7 +1377,7 @@ CV splits
 
 ```r
 set.seed(42)
-cv_splits_imbalance &lt;- vfold_cv(ok_tr_imbalance, v = 10, strata = pets)
+cv_splits_imbalance &lt;- vfold_cv(ok_tr_imbalance2, v = 10, strata = pets)
 
 lst_recs &lt;- list("upsample" = rec_imb_upsample,
                  "downsample" = rec_imb_downsample,
@@ -2621,8 +2621,8 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [19:02:43.021] early stopping at 20 iteration 
-## INFO  [19:02:43.095] early stopping at 20 iteration 
+## INFO  [21:40:25.994] early stopping at 20 iteration 
+## INFO  [21:40:26.039] early stopping at 20 iteration 
 ##   w1   w2  w3 w4 w5  w6   w7 w8  w9 w10
 ## 1  0 0.05 0.3  0  0 0.5 0.05  0 0.1   0
 ```
@@ -3323,8 +3323,7 @@ summary(lm_int)
 
 
 ```r
-ok_tr_interaction %&gt;%
-  filter(between(height, 60, 80)) %&gt;%
+ok_tr_interaction %&gt;% filter(between(height, 60, 80)) %&gt;%
   ggplot(aes(height, log(income), color = sex)) +
   geom_point() +
   geom_smooth(method = "lm")
@@ -3352,14 +3351,436 @@ Which models surface interactions naturally? What about our model?
 Should you include interaction terms before or after pre-processing?
 ]
 
+---
+
 Obviously, we need some control for this exploding no. of features:
-- Expert knowledge (e.g. when it comes to income most variables probably interact with...?)
+- Expert knowledge .font80percent[(e.g. when it comes to income most variables probably interact with...?)]
 - Heredity principle
 - Resampling, Penalize
 - When `\(p\)` is huge: Two-Stage Modeling combined with your favorite Feature Selection approach
 - Whatever you choose, visualize!
 
 ---
+
+So these will be our four options for handling interactions:
+
+1. Not
+2. Adding only interactions between `sex` and everything
+3. Two Stage: Screening all "main effects" features selected by a single `glmnet` stage then all two-way interactions of those features
+4. Two Stage: Screening all two-way interactions by multiple comparisons of a `glm` main effects model vs. main effects + interaction, combined with FDR adjustment for the p-value
+5. All two-way interactions 😎 .font80percent[(with a `step_nzv()` though)]
+
+---
+
+For stages 3 and 4 let's use previously available data.
+
+
+```r
+ok_tr_combined &lt;- bind_rows(
+  ok_tr_missing,
+  ok_tr_imbalance,
+  ok_tr_eng
+  ) %&gt;%
+  mutate(essays = pmap_chr(
+    list(essay0, essay1, essay2, essay3, essay4, essay5,
+         essay6, essay7, essay8, essay9), str_c))
+
+ok_tr_combined &lt;- ok_tr_combined %&gt;%
+  bind_cols(
+    map_dfr(ok_tr_combined$essays, count_words)
+  ) %&gt;%
+  select(-starts_with("essay")) %&gt;%
+  bind_cols(ok_tr_combined %&gt;% select(essays)) %&gt;%
+  mutate_if(is.character, as.factor)
+```
+
+---
+
+For stage 3 need to screen out "main effects" features which passed `glmnet`
+
+
+```r
+rec_base &lt;- recipe(pets ~ ., data = ok_tr_combined) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+main_data &lt;- rec_base %&gt;% prep() %&gt;% juice()
+
+mod_lr_res &lt;- mod_lr %&gt;%
+  fit(pets ~ ., data = main_data) %&gt;%
+  pluck("fit") %&gt;%
+  tidy()
+
+mod_lr_res
+```
+
+```
+## # A tibble: 4,652 x 5
+##    term                               step  estimate lambda dev.ratio
+##    &lt;chr&gt;                             &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+##  1 (Intercept)                           1 -2.45e-13 0.0832  2.60e-13
+##  2 (Intercept)                           2  4.95e- 2 0.0758  9.25e- 3
+##  3 w_cat                                 2 -1.68e- 2 0.0758  9.25e- 3
+##  4 w_cats                                2 -7.82e- 3 0.0758  9.25e- 3
+##  5 w_dog                                 2  1.43e- 2 0.0758  9.25e- 3
+##  6 ethnicity_white                       2 -6.13e- 2 0.0758  9.25e- 3
+##  7 offspring_doesn.rsquo.t.want.kids     2 -1.45e- 2 0.0758  9.25e- 3
+##  8 status_other1                         2 -1.56e- 2 0.0758  9.25e- 3
+##  9 (Intercept)                           3  7.48e- 2 0.0691  2.51e- 2
+## 10 w_cat                                 3 -3.41e- 2 0.0691  2.51e- 2
+## # ... with 4,642 more rows
+```
+
+---
+
+We can plot no. of features selected by `glmnet` by lambda
+
+
+```r
+mod_lr_res %&gt;%
+  count(lambda) %&gt;%
+  ggplot(aes(lambda, n)) +
+  geom_line(lwd = 2, color = "red", alpha = 0.5) +
+  labs(y = "N features selected by glmnet") +
+  theme_light()
+```
+
+&lt;img src="images/Interaction-Stage3-Glmnet-1.png" width="100%" /&gt;
+
+---
+
+We see a plateau around 12-15 features, let's choose those.
+
+
+```r
+mod_lr_res %&gt;%
+  filter(step == 6) %&gt;%
+  select(term, estimate) %&gt;%
+  head(14)
+```
+
+```
+## # A tibble: 14 x 2
+##    term                                              estimate
+##    &lt;chr&gt;                                                &lt;dbl&gt;
+##  1 (Intercept)                                         0.118 
+##  2 age                                                -0.0223
+##  3 w_cat                                              -0.0640
+##  4 w_cats                                             -0.0446
+##  5 w_dog                                               0.161 
+##  6 w_art                                              -0.0277
+##  7 drinks_socially                                     0.163 
+##  8 drugs_sometimes                                    -0.0838
+##  9 ethnicity_white                                    -0.231 
+## 10 job_sales...marketing...biz.dev                     0.0455
+## 11 location_san.francisco..california                  0.0144
+## 12 offspring_doesn.rsquo.t.want.kids                  -0.261 
+## 13 religion_catholicism.but.not.too.serious.about.it   0.124 
+## 14 status_other1                                      -0.236
+```
+
+---
+
+These make sense, let's choose them as our main effects from which we pick all two-way interactions.
+
+
+```r
+main_effects &lt;- mod_lr_res %&gt;%
+  filter(step == 6, term != "(Intercept)") %&gt;%
+  pull(term)
+```
+
+---
+
+For stage 4 we need to iterate over all possible two-way interactions, each time adding one into a full main effects `glm` model, getting the p-value, and applying FDR adjustment.
+
+
+```r
+extract_interaction_p_val &lt;- function(var1, var2) {
+  pb$tick()$print()
+  int_term &lt;- str_c(var1, ":", var2)
+  mod_formula &lt;- formula(str_c("pets ~ . + ", int_term))
+  mod_glm &lt;- glm(mod_formula,
+                 data = main_data %&gt;% select(-ends_with("_new")),
+                 family = "binomial")
+  mod_summary &lt;- summary(mod_glm)
+  p_val &lt;- tidy(mod_glm) %&gt;%
+    filter(term == int_term) %&gt;%
+    pull(p.value)
+  if (length(p_val) == 0) {
+    return(NA_real_)
+  }
+  p_val
+}
+
+all_vars &lt;- colnames(main_data %&gt;% select(-ends_with("_new")))
+all_ints &lt;- t(combn(all_vars[-which(all_vars == "pets")], 2))
+colnames(all_ints) &lt;- c("var1", "var2")
+all_ints &lt;- as_tibble(all_ints)
+
+pb &lt;- progress_estimated(nrow(all_ints))
+all_ints &lt;- all_ints %&gt;%
+  mutate(p_val = map2_dbl(var1, var2, extract_interaction_p_val),
+         fdr = p.adjust(p_val, method = "fdr"))
+```
+
+
+
+---
+
+Let's filter only the *most* convincing interactions:
+
+
+```r
+pairwise_ints &lt;- all_ints %&gt;%
+  arrange(fdr) %&gt;%
+  filter(fdr &lt; 10e-7)
+
+pairwise_ints
+```
+
+```
+## # A tibble: 10 x 4
+##    var1           var2                                    p_val         fdr
+##    &lt;chr&gt;          &lt;chr&gt;                                   &lt;dbl&gt;       &lt;dbl&gt;
+##  1 w_dog          sex_m                                1.63e-13     1.03e-9
+##  2 w_cat          t_essays_n_mentions                  1.03e-12     1.71e-9
+##  3 w_cat          t_essays_n_uq_mentions               1.03e-12     1.71e-9
+##  4 w_books        w_sci                                1.09e-12     1.71e-9
+##  5 ethnicity_whi~ religion_agnosticism.and.laughing.a~ 6.21e-12     7.83e-9
+##  6 w_dog          job_other1                           1.91e-11     2.01e-8
+##  7 ethnicity_oth~ religion_agnosticism.and.laughing.a~ 1.14e-10     1.03e-7
+##  8 w_pretty       religion_other1                      1.77e-10     1.26e-7
+##  9 w_punk         offspring_doesn.rsquo.t.want.kids    1.80e-10     1.26e-7
+## 10 w_sci          religion_other1                      1.48e- 9     9.30e-7
+```
+
+---
+
+Let's visualize the top pairwise interaction.
+
+
+```r
+main_data %&gt;%
+  group_by(sex_m, pets) %&gt;%
+  summarise(mean_w_dog = mean(w_dog)) %&gt;%
+  ungroup() %&gt;%
+  mutate(gender = factor(ifelse(sex_m == 0, "women", "men"))) %&gt;%
+  ggplot(aes(pets, mean_w_dog, color = gender)) +
+  geom_line(aes(group = gender)) +
+  geom_point() +
+  theme_light()
+```
+
+&lt;img src="images/W_Dog-Interaction-1.png" width="100%" /&gt;
+
+.insight[
+💡 Try stating what you see in words.
+]
+
+---
+
+
+
+
+```r
+rec_int_noint &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+
+rec_int_sex &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_interact(~starts_with("sex"):all_numeric()) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+# pairwise interactions string code from Max Kuhn's workshop: https://github.com/topepo/FES/blob/master/07_Detecting_Interaction_Effects/7_04_The_Brute-Force_Approach_to_Identifying_Predictive_Interactions/ames_glmnet.R
+
+topmain_ints &lt;- t(combn(main_effects, 2))
+colnames(topmain_ints) &lt;- c("var1", "var2")
+topmain_ints &lt;- topmain_ints %&gt;% 
+  as_tibble() %&gt;% 
+  mutate(
+    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+  ) %&gt;% 
+  pull(term) %&gt;% 
+  paste(collapse = "+")
+
+topmain_ints &lt;- str_c("~", topmain_ints)
+topmain_ints &lt;- as.formula(topmain_ints)
+
+rec_int_topmain &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_interact(topmain_ints) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+topint_ints &lt;- pairwise_ints %&gt;% 
+  as_tibble() %&gt;% 
+  mutate(
+    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+  ) %&gt;% 
+  pull(term) %&gt;% 
+  paste(collapse = "+")
+
+topint_ints &lt;- str_c("~", topint_ints)
+topint_ints &lt;- as.formula(topint_ints)
+
+rec_int_topints &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  {if (!"religion_agnosticism.and.laughing.about.it"
+       %in% .$var_info$variable)
+    step_mutate(., religion_agnosticism.and.laughing.about.it = 0)} %&gt;%
+  step_interact(topint_ints) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+rec_int_all &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %&gt;%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
+  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
+  step_meanimpute(income) %&gt;%
+  step_zv(all_numeric()) %&gt;%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %&gt;%
+  step_interact(~all_numeric():all_numeric()) %&gt;%
+  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  step_nzv(all_numeric(), freq_cut = 95/5) %&gt;%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+
+```r
+set.seed(42)
+cv_splits_int &lt;- vfold_cv(ok_tr_interaction2, v = 10, strata = pets)
+
+lst_recs &lt;- list("noint" = rec_int_noint,
+                 "sex" = rec_int_sex,
+                 "topmain" = rec_int_topmain,
+                 "topints" = rec_int_topints,
+                 "all" = rec_int_all)
+```
+
+
+```r
+cv_res_int &lt;- cv_splits_int %&gt;%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_int$splits)
+  ) %&gt;%
+  pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %&gt;%
+  select(id, recipe, AUC)
+
+cv_res_int_meds &lt;- cv_res_int %&gt;%
+  group_by(recipe) %&gt;%
+  summarise(AUC = median(AUC), id = "All")
+```
+
+---
+
+
+
+---
+
+
+```r
+cv_res_int %&gt;%
+  mutate(recipe = fct_relevel(recipe, c("noint", "sex", "topmain", "topints", "all"))) %&gt;%
+  ggplot(aes(recipe, AUC, group = id, color = id)) +
+  geom_line() + geom_line(data = cv_res_int_meds, color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_int_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
+  guides(color = FALSE) + theme_light()
+```
+
+&lt;img src="images/Ok-Int-1.png" width="100%" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
