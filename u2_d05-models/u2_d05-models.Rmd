@@ -202,7 +202,7 @@ And since we're dealing with large *sparse* networks, we might mention that as $
 
 $D \sim Pois((n-1)p)$ or $D \sim Pois(c)$
 
-Which is why the ER model is sometimes referred to the Poisson random graph.
+Which is why the ER model is sometimes referred to as the Poisson random graph.
 
 ---
 
@@ -256,7 +256,7 @@ We have defined the diameter as the maximal shortest distance between any pair o
 It turns out this has a nice expression in the ER model:
 
 - Take a random node in a ER network, how many neighbors do you expect it to have?
-- Take each one of these neighbors, and take each and one's neighbors - what do you get?
+- Take each one of these neighbors, and take each of *its* neighbors - what do you get?
 - Do this $l$ times, what do you get? What would you get "in the end"?
 
 The average path length from a node to all other nodes is $\sim \frac{\ln(n)}{\ln(c)}$.
@@ -636,7 +636,7 @@ legend("topright", legend = paste0("m=", 1:3), col = 1:3, lty = 1)
 
 Another way of seeing this:
 
-If we take the log-log transformation of the Power-Law distribution we get:
+If we take the log transformation of the Power-Law distribution we get:
 
 $\ln(f(x))=\ln(Cx^{-\alpha})=\ln(C)-\alpha\ln(x)$
 
@@ -710,7 +710,7 @@ For example, here is a [post](http://giorasimchoni.com/2019/03/04/2019-03-04-on-
 
 ---
 
-Another nice way of showing this is comparing $f(X)$ under the PL distribution vs. $f(X)$ under the Exponential distribution for suitable values of $\alpha$ and $\lambda$:
+Another nice way of showing this is comparing $1-F_X(x)$ under the PL distribution vs. $1-F_X(x)$ under the Exponential distribution for suitable values of $\alpha$ and $\lambda$:
 
 <img src = "images/PL-Exponential-Compare.png" style="width: 100%">
 
@@ -823,7 +823,7 @@ Finally notice that as with the ER model, we get a *distribution* of networks fr
 1. If $m$ is no. of edges $\sum_i k_i = 2m$ --> the sum of degrees must be even! Even those sampled from $p_{k_i}$
 
 2. Nothing preventing connecting two of node $i$'s stubs together
-Nothing preventing commcting nodes $i$ and $j$ more than once
+Nothing preventing connecting nodes $i$ and $j$ more than once
 --> Self-edges and multi-edges are possible! .font80percent[(But with large n chances are small)]
 
 ---
