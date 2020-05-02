@@ -2623,8 +2623,8 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [12:21:19.871] early stopping at 20 iteration 
-## INFO  [12:21:19.922] early stopping at 20 iteration 
+## INFO  [12:38:23.936] early stopping at 20 iteration 
+## INFO  [12:38:24.009] early stopping at 20 iteration 
 ##   w1   w2  w3 w4 w5  w6   w7 w8  w9 w10
 ## 1  0 0.05 0.3  0  0 0.5 0.05  0 0.1   0
 ```
@@ -3946,32 +3946,35 @@ tune_res &lt;- tune_grid(object = mod_en_tune,
                       resamples = cv_splits_tune,
                       grid = en_grid,
                       metrics = metric_set(roc_auc))
-tune_res
+
+collect_metrics_tune_res &lt;- collect_metrics(tune_res)
+
+collect_metrics_tune_res
 ```
 
 
 ```
-## #  10-fold cross-validation using stratification 
-## # A tibble: 10 x 4
-##    splits             id     .metrics          .notes           
-##    &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;           
-##  1 &lt;split [2.7K/301]&gt; Fold01 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  2 &lt;split [2.7K/301]&gt; Fold02 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  3 &lt;split [2.7K/301]&gt; Fold03 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  4 &lt;split [2.7K/301]&gt; Fold04 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  5 &lt;split [2.7K/300]&gt; Fold05 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  6 &lt;split [2.7K/300]&gt; Fold06 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  7 &lt;split [2.7K/299]&gt; Fold07 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  8 &lt;split [2.7K/299]&gt; Fold08 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-##  9 &lt;split [2.7K/299]&gt; Fold09 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
-## 10 &lt;split [2.7K/299]&gt; Fold10 &lt;tibble [77 x 5]&gt; &lt;tibble [11 x 1]&gt;
+## # A tibble: 77 x 7
+##     penalty mixture .metric .estimator  mean     n std_err
+##       &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
+##  1 0.000001     0   roc_auc binary     0.761    10  0.0167
+##  2 0.000001     0.1 roc_auc binary     0.753    10  0.0175
+##  3 0.000001     0.2 roc_auc binary     0.753    10  0.0175
+##  4 0.000001     0.3 roc_auc binary     0.753    10  0.0175
+##  5 0.000001     0.4 roc_auc binary     0.753    10  0.0175
+##  6 0.000001     0.5 roc_auc binary     0.753    10  0.0174
+##  7 0.000001     0.6 roc_auc binary     0.754    10  0.0175
+##  8 0.000001     0.7 roc_auc binary     0.754    10  0.0174
+##  9 0.000001     0.8 roc_auc binary     0.753    10  0.0175
+## 10 0.000001     0.9 roc_auc binary     0.754    10  0.0175
+## # ... with 67 more rows
 ```
 
 ---
 
 
 ```r
-collect_metrics(tune_res) %&gt;%
+collect_metrics_tune_res %&gt;%
   mutate(auc = mean, mixture = factor(mixture)) %&gt;%
   ggplot(aes(penalty, auc, color = mixture)) +
   geom_line() + geom_point() +
@@ -3986,6 +3989,7 @@ collect_metrics(tune_res) %&gt;%
 ```r
 show_best(tune_res, n = 10, metric = "roc_auc")
 ```
+
 
 ```
 ## # A tibble: 10 x 7

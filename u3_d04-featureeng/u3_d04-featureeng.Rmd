@@ -3046,18 +3046,23 @@ tune_res <- tune_grid(object = mod_en_tune,
                       resamples = cv_splits_tune,
                       grid = en_grid,
                       metrics = metric_set(roc_auc))
-tune_res
+
+collect_metrics_tune_res <- collect_metrics(tune_res)
+
+collect_metrics_tune_res
 ```
 
 ```{r echo=FALSE}
-tune_res <- read_rds("../data/Ok_tune_res2.rds")
-tune_res
+collect_metrics_tune_res <- read_rds("../data/Ok_tune_res_collect.rds")
+show_best_tune_res <- read_rds("../data/Ok_tune_res_showbest.rds")
+
+collect_metrics_tune_res
 ```
 
 ---
 
 ```{r Ok-Tune, out.width="100%", fig.asp=0.5}
-collect_metrics(tune_res) %>%
+collect_metrics_tune_res %>%
   mutate(auc = mean, mixture = factor(mixture)) %>%
   ggplot(aes(penalty, auc, color = mixture)) +
   geom_line() + geom_point() +
@@ -3066,8 +3071,12 @@ collect_metrics(tune_res) %>%
 
 ---
 
-```{r}
+```{r, eval=FALSE}
 show_best(tune_res, n = 10, metric = "roc_auc")
+```
+
+```{r, echo=FALSE}
+show_best_tune_res
 ```
 
 .insight[
