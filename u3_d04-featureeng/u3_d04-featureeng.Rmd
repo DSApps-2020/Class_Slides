@@ -221,6 +221,8 @@ okcupid <- okcupid %>%
   drop_na(pets) %>%
   na_if(-1) %>%
   select(-last_online)
+
+okcupid[which(is.na(okcupid$height)), "height"] <- 70 # you don't wanna know
 ```
 
 ---
@@ -2222,20 +2224,184 @@ cv_res_eng <- read_rds("../data/Ok_eng_cv_res_auc.rds")
 
 cv_res_eng_meds <- cv_res_eng %>%
   group_by(recipe) %>%
-  summarise(AUC = median(AUC), id = "All")
+  summarise(AUC = mean(AUC), id = "All")
 ```
 
 ---
 
-```{r Ok-FES2, out.width="100%", fig.asp=0.5}
+### Haven't forgot about our other categorical variables
+
+Let's use some common sense (see code!).
+
+```{r, echo=FALSE}
+full_features <- function(df) {
+  ethnicities_keep <- c("white", "asian", "hispanic / latin", "black", "indian",
+                        "pacific islander", "middle eastern", "native american")
+
+  not_perfect <- c("a little extra", "average", "curvy", "full figured",
+                   "overweight", "rather not say")
+
+signs <- c("leo", "libra", "cancer", "virgo", "scorpio", "gemini", "taurus",
+           "aries", "pisces", "aquarius", "sagittarius", "capricorn")
+
+narrow_category <- function(category, sep = " ") {
+  if (is.na(category)) return(NA_character_)
+  split_var <- str_split(category, sep)
+  if (length(split_var[[1]]) == 1) return(category)
+  return(split_var[[1]][2])
+}
+
+df2 <- df %>%
+  mutate_at(vars(essay0:essay9),
+            list("len" = ~ifelse(is.na(.x), 0, str_length(.x)))) %>%
+  rename_at(vars(contains("_len")),
+            list(~paste("len", gsub("_len", "", .), sep = "_"))) %>%
+  mutate(
+    essays = pmap_chr(
+      list(essay0, essay1, essay2, essay3, essay4, essay5,
+           essay6, essay7, essay8, essay9), str_c),
+    offspring_no_kids = str_detect(offspring, "t have kids"),
+    offspring_one_kid = str_detect(offspring, "has a kid"),
+    offspring_many_kids = str_detect(offspring, "has kids"),
+    offspring_wants_kids = str_detect(offspring,"wants them|want them|wants more|want more|wants kids|want kids"),
+    religion_not2serious = str_detect(religion, "not too serious"),
+    religion_laughing = str_detect(religion, "laughing"),
+    religion_somewhat = str_detect(religion, "somewhat"),
+    religion = case_when(
+      str_detect(religion, "agnosticism") |
+        str_detect(religion, "atheism") ~ "atheist",
+      str_detect(religion, "buddhism") ~ "buddhist",
+      str_detect(religion, "christianity") |
+        str_detect(religion, "catholicism") ~ "christian",
+      str_detect(religion, "judaism") ~ "jewish",
+      str_detect(religion, "hinduism") ~ "hindu",
+      str_detect(religion, "islam") ~ "muslim",
+      TRUE ~ NA_character_),
+    part_black = str_detect(ethnicity, "black"),
+    part_white = str_detect(ethnicity, "white"),
+    part_asian = str_detect(ethnicity, "asian"),
+    part_hispanic = str_detect(ethnicity, "hispanic"),
+    ethnicity = ifelse(ethnicity %in% ethnicities_keep, ethnicity, "other"),
+    body_type_not_perfect = body_type %in% not_perfect,
+    diet = map_chr(diet, narrow_category),
+    sign_fun = str_detect(sign, "fun"),
+    sign_not_matter = str_detect(sign, "but it does"),
+    sign_matters = str_detect(sign, "matters"),
+    sign = str_extract(sign, str_c(signs, collapse = "|")),
+    speaks_spanish = str_detect(speaks, "spanish"),
+    speaks_french = str_detect(speaks, "french"),
+    speaks_german = str_detect(speaks, "german"),
+    speaks_chinese = str_detect(speaks, "chinese"),
+    speaks_fluently = str_detect(speaks, "fluently"),
+    education_kind = case_when(
+      str_detect(education, "^dropped") ~ "dropped",
+      str_detect(education, "^graduated") ~ "graduated",
+      str_detect(education, "^working") ~ "working",
+      TRUE ~ "other"),
+    education = case_when(
+      education == "graduated from high school" ~ "high_school",
+      education == "graduated from two-year college" ~ "college",
+      education == "graduated from college/university" ~ "degree1",
+      education == "graduated from masters program" ~ "degree2",
+      education == "graduated from ph.d program" ~ "degree3",
+      education == "working on two-year college" ~ "student0",
+      education == "working on college/university" ~ "student1",
+      education == "working on masters program" ~ "student2",
+      education == "working on ph.d program" ~ "student3",
+      is.na(education) ~ NA_character_,
+      TRUE ~ "other"),
+    job = map_chr(job, narrow_category, sep = " / "),
+    location = case_when(
+      location == "san francisco, california" ~ "sf",
+      location == "oakland, california" ~ "oakland",
+      location == "berkeley, california" ~ "berkeley",
+      TRUE ~ "other_location"
+    )
+  ) %>%
+  mutate_if(is.logical, as.factor) %>%
+  mutate_if(is.character, as.factor) %>%
+  select(-speaks, -offspring, -matches("^essay[0-9]"))
+
+  df2 <- df2 %>%
+    bind_cols(
+      map_dfr(df2$essays, count_words)
+    )
+}
+```
+
+```{r}
+ok_tr_eng4 <- full_features(ok_tr_eng)
+
+colnames(ok_tr_eng4)
+```
+
+---
+
+```{r}
+rec_eng_commonsense <- recipe(pets ~ ., data = ok_tr_eng4) %>%
+  update_role(essays, new_role = "discarded") %>%
+  step_textfeature(essays, prefix = "t",
+                   extract_functions = my_text_funs) %>%
+  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
+  step_log(income, starts_with("len_"), starts_with("t_"),
+           -t_essays_sent_bing, offset = 1) %>%
+  step_meanimpute(income) %>%
+  step_zv(all_numeric()) %>%
+  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_novel(
+    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(),
+             -has_role("discarded"), one_hot = FALSE) %>%
+  step_upsample(pets, over_ratio = 1)
+```
+
+---
+
+```{r}
+set.seed(42)
+cv_splits_eng2 <- vfold_cv(ok_tr_eng4, v = 10, strata = pets)
+
+lst_recs <- list("commonsense" = rec_eng_commonsense)
+```
+
+```{r, eval=FALSE}
+cv_res_commonsense <- cv_splits_eng2 %>%
+  bind_cols(
+    map2_dfc(lst_recs, names(lst_recs), train_recipe,
+             splits = cv_splits_eng2$splits)
+  ) %>%
+  pivot_longer(cols = names(lst_recs),
+                 names_to = "recipe", values_to = "AUC") %>%
+  select(id, recipe, AUC)
+
+cv_res_commonsense_meds <- cv_res_commonsense %>%
+  group_by(recipe) %>%
+  summarise(AUC = mean(AUC), id = "All")
+```
+
+```{r, echo=FALSE}
+cv_res_commonsense <- read_rds("../data/Ok_cs_cv_res_auc2.rds")
+
+cv_res_cs_meds <- cv_res_commonsense %>%
+  group_by(recipe) %>%
+  summarise(AUC = mean(AUC), id = "All")
+```
+
+---
+
+```{r Ok-FES3, out.width="100%", fig.asp=0.5}
 cv_res_eng %>%
+  bind_rows(cv_res_commonsense) %>%
   mutate(recipe = fct_relevel(recipe,
-                              c("notext", "textfeat", "fulltext", "hashtext"))) %>%
+                              c("notext", "hashtext", "textfeat", "fulltext", "commonsense"))) %>%
   ggplot(aes(recipe, AUC, group = id, color = id)) +
-  geom_line() + geom_line(data = cv_res_eng_meds, color = "black", alpha = 0.2, lwd = 2) +
-  geom_point() + geom_point(data = cv_res_eng_meds, color = "black", alpha = 0.2, size = 5, pch = 17) +
+  geom_line() + geom_line(data = cv_res_eng_meds %>% bind_rows(cv_res_cs_meds), color = "black", alpha = 0.2, lwd = 2) +
+  geom_point() + geom_point(data = cv_res_eng_meds %>% bind_rows(cv_res_cs_meds), color = "black", alpha = 0.2, size = 5, pch = 17) +
   guides(color = FALSE) + theme_light()
 ```
+
 
 ---
 
@@ -2359,9 +2525,7 @@ How will the variables look like?
 
 ```{r}
 X <- model.matrix(mod_lm)
-
 age_no_na <- ok_tr_eng$age[!is.na(ok_tr_eng$income)]
-
 head(cbind(age_no_na, X), 4)
 ```
 
@@ -2494,9 +2658,9 @@ ok_tr_interaction %>% filter(between(height, 60, 80)) %>%
 
 #### You get an interaction! You get an interaction!
 
-With the last `rec_eng_fulltext` recipe we reached over 130 features.
+With the last `rec_eng_commonsense` recipe we reached over 150 features.
 
-So all two-way interactions would mean adding... over 8K features. All three-way interactions would mean adding... over 350K features.
+So all two-way interactions would mean adding... over 11K features. All three-way interactions would mean adding... over 550K features.
 
 .insight[
 `r emo::ji("bulb")` What danger comes to mind? How would you defend yourself?
@@ -2534,46 +2698,17 @@ ok_tr_combined <- bind_rows(
   ok_tr_missing,
   ok_tr_imbalance,
   ok_tr_eng
-  ) %>%
-  mutate(essays = pmap_chr(
-    list(essay0, essay1, essay2, essay3, essay4, essay5,
-         essay6, essay7, essay8, essay9), str_c))
-
-ok_tr_combined <- ok_tr_combined %>%
-  bind_cols(
-    map_dfr(ok_tr_combined$essays, count_words)
-  ) %>%
-  select(-starts_with("essay")) %>%
-  bind_cols(ok_tr_combined %>% select(essays)) %>%
-  mutate_if(is.character, as.factor)
+  )
+ok_tr_combined <- full_features(ok_tr_combined)
 ```
 
 ---
 
 For stage 3 need to screen out "main effects" features which passed `glmnet`
 
-```{r}
-rec_base <- recipe(pets ~ ., data = ok_tr_combined) %>%
-  update_role(essays, new_role = "discarded") %>%
-  step_textfeature(essays, prefix = "t",
-                   extract_functions = my_text_funs) %>%
-  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
-  step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes(),
-             -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
-```
-
----
 
 ```{r}
-main_data <- rec_base %>% prep() %>% juice()
+main_data <- rec_eng_commonsense %>% prep(ok_tr_combined) %>% juice()
 
 mod_lr_res <- mod_lr %>%
   fit(pets ~ ., data = main_data) %>%
@@ -2602,9 +2737,9 @@ We see a plateau around 12-15 features, let's choose those.
 
 ```{r}
 mod_lr_res %>%
-  filter(step == 6) %>%
+  filter(step == 8) %>%
   select(term, estimate) %>%
-  head(14)
+  arrange(-abs(estimate))
 ```
 
 ---
@@ -2613,13 +2748,13 @@ These make sense, let's choose them as our main effects from which we pick all t
 
 ```{r}
 main_effects <- mod_lr_res %>%
-  filter(step == 6, term != "(Intercept)") %>%
+  filter(step == 8, term != "(Intercept)") %>%
   pull(term)
 ```
 
----
-
 For stage 4 we need to iterate over all possible two-way interactions, each time adding one into a full main effects `glm` model, getting the p-value, and applying FDR adjustment.
+
+---
 
 ```{r, eval=FALSE}
 extract_interaction_p_val <- function(var1, var2) {
@@ -2651,34 +2786,30 @@ all_ints <- all_ints %>%
 ```
 
 ```{r, echo=FALSE}
-all_ints <- read_rds("../data/Ok_interaction_fdr.rds")
+all_ints <- read_rds("../data/Ok_interaction_fdr2.rds")
 ```
 
 ---
 
-Let's filter only the *most* convincing interactions:
+Let's filter only the *most* convincing interactions.
 
 ```{r}
 pairwise_ints <- all_ints %>%
   arrange(fdr) %>%
-  filter(fdr < 10e-7)
+  filter(fdr < 10e-6)
 
 pairwise_ints
 ```
 
 ---
 
-Let's visualize the top pairwise interaction.
-
-```{r W_Dog-Interaction, out.width="100%", fig.asp=0.5}
+```{r W_Dog-Interaction, out.width="90%", fig.asp=0.5}
 main_data %>%
   group_by(sex_m, pets) %>%
-  summarise(mean_w_dog = mean(w_dog)) %>%
-  ungroup() %>%
+  summarise(mean_w_dog = mean(w_dog)) %>% ungroup() %>%
   mutate(gender = factor(ifelse(sex_m == 0, "women", "men"))) %>%
   ggplot(aes(pets, mean_w_dog, color = gender)) +
-  geom_line(aes(group = gender)) +
-  geom_point() +
+  geom_line(aes(group = gender)) + geom_point() +
   theme_light()
 ```
 
@@ -2688,47 +2819,23 @@ main_data %>%
 
 ---
 
-```{r, echo=FALSE}
-ok_tr_interaction2 <- ok_tr_interaction %>%
-  mutate(essays = pmap_chr(
-    list(essay0, essay1, essay2, essay3, essay4, essay5,
-         essay6, essay7, essay8, essay9), str_c))
-ok_tr_interaction2 <- ok_tr_interaction2 %>%
-  bind_cols(
-    map_dfr(ok_tr_interaction2$essays, count_words)
-  ) %>%
-  select(-starts_with("essay")) %>%
-  bind_cols(ok_tr_interaction2 %>% select(essays)) %>%
-  mutate_if(is.character, as.factor)
-```
-
 ```{r}
-rec_int_noint <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
-  update_role(essays, new_role = "discarded") %>%
-  step_textfeature(essays, prefix = "t",
-                   extract_functions = my_text_funs) %>%
-  step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
-  step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
-  step_dummy(all_nominal(), -all_outcomes(),
-             -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+ok_tr_interaction2 <- full_features(ok_tr_interaction)
+
+rec_int_noint <- rec_eng_commonsense
 
 rec_int_sex <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
   update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_log(income, starts_with("len_"), starts_with("t_"),
+           -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_novel(
+    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
@@ -2741,14 +2848,15 @@ rec_int_sex <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
 ---
 
 ```{r}
-# pairwise interactions string code from Max Kuhn's workshop: https://github.com/topepo/FES/blob/master/07_Detecting_Interaction_Effects/7_04_The_Brute-Force_Approach_to_Identifying_Predictive_Interactions/ames_glmnet.R
+# pairwise interactions string code from Max Kuhn's workshop:
+# https://github.com/topepo/FES/blob/master/07_Detecting_Interaction_Effects/7_04_The_Brute-Force_Approach_to_Identifying_Predictive_Interactions/ames_glmnet.R
 
 topmain_ints <- t(combn(main_effects, 2))
 colnames(topmain_ints) <- c("var1", "var2")
 topmain_ints <- topmain_ints %>% 
-  as_tibble() %>% 
+  as_tibble() %>%
   mutate(
-    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+    term = str_c(var1, ":", var2)
   ) %>% 
   pull(term) %>% 
   paste(collapse = "+")
@@ -2756,16 +2864,24 @@ topmain_ints <- topmain_ints %>%
 topmain_ints <- str_c("~", topmain_ints)
 topmain_ints <- as.formula(topmain_ints)
 
+topmain_ints
+```
+
+---
+
+```{r}
 rec_int_topmain <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
   update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_log(income, starts_with("len_"), starts_with("t_"),
+           -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_novel(
+    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
@@ -2777,34 +2893,38 @@ rec_int_topmain <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
 
 ---
 
-```{r}
+```{r, echo=FALSE}
 topint_ints <- pairwise_ints %>% 
   as_tibble() %>% 
   mutate(
-    term = str_c("starts_with('", var1, "'):starts_with('", var2, "')")
+    term = str_c(var1, ":", var2)
   ) %>% 
   pull(term) %>% 
   paste(collapse = "+")
 
 topint_ints <- str_c("~", topint_ints)
 topint_ints <- as.formula(topint_ints)
+```
 
+
+```{r}
 rec_int_topints <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
   update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_log(income, starts_with("len_"), starts_with("t_"),
+           -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_novel(
+    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  {if (!"religion_agnosticism.and.laughing.about.it"
-       %in% .$var_info$variable)
-    step_mutate(., religion_agnosticism.and.laughing.about.it = 0)} %>%
+  {if (!"smokes_when.drinking" %in% .$var_info$variable)
+    step_mutate(., smokes_when.drinking = 0)} %>%
   step_interact(topint_ints) %>%
   step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_nzv(all_numeric(), freq_cut = 99/1) %>%
@@ -2819,11 +2939,13 @@ rec_int_all <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
-  step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
+  step_log(income, starts_with("len_"), starts_with("t_"),
+           -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
-  step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
+  step_novel(
+    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
@@ -2853,22 +2975,20 @@ cv_res_int <- cv_splits_int %>%
              splits = cv_splits_int$splits)
   ) %>%
   pivot_longer(cols = names(lst_recs),
-                 names_to = "recipe", values_to = "AUC") %>%
+               names_to = "recipe", values_to = "AUC") %>%
   select(id, recipe, AUC)
 
 cv_res_int_meds <- cv_res_int %>%
   group_by(recipe) %>%
-  summarise(AUC = median(AUC), id = "All")
+  summarise(AUC = mean(AUC), id = "All")
 ```
 
----
-
 ```{r, echo=FALSE}
-cv_res_int <- read_rds("../data/Ok_int_cv_res_auc.rds")
+cv_res_int <- read_rds("../data/Ok_int_cv_res_auc2.rds")
 
 cv_res_int_meds <- cv_res_int %>%
   group_by(recipe) %>%
-  summarise(AUC = median(AUC), id = "All")
+  summarise(AUC = mean(AUC), id = "All")
 ```
 
 ---
@@ -2882,3 +3002,260 @@ cv_res_int %>%
   guides(color = FALSE) + theme_light()
 ```
 
+---
+
+class: section-slide
+
+# Tuning Params
+
+---
+
+### Everything is a Tunable
+
+.insight[
+`r emo::ji("bulb")` I can think of at least 5 semi-random quantitative decisions so far, can you?
+]
+
+But let us simply vary Elastic Net $\alpha$ and $\lambda$:
+
+$\min_{\beta_0, \beta}\frac{1}{N}\sum_{i = 1}^N w_i l(y_i,\beta_0 + \beta^Tx_i) + \lambda[(1-\alpha)||\beta||^2_2/2 + \alpha||\beta||_1]$
+
+```{r, warning=FALSE, message=FALSE}
+library(tune)
+
+mod_en_tune <- logistic_reg(penalty = tune(),
+                            mixture = tune()) %>%
+  set_engine("glmnet")
+
+en_grid <- grid_regular(penalty(range(-6, 0)),
+                        mixture(range(0, 1)), levels = c(7, 11))
+```
+
+---
+
+```{r}
+ok_tr_tuning2 <- full_features(ok_tr_tuning)
+
+set.seed(42)
+cv_splits_tune <- vfold_cv(ok_tr_tuning2, v = 10, strata = pets)
+```
+
+```{r, eval=FALSE}
+tune_res <- tune_grid(object = mod_en_tune,
+                      preprocessor = rec_int_topints,
+                      resamples = cv_splits_tune,
+                      grid = en_grid,
+                      metrics = metric_set(roc_auc))
+tune_res
+```
+
+```{r echo=FALSE}
+tune_res <- read_rds("../data/Ok_tune_res2.rds")
+tune_res
+```
+
+---
+
+```{r Ok-Tune, out.width="100%", fig.asp=0.5}
+collect_metrics(tune_res) %>%
+  mutate(auc = mean, mixture = factor(mixture)) %>%
+  ggplot(aes(penalty, auc, color = mixture)) +
+  geom_line() + geom_point() +
+  theme_light()
+```
+
+---
+
+```{r}
+show_best(tune_res, n = 10, metric = "roc_auc")
+```
+
+.insight[
+`r emo::ji("bulb")` So what would you do?
+]
+
+---
+
+class: section-slide
+
+# Cutoff choice
+
+---
+
+### The model is there.
+
+Remember it is best to predict a score, let the model's "clients" choose what to do with that score.
+
+Also remember the "I don't know" strategy!
+
+But if we must, let us provide:
+- a score to maximize precision of `cats` .font80percent[(while maintaing acceptable levels of recall)]
+- a score to maximize recall of `cats` .font80percent[(while maintaing acceptable levels of precision)]
+- a middle score
+
+---
+
+```{r}
+ok_tr_combined <- full_features(
+  bind_rows(
+    ok_tr_missing,
+    ok_tr_imbalance,
+    ok_tr_eng,
+    ok_tr_interaction,
+    ok_tr_tuning))
+
+ok_tr_cutoff2 <- full_features(ok_tr_cutoff)
+
+rec_cutoff <- rec_int_topints %>%
+  prep(ok_tr_combined)
+
+ok_tr_for_cutoff <- rec_cutoff %>%
+  juice()
+
+ok_te_for_cutoff <- rec_cutoff %>%
+  bake(ok_tr_cutoff2)
+
+mod_lr_cutoff <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+  set_engine("glmnet")
+
+mod_lr_cutoff <- mod_lr_cutoff %>%
+  fit(pets ~ ., data = ok_tr_for_cutoff)
+
+pred_cutoff <-  mod_lr_cutoff %>%
+  predict(new_data = ok_te_for_cutoff, penalty = 0.01, type = "prob") %>%
+  mutate(truth = ok_te_for_cutoff$pets)
+```
+
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(pROC)
+
+cutoffs <- seq(0.1, 0.9, 0.1)
+
+roc_obj <- roc(pred_cutoff$truth, pred_cutoff$.pred_cats,
+               levels = c("dogs", "cats"))
+coords(roc_obj, x = cutoffs,
+                ret = c("accuracy", "recall", "precision",
+                        "specificity", "npv"),
+                transpose = TRUE)
+```
+
+---
+
+class: section-slide
+
+# Predict on Test set
+
+---
+
+### Long time no see!
+
+```{r}
+set.seed(42)
+random_cats_to_get_rid_of <- okcupid_test %>%
+  mutate(id = 1:n()) %>%
+  filter(pets == "cats") %>%
+  sample_n(40) %>%
+  pull(id)
+
+okcupid_test2 <- okcupid_test %>%
+  mutate(id = 1:n()) %>%
+  filter(!id %in% random_cats_to_get_rid_of) %>%
+  select(-id)
+okcupid_test2 <- full_features(okcupid_test2)
+
+okcupid_test2 %>% count(pets) %>% mutate(pct = n / sum(n))
+```
+
+---
+
+```{r}
+okcupid_test_baked <- rec_cutoff %>%
+  bake(okcupid_test2)
+
+mod_lr_test <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+  set_engine("glmnet")
+
+mod_lr_test <- mod_lr_test %>%
+  fit(pets ~ ., data = ok_tr_for_cutoff)
+
+pred_test <-  mod_lr_test %>%
+  predict(new_data = okcupid_test_baked, penalty = 0.01, type = "prob") %>%
+  mutate(truth = okcupid_test_baked$pets)
+```
+
+```{r}
+roc_auc(pred_test, truth, .pred_cats)
+```
+
+---
+
+```{r Ok-Test-ROC-Curve, out.width="60%"}
+roc_lr <- roc_curve(
+  tibble(truth = pred_test$truth, cats = pred_test$.pred_cats),
+  truth, cats)
+
+autoplot(roc_lr) +
+  labs(x = "1 - Recall(Dogs)", y = "Recall(Cats)")
+```
+
+---
+
+```{r, message=FALSE}
+roc_obj <- roc(pred_test$truth, pred_test$.pred_cats,
+               levels = c("dogs", "cats"))
+
+cutoffs <- c(0.3, 0.5, 0.9)
+
+coords(roc_obj, x = cutoffs,
+                ret = c("accuracy", "recall", "precision",
+                        "specificity", "npv"),
+                transpose = TRUE)
+```
+
+---
+
+### What *is* the model?
+
+```{r}
+tidy(mod_lr_test) %>%
+  filter(near(lambda, 0.01, tol = 0.0005)) %>%
+  arrange(-abs(estimate)) %>%
+  select(term, estimate, lambda) %>%
+  head(20)
+```
+
+---
+
+### What did we achieve?
+
+- `r emo::ji("heavy_check_mark")` Reproducible model
+- `r emo::ji("heavy_check_mark")` Dependable model
+- `r emo::ji("heavy_check_mark")` Explainable model
+- `r emo::ji("heavy_check_mark")` Small and Fast as hell model
+- `r emo::ji("cross_mark")` Impressive model
+
+### Is that the end?
+
+No.
+
+.insight[
+`r emo::ji("bulb")` What *didn't* we do?
+]
+
+---
+
+### Few Excellent Books
+
+.pull-left[
+
+<img src = "images/apm_cover.png" style="width: 85%">
+
+]
+
+.pull-right[
+
+<img src = "images/fes_cover.jpg" style="width: 100%">
+
+]
