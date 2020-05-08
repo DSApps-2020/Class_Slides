@@ -190,7 +190,7 @@ In the vector `predictors` .font80percent[(see slides Rmd source)] we have `r le
 
 ```{r}
 okcupid2 <- okcupid2 %>%
-  select(income, predictors) %>%
+  select(income, all_of(predictors)) %>%
   mutate(id = 1:n())
 
 dim(okcupid2)
@@ -206,7 +206,7 @@ glimpse(okcupid2)
 
 We split the data into training, validation and test sets:
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 # test_idx <- sample(1:nrow(okcupid2), 2000, replace = FALSE)
 # train_idx <- okcupid2 %>% filter(!id %in% test_idx) %>% sample_n(8000) %>% pull(id)
 # valid_idx <- okcupid2 %>% filter(!id %in% test_idx, !id %in% train_idx) %>% pull(id)
@@ -863,7 +863,8 @@ Looking at this one might wonder:
 [Hothorn et. al. (2006)](https://eeecon.uibk.ac.at/~zeileis/papers/Hothorn+Hornik+Zeileis-2006.pdf) perform a statistical hypothesis test for each variable to decide whether it is related to $y$ (including multiple comparisons adjustment).
 
 If no variable passes test - stop. No pruning necessary.
-If a few variable pass - choose the most related, e.g. using a p-value.
+
+If a few variables pass - choose the most related, e.g. using a p-value.
 
 ```{r, message=FALSE, warning=FALSE}
 library(partykit)
@@ -1085,7 +1086,7 @@ class: section-slide
 For $j= 1$ to $m$ do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
-- For each splot:
+- For each split:
   - Randomly select $m_{try}$ predictors
   - Select best predictor for split in this subset only
 
@@ -1419,7 +1420,7 @@ As before in the vector `predictors` we have `r length(predictors)` continuous a
 
 ```{r}
 okcupid3 <- okcupid3 %>%
-  select(pets, predictors) %>%
+  select(pets, all_of(predictors)) %>%
   mutate(id = 1:n())
 
 dim(okcupid3)

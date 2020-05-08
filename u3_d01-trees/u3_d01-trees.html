@@ -4,7 +4,7 @@
     <title>The Trees</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-03-31" />
+    <meta name="date" content="2020-05-08" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-03-31
+### 2020-05-08
 
 ---
 
@@ -136,7 +136,7 @@ In the vector `predictors` .font80percent[(see slides Rmd source)] we have 42 co
 
 ```r
 okcupid2 &lt;- okcupid2 %&gt;%
-  select(income, predictors) %&gt;%
+  select(income, all_of(predictors)) %&gt;%
   mutate(id = 1:n())
 
 dim(okcupid2)
@@ -154,8 +154,8 @@ glimpse(okcupid2)
 ```
 
 ```
-## Observations: 11,504
-## Variables: 44
+## Rows: 11,504
+## Columns: 44
 ## $ income                &lt;dbl&gt; -0.09691001, -0.69897000, -0.39794001, -...
 ## $ age                   &lt;dbl&gt; 35, 23, 28, 30, 29, 40, 31, 22, 35, 31, ...
 ## $ height_cm             &lt;dbl&gt; 177.80, 180.34, 182.88, 167.64, 157.48, ...
@@ -726,12 +726,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0002472 0.02238124
-## 2 0.048179174      1 0.8864025 0.8897030 0.02273964
-## 3 0.013140594      2 0.8382233 0.8450335 0.02360412
-## 4 0.010043056      3 0.8250827 0.8347088 0.02372920
-## 5 0.009147817      4 0.8150397 0.8272763 0.02392690
-## 6 0.005634308      5 0.8058919 0.8203607 0.02403367
+## 1 0.113597498      0 1.0000000 1.0003043 0.02238559
+## 2 0.048179174      1 0.8864025 0.8891929 0.02273538
+## 3 0.013140594      2 0.8382233 0.8472123 0.02359730
+## 4 0.010043056      3 0.8250827 0.8335272 0.02377108
+## 5 0.009147817      4 0.8150397 0.8258328 0.02400265
+## 6 0.005634308      5 0.8058919 0.8180082 0.02407934
 ```
 
 ---
@@ -966,7 +966,8 @@ Looking at this one might wonder:
 [Hothorn et. al. (2006)](https://eeecon.uibk.ac.at/~zeileis/papers/Hothorn+Hornik+Zeileis-2006.pdf) perform a statistical hypothesis test for each variable to decide whether it is related to `\(y\)` (including multiple comparisons adjustment).
 
 If no variable passes test - stop. No pruning necessary.
-If a few variable pass - choose the most related, e.g. using a p-value.
+
+If a few variables pass - choose the most related, e.g. using a p-value.
 
 
 ```r
@@ -978,8 +979,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
 ```
 
 ```
-## RMSE: 0.363
-## CORR: 0.449
+## RMSE: 0.364
+## CORR: 0.444
 ```
 
 ---
@@ -1155,8 +1156,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 ```
 
 ```
-## RMSE: 0.365
-## CORR: 0.441
+## RMSE: 0.366
+## CORR: 0.436
 ```
 
 ```r
@@ -1167,7 +1168,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 
 ```
 ## RMSE: 0.365
-## CORR: 0.442
+## CORR: 0.443
 ```
 
 ---
@@ -1183,7 +1184,7 @@ class: section-slide
 For `\(j= 1\)` to `\(m\)` do
 - Generate a bootstrap sample of the original data
 - Train an unpruned tree model on this sample
-- For each splot:
+- For each split:
   - Randomly select `\(m_{try}\)` predictors
   - Select best predictor for split in this subset only
 
@@ -1312,8 +1313,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_na)
 ```
 
 ```
-## RMSE: 0.35
-## CORR: 0.509
+## RMSE: 0.351
+## CORR: 0.506
 ```
 
 ```r
@@ -1325,7 +1326,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 
 ```
 ## RMSE: 0.352
-## CORR: 0.502
+## CORR: 0.5
 ```
 
 For variables importance see the `summary` function:
@@ -1363,8 +1364,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.359
-## CORR: 0.47
+## RMSE: 0.358
+## CORR: 0.476
 ```
 
 .warning[
@@ -1461,7 +1462,7 @@ As before in the vector `predictors` we have 37 continuous and categorical varia
 
 ```r
 okcupid3 &lt;- okcupid3 %&gt;%
-  select(pets, predictors) %&gt;%
+  select(pets, all_of(predictors)) %&gt;%
   mutate(id = 1:n())
 
 dim(okcupid3)
@@ -1679,11 +1680,11 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.738
-## ACC: 0.687
-## Dogs: Recall: 0.69
+## ACC: 0.685
+## Dogs: Recall: 0.688
 ##       Precision: 0.909
-## Cats: Recall: 0.672
-##       Precision: 0.312
+## Cats: Recall: 0.67
+##       Precision: 0.31
 ```
 
 ---
