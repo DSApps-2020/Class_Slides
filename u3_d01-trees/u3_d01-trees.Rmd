@@ -1208,7 +1208,7 @@ What you end up with:
 
 $\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)$
 
-That is, GBT (or GBM) in general is called an additive model.
+That is why GBT (or GBM) in general is called an additive model.
 
 .insight[
 `r emo::ji("bulb")` Where does "Gradient" come from?
@@ -1644,7 +1644,7 @@ plot(p, 2 * p * (1 - p), type = "l")
 
 ---
 
-For example if `religion2` is candidate in splitting `pets`:
+For example if `age` is candidate in splitting `pets`:
 
 ```{r Religion-Gini0, fig.show="hide", warning=FALSE}
 gini <- function(l, df, v) {

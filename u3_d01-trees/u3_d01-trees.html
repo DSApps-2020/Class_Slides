@@ -726,12 +726,12 @@ head(mod_tree$cptable)
 
 ```
 ##            CP nsplit rel error    xerror       xstd
-## 1 0.113597498      0 1.0000000 1.0003043 0.02238559
-## 2 0.048179174      1 0.8864025 0.8891929 0.02273538
-## 3 0.013140594      2 0.8382233 0.8472123 0.02359730
-## 4 0.010043056      3 0.8250827 0.8335272 0.02377108
-## 5 0.009147817      4 0.8150397 0.8258328 0.02400265
-## 6 0.005634308      5 0.8058919 0.8180082 0.02407934
+## 1 0.113597498      0 1.0000000 1.0003729 0.02238757
+## 2 0.048179174      1 0.8864025 0.8902929 0.02282783
+## 3 0.013140594      2 0.8382233 0.8441494 0.02361545
+## 4 0.010043056      3 0.8250827 0.8377679 0.02378283
+## 5 0.009147817      4 0.8150397 0.8263342 0.02392834
+## 6 0.005634308      5 0.8058919 0.8210135 0.02414059
 ```
 
 ---
@@ -979,8 +979,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_ctree_na)
 ```
 
 ```
-## RMSE: 0.364
-## CORR: 0.444
+## RMSE: 0.365
+## CORR: 0.44
 ```
 
 ---
@@ -1157,7 +1157,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_na)
 
 ```
 ## RMSE: 0.366
-## CORR: 0.436
+## CORR: 0.435
 ```
 
 ```r
@@ -1167,8 +1167,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_bag_mice)
 ```
 
 ```
-## RMSE: 0.365
-## CORR: 0.443
+## RMSE: 0.364
+## CORR: 0.446
 ```
 
 ---
@@ -1286,7 +1286,7 @@ What you end up with:
 
 `\(\hat{y_i} = \overline{y} + \sum_{j=1}^m \lambda \cdot tree_j(\mbox{x}_i)\)`
 
-That is, GBT (or GBM) in general is called an additive model.
+That is why GBT (or GBM) in general is called an additive model.
 
 .insight[
 💡 Where does "Gradient" come from?
@@ -1326,7 +1326,7 @@ report_rmse_and_cor(okcupid2_valid$income, pred_gbm_mice)
 
 ```
 ## RMSE: 0.352
-## CORR: 0.5
+## CORR: 0.499
 ```
 
 For variables importance see the `summary` function:
@@ -1364,8 +1364,8 @@ report_rmse_and_cor(okcupid2_valid$income, pred_xgboost_na)
 ```
 
 ```
-## RMSE: 0.358
-## CORR: 0.476
+## RMSE: 0.356
+## CORR: 0.481
 ```
 
 .warning[
@@ -1680,7 +1680,7 @@ report_accuracy_and_auc(okcupid3_valid$pets, pred_glm_glmnet[, 1])
 
 ```
 ## AUC: 0.738
-## ACC: 0.685
+## ACC: 0.684
 ## Dogs: Recall: 0.688
 ##       Precision: 0.909
 ## Cats: Recall: 0.67
@@ -1736,7 +1736,7 @@ plot(p, 2 * p * (1 - p), type = "l")
 
 ---
 
-For example if `religion2` is candidate in splitting `pets`:
+For example if `age` is candidate in splitting `pets`:
 
 
 ```r
