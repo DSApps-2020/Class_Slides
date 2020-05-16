@@ -1283,7 +1283,7 @@ rec_imb_upsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   update_role(starts_with("isna"), new_role = "discarded") %>%
@@ -1295,7 +1295,7 @@ rec_imb_downsample <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_downsample(pets, under_ratio = 1)
+  step_downsample(pets, under_ratio = 1, seed = 42)
 ```
 
 ---
@@ -1312,7 +1312,7 @@ rec_imb_smote <- recipe(pets ~ ., data = ok_tr_imbalance2) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_downsample(pets, under_ratio = 1.5) %>%
-  step_smote(pets, over_ratio = 1)
+  step_smote(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -1874,7 +1874,7 @@ rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng2) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 str_count_na <- function(string, pattern = "") {
   n <- str_count(string, pattern)
@@ -1900,7 +1900,7 @@ rec_eng_catdog <- recipe(pets ~ ., data = ok_tr_eng2) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2111,7 +2111,7 @@ So these will be our four options for handling text:
 ```{r}
 count_words <- function(essays) {
   counts <- map(cd_words$word, ~str_count_na(essays, .x))
-  names(counts) = str_c("w_", cd_words$word)
+  names(counts) = janitor::make_clean_names(str_c("w_", cd_words$word))
   counts
 }
 
@@ -2131,13 +2131,13 @@ rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   update_role(starts_with("w_"), essays, new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   update_role(starts_with("w_"), essays, new_role = "discarded") %>%
@@ -2147,13 +2147,13 @@ rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2167,13 +2167,13 @@ rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_eng_hashtext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   update_role(starts_with("w_"), essays, new_role = "discarded") %>%
@@ -2183,13 +2183,13 @@ rec_eng_hashtext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
+  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2216,11 +2216,11 @@ cv_res_eng <- cv_splits_eng %>%
 
 cv_res_eng_meds <- cv_res_eng %>%
   group_by(recipe) %>%
-  summarise(AUC = median(AUC), id = "All")
+  summarise(AUC = mean(AUC), id = "All")
 ```
 
 ```{r, echo=FALSE}
-cv_res_eng <- read_rds("../data/Ok_eng_cv_res_auc.rds")
+cv_res_eng <- read_rds("../data/Ok_eng_cv_res_auc2.rds")
 
 cv_res_eng_meds <- cv_res_eng %>%
   group_by(recipe) %>%
@@ -2233,99 +2233,112 @@ cv_res_eng_meds <- cv_res_eng %>%
 
 Let's use some common sense (see code!).
 
+```{r}
+cd_words <- cd_words %>%
+  bind_rows(
+    tibble(word =
+             c("my cat", "my dog", "love cat", "love dog", "kitt", "pupp",
+               "have cat", "have dog", "have a cat", "have a dog"),
+           cats = NULL, dogs = NULL, fisher_obj = NULL, OR = 0,
+           p_val = 0, fdr = 0))
+```
+
+
 ```{r, echo=FALSE}
 full_features <- function(df) {
-  ethnicities_keep <- c("white", "asian", "hispanic / latin", "black", "indian",
-                        "pacific islander", "middle eastern", "native american")
+  ethnicities_keep <- c("white", "asian", "hispanic / latin", "black", "indian")
+  diets_keep <- c("anything", "vegan", "vegetarian")
 
   not_perfect <- c("a little extra", "average", "curvy", "full figured",
                    "overweight", "rather not say")
 
-signs <- c("leo", "libra", "cancer", "virgo", "scorpio", "gemini", "taurus",
-           "aries", "pisces", "aquarius", "sagittarius", "capricorn")
-
-narrow_category <- function(category, sep = " ") {
-  if (is.na(category)) return(NA_character_)
-  split_var <- str_split(category, sep)
-  if (length(split_var[[1]]) == 1) return(category)
-  return(split_var[[1]][2])
-}
-
-df2 <- df %>%
-  mutate_at(vars(essay0:essay9),
-            list("len" = ~ifelse(is.na(.x), 0, str_length(.x)))) %>%
-  rename_at(vars(contains("_len")),
-            list(~paste("len", gsub("_len", "", .), sep = "_"))) %>%
-  mutate(
-    essays = pmap_chr(
-      list(essay0, essay1, essay2, essay3, essay4, essay5,
-           essay6, essay7, essay8, essay9), str_c),
-    offspring_no_kids = str_detect(offspring, "t have kids"),
-    offspring_one_kid = str_detect(offspring, "has a kid"),
-    offspring_many_kids = str_detect(offspring, "has kids"),
-    offspring_wants_kids = str_detect(offspring,"wants them|want them|wants more|want more|wants kids|want kids"),
-    religion_not2serious = str_detect(religion, "not too serious"),
-    religion_laughing = str_detect(religion, "laughing"),
-    religion_somewhat = str_detect(religion, "somewhat"),
-    religion = case_when(
-      str_detect(religion, "agnosticism") |
-        str_detect(religion, "atheism") ~ "atheist",
-      str_detect(religion, "buddhism") ~ "buddhist",
-      str_detect(religion, "christianity") |
-        str_detect(religion, "catholicism") ~ "christian",
-      str_detect(religion, "judaism") ~ "jewish",
-      str_detect(religion, "hinduism") ~ "hindu",
-      str_detect(religion, "islam") ~ "muslim",
-      TRUE ~ NA_character_),
-    part_black = str_detect(ethnicity, "black"),
-    part_white = str_detect(ethnicity, "white"),
-    part_asian = str_detect(ethnicity, "asian"),
-    part_hispanic = str_detect(ethnicity, "hispanic"),
-    ethnicity = ifelse(ethnicity %in% ethnicities_keep, ethnicity, "other"),
-    body_type_not_perfect = body_type %in% not_perfect,
-    diet = map_chr(diet, narrow_category),
-    sign_fun = str_detect(sign, "fun"),
-    sign_not_matter = str_detect(sign, "but it does"),
-    sign_matters = str_detect(sign, "matters"),
-    sign = str_extract(sign, str_c(signs, collapse = "|")),
-    speaks_spanish = str_detect(speaks, "spanish"),
-    speaks_french = str_detect(speaks, "french"),
-    speaks_german = str_detect(speaks, "german"),
-    speaks_chinese = str_detect(speaks, "chinese"),
-    speaks_fluently = str_detect(speaks, "fluently"),
-    education_kind = case_when(
-      str_detect(education, "^dropped") ~ "dropped",
-      str_detect(education, "^graduated") ~ "graduated",
-      str_detect(education, "^working") ~ "working",
-      TRUE ~ "other"),
-    education = case_when(
-      education == "graduated from high school" ~ "high_school",
-      education == "graduated from two-year college" ~ "college",
-      education == "graduated from college/university" ~ "degree1",
-      education == "graduated from masters program" ~ "degree2",
-      education == "graduated from ph.d program" ~ "degree3",
-      education == "working on two-year college" ~ "student0",
-      education == "working on college/university" ~ "student1",
-      education == "working on masters program" ~ "student2",
-      education == "working on ph.d program" ~ "student3",
-      is.na(education) ~ NA_character_,
-      TRUE ~ "other"),
-    job = map_chr(job, narrow_category, sep = " / "),
-    location = case_when(
-      location == "san francisco, california" ~ "sf",
-      location == "oakland, california" ~ "oakland",
-      location == "berkeley, california" ~ "berkeley",
-      TRUE ~ "other_location"
-    )
-  ) %>%
-  mutate_if(is.logical, as.factor) %>%
-  mutate_if(is.character, as.factor) %>%
-  select(-speaks, -offspring, -matches("^essay[0-9]"))
-
-  df2 <- df2 %>%
-    bind_cols(
-      map_dfr(df2$essays, count_words)
-    )
+  narrow_category <- function(category, sep = " ") {
+    if (is.na(category)) return(NA_character_)
+    split_var <- str_split(category, sep)
+    if (length(split_var[[1]]) == 1) return(category)
+    return(split_var[[1]][2])
+  }
+  
+  str_detect_yesno <- function(s, pattern) {
+    ifelse(is.na(s), 0, ifelse(str_detect(s, pattern), 1, 0))
+  }
+  
+  df2 <- df %>%
+    mutate_at(vars(essay0:essay9),
+              list("len" = ~ifelse(is.na(.x), 0, str_length(.x)))) %>%
+    rename_at(vars(contains("_len")),
+              list(~paste("len", gsub("_len", "", .), sep = "_"))) %>%
+    mutate(
+      essays = pmap_chr(
+        list(essay0, essay1, essay2, essay3, essay4, essay5,
+             essay6, essay7, essay8, essay9), str_c),
+      offspring_no_kids = str_detect_yesno(offspring, "t have kids"),
+      offspring_one_kid = str_detect_yesno(offspring, "has a kid"),
+      offspring_many_kids = str_detect_yesno(offspring, "has kids"),
+      offspring_wants_kids = str_detect_yesno(offspring,
+                                              "wants them|want them|wants more|want more|wants kids|want kids"),
+      religion_not2serious = str_detect_yesno(religion, "not too serious"),
+      religion_laughing = str_detect_yesno(religion, "laughing"),
+      religion_somewhat = str_detect_yesno(religion, "somewhat"),
+      religion = case_when(
+        str_detect(religion, "agnosticism") |
+          str_detect(religion, "atheism") ~ "atheist",
+        str_detect(religion, "buddhism") ~ "buddhist",
+        str_detect(religion, "christianity") |
+          str_detect(religion, "catholicism") ~ "christian",
+        str_detect(religion, "judaism") ~ "jewish",
+        str_detect(religion, "hinduism") ~ "hindu",
+        str_detect(religion, "islam") ~ "muslim",
+        TRUE ~ "other"),
+      ethnicity = ifelse(ethnicity %in% ethnicities_keep, ethnicity, "other"),
+      ethnicity = ifelse(ethnicity == "hispanic / latin", "hispanic", ethnicity),
+      body_type_perfect = ifelse(body_type %in% not_perfect, 0, 1),
+      diet = map_chr(diet, narrow_category),
+      diet = ifelse(diet %in% diets_keep, diet, "other"),
+      sign_fun = str_detect_yesno(sign, "fun"),
+      sign_not_matter = str_detect_yesno(sign, "but it does"),
+      sign_matters = str_detect_yesno(sign, "matters"),
+      sign_na = ifelse(is.na(sign), 1, 0),
+      speaks_spanish = str_detect_yesno(speaks, "spanish"),
+      speaks_french = str_detect_yesno(speaks, "french"),
+      speaks_german = str_detect_yesno(speaks, "german"),
+      speaks_chinese = str_detect_yesno(speaks, "chinese"),
+      speaks_n_fluently = str_count_na(speaks, "fluently"),
+      speaks_n_okay = str_count_na(speaks, "okay"),
+      speaks_n_poorly = str_count_na(speaks, "poorly"),
+      education_kind = case_when(
+        str_detect(education, "^dropped") ~ "dropped",
+        str_detect(education, "^graduated") ~ "graduated",
+        str_detect(education, "^working") ~ "working",
+        TRUE ~ "other"),
+      education = case_when(
+        education == "graduated from high school" ~ "high_school",
+        education == "graduated from two-year college" ~ "college",
+        education == "graduated from college/university" ~ "degree1",
+        education == "graduated from masters program" ~ "degree2",
+        education == "graduated from ph.d program" ~ "degree3",
+        education == "working on two-year college" ~ "student0",
+        education == "working on college/university" ~ "student1",
+        education == "working on masters program" ~ "student2",
+        education == "working on ph.d program" ~ "student3",
+        TRUE ~ "other"),
+      job = map_chr(job, narrow_category, sep = " / "),
+      job = ifelse(job == "other", "other_job", job),
+      location = case_when(
+        location == "san francisco, california" ~ "sf",
+        location == "oakland, california" ~ "oakland",
+        location == "berkeley, california" ~ "berkeley",
+        TRUE ~ "other"
+      )
+    ) %>%
+    mutate_if(is.logical, as.factor) %>%
+    mutate_if(is.character, as.factor) %>%
+    select(-speaks, -sign, -offspring, -matches("^essay[0-9]"))
+  
+    df2 <- df2 %>%
+      bind_cols(
+        map_dfr(df2$essays, count_words)
+      )
 }
 ```
 
@@ -2339,22 +2352,25 @@ colnames(ok_tr_eng4)
 
 ```{r}
 rec_eng_commonsense <- recipe(pets ~ ., data = ok_tr_eng4) %>%
-  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
+  update_role(essays, new_role = "discarded") %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  # step_zv(all_numeric()) %>%
+  # step_normalize(all_numeric(), -has_role("discarded")) %>%
+  # step_other(ends_with("yesno"), other = "other", threshold = 0.1) %>%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %>%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2376,13 +2392,13 @@ cv_res_commonsense <- cv_splits_eng2 %>%
                  names_to = "recipe", values_to = "AUC") %>%
   select(id, recipe, AUC)
 
-cv_res_commonsense_meds <- cv_res_commonsense %>%
+cv_res_cs_meds <- cv_res_commonsense %>%
   group_by(recipe) %>%
   summarise(AUC = mean(AUC), id = "All")
 ```
 
 ```{r, echo=FALSE}
-cv_res_commonsense <- read_rds("../data/Ok_cs_cv_res_auc2.rds")
+cv_res_commonsense <- read_rds("../data/Ok_cs_cv_res_auc4.rds")
 
 cv_res_cs_meds <- cv_res_commonsense %>%
   group_by(recipe) %>%
@@ -2706,7 +2722,6 @@ ok_tr_combined <- full_features(ok_tr_combined)
 
 For stage 3 need to screen out "main effects" features which passed `glmnet`
 
-
 ```{r}
 main_data <- rec_eng_commonsense %>% prep(ok_tr_combined) %>% juice()
 
@@ -2737,7 +2752,7 @@ We see a plateau around 12-15 features, let's choose those.
 
 ```{r}
 mod_lr_res %>%
-  filter(step == 8) %>%
+  filter(step == 6) %>%
   select(term, estimate) %>%
   arrange(-abs(estimate))
 ```
@@ -2748,7 +2763,7 @@ These make sense, let's choose them as our main effects from which we pick all t
 
 ```{r}
 main_effects <- mod_lr_res %>%
-  filter(step == 8, term != "(Intercept)") %>%
+  filter(step == 6, term != "(Intercept)") %>%
   pull(term)
 ```
 
@@ -2757,16 +2772,22 @@ For stage 4 we need to iterate over all possible two-way interactions, each time
 ---
 
 ```{r, eval=FALSE}
+mod_glm_base <- glm(pets ~ .,
+                    data = main_data %>% select(-ends_with("_new")),
+                    family = "binomial")
+
 extract_interaction_p_val <- function(var1, var2) {
   pb$tick()$print()
   int_term <- str_c(var1, ":", var2)
-  mod_formula <- formula(str_c("pets ~ . + ", int_term))
-  mod_glm <- glm(mod_formula,
-                 data = main_data %>% select(-ends_with("_new")),
-                 family = "binomial")
-  mod_summary <- summary(mod_glm)
-  p_val <- tidy(mod_glm) %>%
-    filter(term == int_term) %>%
+  int_term2 <- str_c(var2, ":", var1)
+  mod_glm <- quietly(update)(
+    mod_glm_base, as.formula(str_c(".~.+", int_term))
+  )
+  if(length(mod_glm$warnings) > 1) {
+    return(NA_real_)
+  }
+  p_val <- tidy(mod_glm$result) %>%
+    filter(term %in% c(int_term, int_term2)) %>%
     pull(p.value)
   if (length(p_val) == 0) {
     return(NA_real_)
@@ -2796,20 +2817,52 @@ Let's filter only the *most* convincing interactions.
 ```{r}
 pairwise_ints <- all_ints %>%
   arrange(fdr) %>%
-  filter(fdr < 10e-6)
+  filter(fdr < 10e-7)
 
 pairwise_ints
 ```
 
 ---
 
-```{r W_Dog-Interaction, out.width="90%", fig.asp=0.5}
+First make sure you understand the difference between `other`, `all_else` etc.
+
+```{r}
+ok_tr_combined %>% count(ethnicity, sort = TRUE)
+```
+
+```{r}
+main_data %>% select(starts_with("ethnicity")) %>% head()
+```
+
+What are those people with all `ethnicity` columns with zero?
+
+```{r}
+main_data %>% select(starts_with("ethnicity")) %>%
+  filter_all(~.x == 0)
+```
+
+---
+
+Same with `location`.
+
+```{r}
+ok_tr_combined %>% count(location, sort = TRUE)
+```
+
+```{r}
+main_data %>% select(starts_with("location")) %>% head()
+```
+
+---
+
+```{r Ethnicity-Interaction, out.width="90%", fig.asp=0.5}
 main_data %>%
-  group_by(sex_m, pets) %>%
-  summarise(mean_w_dog = mean(w_dog)) %>% ungroup() %>%
-  mutate(gender = factor(ifelse(sex_m == 0, "women", "men"))) %>%
-  ggplot(aes(pets, mean_w_dog, color = gender)) +
-  geom_line(aes(group = gender)) + geom_point() +
+  group_by(ethnicity_other, location_other) %>%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %>% ungroup() %>%
+  mutate_at(vars("ethnicity_other", "location_other"), as.factor) %>%
+  ggplot(aes(ethnicity_other, pct_cats, color = location_other)) +
+  geom_line(aes(group = location_other)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
   theme_light()
 ```
 
@@ -2819,30 +2872,57 @@ main_data %>%
 
 ---
 
+```{r Fluently-Interaction, out.width="90%", fig.asp=0.5}
+main_data %>%
+  mutate(speaks_n_fluently = ifelse(speaks_n_fluently >= 3, "3+", speaks_n_fluently)) %>%
+  group_by(speaks_n_fluently, offspring_one_kid) %>%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %>% ungroup() %>%
+  mutate_at(vars("speaks_n_fluently", "offspring_one_kid"), as.factor) %>%
+  ggplot(aes(speaks_n_fluently, pct_cats, color = offspring_one_kid)) +
+  geom_line(aes(group = offspring_one_kid)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_light()
+```
+
+---
+
+```{r Religion-Interaction, out.width="90%", fig.asp=0.5}
+main_data %>%
+  group_by(religion_laughing, ethnicity_white) %>%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %>% ungroup() %>%
+  mutate_at(vars("religion_laughing", "ethnicity_white"), as.factor) %>%
+  ggplot(aes(religion_laughing, pct_cats, color = ethnicity_white)) +
+  geom_line(aes(group = ethnicity_white)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_light()
+```
+
+---
+
 ```{r}
 ok_tr_interaction2 <- full_features(ok_tr_interaction)
 
 rec_int_noint <- rec_eng_commonsense
 
 rec_int_sex <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
-  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
+  update_role(essays, new_role = "discarded") %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %>%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_interact(~starts_with("sex"):all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_nzv(all_numeric(), freq_cut = 99/1) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2871,24 +2951,24 @@ topmain_ints
 
 ```{r}
 rec_int_topmain <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
-  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
+  update_role(essays, new_role = "discarded") %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %>%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_interact(topmain_ints) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_nzv(all_numeric(), freq_cut = 99/1) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2909,50 +2989,48 @@ topint_ints <- as.formula(topint_ints)
 
 ```{r}
 rec_int_topints <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
-  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
+  update_role(essays, new_role = "discarded") %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %>%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
-  {if (!"smokes_when.drinking" %in% .$var_info$variable)
-    step_mutate(., smokes_when.drinking = 0)} %>%
   step_interact(topint_ints) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_nzv(all_numeric(), freq_cut = 99/1) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
 
 ```{r}
 rec_int_all <- recipe(pets ~ ., data = ok_tr_interaction2) %>%
-  update_role(essays, new_role = "discarded") %>%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %>%
+  update_role(essays, new_role = "discarded") %>%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  step_zv(all_numeric()) %>%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %>%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %>%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %>%
   step_interact(~all_numeric():all_numeric()) %>%
-  step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_nzv(all_numeric(), freq_cut = 95/5) %>%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3042,10 +3120,11 @@ cv_splits_tune <- vfold_cv(ok_tr_tuning2, v = 10, strata = pets)
 
 ```{r, eval=FALSE}
 tune_res <- tune_grid(object = mod_en_tune,
-                      preprocessor = rec_int_topints,
+                      preprocessor = rec_eng_commonsense,
                       resamples = cv_splits_tune,
                       grid = en_grid,
-                      metrics = metric_set(roc_auc))
+                      metrics = metric_set(roc_auc),
+                      control = control_grid(verbose = TRUE))
 
 collect_metrics_tune_res <- collect_metrics(tune_res)
 
@@ -3115,7 +3194,7 @@ ok_tr_combined <- full_features(
 
 ok_tr_cutoff2 <- full_features(ok_tr_cutoff)
 
-rec_cutoff <- rec_int_topints %>%
+rec_cutoff <- rec_eng_commonsense %>%
   prep(ok_tr_combined)
 
 ok_tr_for_cutoff <- rec_cutoff %>%
@@ -3124,7 +3203,7 @@ ok_tr_for_cutoff <- rec_cutoff %>%
 ok_te_for_cutoff <- rec_cutoff %>%
   bake(ok_tr_cutoff2)
 
-mod_lr_cutoff <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+mod_lr_cutoff <- logistic_reg(penalty = 0.01, mixture = 0.5) %>%
   set_engine("glmnet")
 
 mod_lr_cutoff <- mod_lr_cutoff %>%
@@ -3183,7 +3262,7 @@ okcupid_test2 %>% count(pets) %>% mutate(pct = n / sum(n))
 okcupid_test_baked <- rec_cutoff %>%
   bake(okcupid_test2)
 
-mod_lr_test <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+mod_lr_test <- logistic_reg(penalty = 0.01, mixture = 0.5) %>%
   set_engine("glmnet")
 
 mod_lr_test <- mod_lr_test %>%

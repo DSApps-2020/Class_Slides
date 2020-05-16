@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-05-02" />
+    <meta name="date" content="2020-05-16" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-05-02
+### 2020-05-16
 
 ---
 
@@ -1339,7 +1339,7 @@ rec_imb_upsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   update_role(starts_with("isna"), new_role = "discarded") %&gt;%
@@ -1351,7 +1351,7 @@ rec_imb_downsample &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_downsample(pets, under_ratio = 1)
+  step_downsample(pets, under_ratio = 1, seed = 42)
 ```
 
 ---
@@ -1369,7 +1369,7 @@ rec_imb_smote &lt;- recipe(pets ~ ., data = ok_tr_imbalance2) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
   step_downsample(pets, under_ratio = 1.5) %&gt;%
-  step_smote(pets, over_ratio = 1)
+  step_smote(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -1418,13 +1418,13 @@ print(summary(aov_imbalance))
 ```
 ## 
 ## Error: factor(id)
-##           Df  Sum Sq  Mean Sq F value Pr(&gt;F)
-## Residuals  9 0.06694 0.007438               
+##           Df  Sum Sq Mean Sq F value Pr(&gt;F)
+## Residuals  9 0.07173 0.00797               
 ## 
 ## Error: Within
 ##                Df   Sum Sq   Mean Sq F value Pr(&gt;F)
-## factor(recipe)  2 0.000527 0.0002637   0.946  0.407
-## Residuals      18 0.005016 0.0002787
+## factor(recipe)  2 0.001422 0.0007111   2.202  0.139
+## Residuals      18 0.005812 0.0003229
 ```
 
 ---
@@ -1458,9 +1458,9 @@ print(cv_res_imbalance %&gt;%
 ## # A tibble: 3 x 2
 ##   recipe     mean_auc
 ##   &lt;chr&gt;         &lt;dbl&gt;
-## 1 downsample    0.724
-## 2 smote         0.724
-## 3 upsample      0.733
+## 1 downsample    0.736
+## 2 smote         0.725
+## 3 upsample      0.741
 ```
 
 .insight[
@@ -2531,7 +2531,7 @@ rec_eng_notext &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 str_count_na &lt;- function(string, pattern = "") {
   n &lt;- str_count(string, pattern)
@@ -2558,7 +2558,7 @@ rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2623,10 +2623,10 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [12:38:23.936] early stopping at 20 iteration 
-## INFO  [12:38:24.009] early stopping at 20 iteration 
-##   w1   w2  w3 w4 w5  w6   w7 w8  w9 w10
-## 1  0 0.05 0.3  0  0 0.5 0.05  0 0.1   0
+## INFO  [08:04:05.443] early stopping at 20 iteration 
+## INFO  [08:04:05.504] early stopping at 20 iteration 
+##   w1 w2   w3   w4  w5 w6   w7  w8 w9  w10
+## 1  0  0 0.05 0.05 0.1  0 0.05 0.7  0 0.05
 ```
 
 ---
@@ -2825,7 +2825,7 @@ So these will be our four options for handling text:
 ```r
 count_words &lt;- function(essays) {
   counts &lt;- map(cd_words$word, ~str_count_na(essays, .x))
-  names(counts) = str_c("w_", cd_words$word)
+  names(counts) = janitor::make_clean_names(str_c("w_", cd_words$word))
   counts
 }
 
@@ -2846,13 +2846,13 @@ rec_eng_notext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_eng_textfeat &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
@@ -2862,13 +2862,13 @@ rec_eng_textfeat &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2883,13 +2883,13 @@ rec_eng_fulltext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 
 rec_eng_hashtext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
@@ -2899,13 +2899,13 @@ rec_eng_hashtext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -2934,7 +2934,7 @@ cv_res_eng &lt;- cv_splits_eng %&gt;%
 
 cv_res_eng_meds &lt;- cv_res_eng %&gt;%
   group_by(recipe) %&gt;%
-  summarise(AUC = median(AUC), id = "All")
+  summarise(AUC = mean(AUC), id = "All")
 ```
 
 
@@ -2946,6 +2946,18 @@ cv_res_eng_meds &lt;- cv_res_eng %&gt;%
 Let's use some common sense (see code!).
 
 
+```r
+cd_words &lt;- cd_words %&gt;%
+  bind_rows(
+    tibble(word =
+             c("my cat", "my dog", "love cat", "love dog", "kitt", "pupp",
+               "have cat", "have dog", "have a cat", "have a dog"),
+           cats = NULL, dogs = NULL, fisher_obj = NULL, OR = 0,
+           p_val = 0, fdr = 0))
+```
+
+
+
 
 
 ```r
@@ -2955,50 +2967,38 @@ colnames(ok_tr_eng4)
 ```
 
 ```
-##  [1] "age"                   "body_type"            
-##  [3] "diet"                  "drinks"               
-##  [5] "drugs"                 "education"            
-##  [7] "ethnicity"             "height"               
-##  [9] "income"                "job"                  
-## [11] "location"              "orientation"          
-## [13] "pets"                  "religion"             
-## [15] "sex"                   "sign"                 
-## [17] "smokes"                "status"               
-## [19] "len_essay0"            "len_essay1"           
-## [21] "len_essay2"            "len_essay3"           
-## [23] "len_essay4"            "len_essay5"           
-## [25] "len_essay6"            "len_essay7"           
-## [27] "len_essay8"            "len_essay9"           
-## [29] "essays"                "offspring_no_kids"    
-## [31] "offspring_one_kid"     "offspring_many_kids"  
-## [33] "offspring_wants_kids"  "religion_not2serious" 
-## [35] "religion_laughing"     "religion_somewhat"    
-## [37] "part_black"            "part_white"           
-## [39] "part_asian"            "part_hispanic"        
-## [41] "body_type_not_perfect" "sign_fun"             
-## [43] "sign_not_matter"       "sign_matters"         
-## [45] "speaks_spanish"        "speaks_french"        
-## [47] "speaks_german"         "speaks_chinese"       
-## [49] "speaks_fluently"       "education_kind"       
-## [51] "w_cat"                 "w_cats"               
-## [53] "w_class"               "w_href"               
-## [55] "w_ilink"               "w_dog"                
-## [57] "w_writing"             "w_strange"            
-## [59] "w_dr"                  "w_dogs"               
-## [61] "w_feel"                "w_shy"                
-## [63] "w_books"               "w_br"                 
-## [65] "w_fantasy"             "w_games"              
-## [67] "w_video"               "w_means"              
-## [69] "w_pretty"              "w_geek"               
-## [71] "w_computer"            "w_brain"              
-## [73] "w_stuff"               "w_constantly"         
-## [75] "w_science"             "w_nerd"               
-## [77] "w_write"               "w_walk"               
-## [79] "w_punk"                "w_history"            
-## [81] "w_art"                 "w_possibly"           
-## [83] "w_sci"                 "w_series"             
-## [85] "w_form"                "w_fi"                 
-## [87] "w_sort"
+##  [1] "age"                  "body_type"            "diet"                
+##  [4] "drinks"               "drugs"                "education"           
+##  [7] "ethnicity"            "height"               "income"              
+## [10] "job"                  "location"             "orientation"         
+## [13] "pets"                 "religion"             "sex"                 
+## [16] "smokes"               "status"               "len_essay0"          
+## [19] "len_essay1"           "len_essay2"           "len_essay3"          
+## [22] "len_essay4"           "len_essay5"           "len_essay6"          
+## [25] "len_essay7"           "len_essay8"           "len_essay9"          
+## [28] "essays"               "offspring_no_kids"    "offspring_one_kid"   
+## [31] "offspring_many_kids"  "offspring_wants_kids" "religion_not2serious"
+## [34] "religion_laughing"    "religion_somewhat"    "body_type_perfect"   
+## [37] "sign_fun"             "sign_not_matter"      "sign_matters"        
+## [40] "sign_na"              "speaks_spanish"       "speaks_french"       
+## [43] "speaks_german"        "speaks_chinese"       "speaks_n_fluently"   
+## [46] "speaks_n_okay"        "speaks_n_poorly"      "education_kind"      
+## [49] "w_cat"                "w_cats"               "w_class"             
+## [52] "w_href"               "w_ilink"              "w_dog"               
+## [55] "w_writing"            "w_strange"            "w_dr"                
+## [58] "w_dogs"               "w_feel"               "w_shy"               
+## [61] "w_books"              "w_br"                 "w_fantasy"           
+## [64] "w_games"              "w_video"              "w_means"             
+## [67] "w_pretty"             "w_geek"               "w_computer"          
+## [70] "w_brain"              "w_stuff"              "w_constantly"        
+## [73] "w_science"            "w_nerd"               "w_write"             
+## [76] "w_walk"               "w_punk"               "w_history"           
+## [79] "w_art"                "w_possibly"           "w_sci"               
+## [82] "w_series"             "w_form"               "w_fi"                
+## [85] "w_sort"               "w_my_cat"             "w_my_dog"            
+## [88] "w_love_cat"           "w_love_dog"           "w_kitt"              
+## [91] "w_pupp"               "w_have_cat"           "w_have_dog"          
+## [94] "w_have_a_cat"         "w_have_a_dog"
 ```
 
 ---
@@ -3006,22 +3006,25 @@ colnames(ok_tr_eng4)
 
 ```r
 rec_eng_commonsense &lt;- recipe(pets ~ ., data = ok_tr_eng4) %&gt;%
-  update_role(essays, new_role = "discarded") %&gt;%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_zv(all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  # step_zv(all_numeric()) %&gt;%
+  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
+  # step_other(ends_with("yesno"), other = "other", threshold = 0.1) %&gt;%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %&gt;%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %&gt;%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3045,7 +3048,7 @@ cv_res_commonsense &lt;- cv_splits_eng2 %&gt;%
                  names_to = "recipe", values_to = "AUC") %&gt;%
   select(id, recipe, AUC)
 
-cv_res_commonsense_meds &lt;- cv_res_commonsense %&gt;%
+cv_res_cs_meds &lt;- cv_res_commonsense %&gt;%
   group_by(recipe) %&gt;%
   summarise(AUC = mean(AUC), id = "All")
 ```
@@ -3504,7 +3507,6 @@ ok_tr_combined &lt;- full_features(ok_tr_combined)
 For stage 3 need to screen out "main effects" features which passed `glmnet`
 
 
-
 ```r
 main_data &lt;- rec_eng_commonsense %&gt;% prep(ok_tr_combined) %&gt;% juice()
 
@@ -3517,20 +3519,20 @@ mod_lr_res
 ```
 
 ```
-## # A tibble: 7,962 x 5
+## # A tibble: 6,289 x 5
 ##    term                step  estimate lambda dev.ratio
 ##    &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt;
-##  1 (Intercept)            1 -2.45e-13 0.0931  2.60e-13
-##  2 (Intercept)            2  5.09e- 2 0.0848  5.99e- 3
-##  3 w_cat                  2 -3.54e- 3 0.0848  5.99e- 3
-##  4 religion_christian     2  3.20e- 2 0.0848  5.99e- 3
-##  5 part_white_TRUE.       2 -7.29e- 2 0.0848  5.99e- 3
-##  6 (Intercept)            3  8.87e- 2 0.0773  1.55e- 2
-##  7 w_cat                  3 -2.19e- 2 0.0773  1.55e- 2
-##  8 w_cats                 3 -7.26e- 3 0.0773  1.55e- 2
-##  9 w_dog                  3  1.07e- 3 0.0773  1.55e- 2
-## 10 religion_christian     3  9.52e- 2 0.0773  1.55e- 2
-## # ... with 7,952 more rows
+##  1 (Intercept)            1 -2.45e-13 0.0889  2.60e-13
+##  2 (Intercept)            2 -4.83e- 3 0.0810  9.36e- 3
+##  3 w_cat                  2 -6.84e- 3 0.0810  9.36e- 3
+##  4 w_my_cat               2 -1.34e- 1 0.0810  9.36e- 3
+##  5 w_my_dog               2  6.28e- 2 0.0810  9.36e- 3
+##  6 religion_christian     2  6.28e- 2 0.0810  9.36e- 3
+##  7 (Intercept)            3 -5.75e- 3 0.0738  2.11e- 2
+##  8 w_cat                  3 -2.02e- 2 0.0738  2.11e- 2
+##  9 w_cats                 3 -3.38e- 2 0.0738  2.11e- 2
+## 10 w_my_cat               3 -2.32e- 1 0.0738  2.11e- 2
+## # ... with 6,279 more rows
 ```
 
 ---
@@ -3556,29 +3558,30 @@ We see a plateau around 12-15 features, let's choose those.
 
 ```r
 mod_lr_res %&gt;%
-  filter(step == 8) %&gt;%
+  filter(step == 6) %&gt;%
   select(term, estimate) %&gt;%
   arrange(-abs(estimate))
 ```
 
 ```
-## # A tibble: 14 x 2
-##    term                     estimate
-##    &lt;chr&gt;                       &lt;dbl&gt;
-##  1 part_white_TRUE.        -0.342   
-##  2 religion_christian       0.323   
-##  3 status_other1           -0.208   
-##  4 drinks_socially          0.183   
-##  5 w_dog                    0.179   
-##  6 drugs_sometimes         -0.122   
-##  7 offspring_no_kids_TRUE.  0.119   
-##  8 location_sf              0.104   
-##  9 w_cat                   -0.0842  
-## 10 w_cats                  -0.0577  
-## 11 job_marketing            0.0426  
-## 12 w_art                   -0.0191  
-## 13 t_essays_n_commas       -0.00513 
-## 14 (Intercept)              0.000973
+## # A tibble: 15 x 2
+##    term                estimate
+##    &lt;chr&gt;                  &lt;dbl&gt;
+##  1 w_my_cat           -0.493   
+##  2 w_my_dog            0.328   
+##  3 religion_christian  0.278   
+##  4 status_all_else    -0.207   
+##  5 w_cats             -0.147   
+##  6 (Intercept)         0.130   
+##  7 drinks_all_else    -0.100   
+##  8 body_type_all_else -0.0823  
+##  9 w_dog               0.0698  
+## 10 w_cat              -0.0430  
+## 11 drugs_sometimes    -0.0297  
+## 12 location_sf         0.00977 
+## 13 w_art              -0.00600 
+## 14 age                -0.00189 
+## 15 w_sci              -0.000986
 ```
 
 ---
@@ -3588,7 +3591,7 @@ These make sense, let's choose them as our main effects from which we pick all t
 
 ```r
 main_effects &lt;- mod_lr_res %&gt;%
-  filter(step == 8, term != "(Intercept)") %&gt;%
+  filter(step == 6, term != "(Intercept)") %&gt;%
   pull(term)
 ```
 
@@ -3598,16 +3601,22 @@ For stage 4 we need to iterate over all possible two-way interactions, each time
 
 
 ```r
+mod_glm_base &lt;- glm(pets ~ .,
+                    data = main_data %&gt;% select(-ends_with("_new")),
+                    family = "binomial")
+
 extract_interaction_p_val &lt;- function(var1, var2) {
   pb$tick()$print()
   int_term &lt;- str_c(var1, ":", var2)
-  mod_formula &lt;- formula(str_c("pets ~ . + ", int_term))
-  mod_glm &lt;- glm(mod_formula,
-                 data = main_data %&gt;% select(-ends_with("_new")),
-                 family = "binomial")
-  mod_summary &lt;- summary(mod_glm)
-  p_val &lt;- tidy(mod_glm) %&gt;%
-    filter(term == int_term) %&gt;%
+  int_term2 &lt;- str_c(var2, ":", var1)
+  mod_glm &lt;- quietly(update)(
+    mod_glm_base, as.formula(str_c(".~.+", int_term))
+  )
+  if(length(mod_glm$warnings) &gt; 1) {
+    return(NA_real_)
+  }
+  p_val &lt;- tidy(mod_glm$result) %&gt;%
+    filter(term %in% c(int_term, int_term2)) %&gt;%
     pull(p.value)
   if (length(p_val) == 0) {
     return(NA_real_)
@@ -3636,34 +3645,124 @@ Let's filter only the *most* convincing interactions.
 ```r
 pairwise_ints &lt;- all_ints %&gt;%
   arrange(fdr) %&gt;%
-  filter(fdr &lt; 10e-6)
+  filter(fdr &lt; 10e-7)
 
 pairwise_ints
 ```
 
 ```
-## # A tibble: 19 x 4
-##    var1                 var2                       p_val           fdr
-##    &lt;chr&gt;                &lt;chr&gt;                      &lt;dbl&gt;         &lt;dbl&gt;
-##  1 w_dog                w_strange               5.70e-13 0.00000000296
-##  2 w_strange            orientation_other1      3.79e-13 0.00000000296
-##  3 w_dog                sign_not_matter_TRUE.   2.58e-12 0.00000000892
-##  4 len_essay0           job_student             1.03e-11 0.0000000215 
-##  5 len_essay4           job_student             8.78e-12 0.0000000215 
-##  6 orientation_straight religion_christian      2.68e-10 0.000000463  
-##  7 job_financial        location_other_location 3.72e-10 0.000000551  
-##  8 drinks_socially      education_kind_other    4.44e-10 0.000000576  
-##  9 w_class              w_dog                   8.95e-10 0.00000103   
-## 10 len_essay1           part_asian_TRUE.        1.57e- 9 0.00000163   
-## 11 w_href               w_dog                   2.78e- 9 0.00000215   
-## 12 w_ilink              w_dog                   2.90e- 9 0.00000215   
-## 13 w_dog                sex_m                   2.71e- 9 0.00000215   
-## 14 w_strange            diet_other1             2.44e- 9 0.00000215   
-## 15 part_asian_TRUE.     sign_not_matter_TRUE.   3.58e- 9 0.00000248   
-## 16 w_books              speaks_spanish_TRUE.    6.22e- 9 0.00000403   
-## 17 len_essay6           smokes_when.drinking    7.99e- 9 0.00000488   
-## 18 w_dog                job_other1              1.45e- 8 0.00000834   
-## 19 body_type_average    location_sf             1.56e- 8 0.00000850
+## # A tibble: 10 x 4
+##    var1               var2                      p_val      fdr
+##    &lt;chr&gt;              &lt;chr&gt;                     &lt;dbl&gt;    &lt;dbl&gt;
+##  1 ethnicity_other    location_other         2.68e-14 2.06e-10
+##  2 offspring_one_kid  speaks_n_fluently      5.06e-13 1.94e- 9
+##  3 religion_laughing  ethnicity_white        1.15e-11 2.93e- 8
+##  4 len_essay0         education_kind_working 8.94e-11 1.53e- 7
+##  5 offspring_one_kid  speaks_spanish         9.97e-11 1.53e- 7
+##  6 w_possibly         education_all_else     1.23e-10 1.57e- 7
+##  7 w_games            w_possibly             1.86e-10 2.04e- 7
+##  8 w_books            w_sci                  3.98e-10 3.81e- 7
+##  9 w_fi               t_essays_n_uq_words    4.54e-10 3.87e- 7
+## 10 education_all_else status_all_else        8.89e-10 6.81e- 7
+```
+
+---
+
+First make sure you understand the difference between `other`, `all_else` etc.
+
+
+```r
+ok_tr_combined %&gt;% count(ethnicity, sort = TRUE)
+```
+
+```
+## # A tibble: 6 x 2
+##   ethnicity     n
+##   &lt;fct&gt;     &lt;int&gt;
+## 1 white      3863
+## 2 other      1641
+## 3 asian       752
+## 4 hispanic    368
+## 5 black       248
+## 6 indian      128
+```
+
+
+```r
+main_data %&gt;% select(starts_with("ethnicity")) %&gt;% head()
+```
+
+```
+## # A tibble: 6 x 4
+##   ethnicity_other ethnicity_white ethnicity_all_else ethnicity_new
+##             &lt;dbl&gt;           &lt;dbl&gt;              &lt;dbl&gt;         &lt;dbl&gt;
+## 1               0               1                  0             0
+## 2               0               0                  1             0
+## 3               0               1                  0             0
+## 4               1               0                  0             0
+## 5               1               0                  0             0
+## 6               1               0                  0             0
+```
+
+What are those people with all `ethnicity` columns with zero?
+
+
+```r
+main_data %&gt;% select(starts_with("ethnicity")) %&gt;%
+  filter_all(~.x == 0)
+```
+
+```
+## # A tibble: 978 x 4
+##    ethnicity_other ethnicity_white ethnicity_all_else ethnicity_new
+##              &lt;dbl&gt;           &lt;dbl&gt;              &lt;dbl&gt;         &lt;dbl&gt;
+##  1               0               0                  0             0
+##  2               0               0                  0             0
+##  3               0               0                  0             0
+##  4               0               0                  0             0
+##  5               0               0                  0             0
+##  6               0               0                  0             0
+##  7               0               0                  0             0
+##  8               0               0                  0             0
+##  9               0               0                  0             0
+## 10               0               0                  0             0
+## # ... with 968 more rows
+```
+
+---
+
+Same with `location`.
+
+
+```r
+ok_tr_combined %&gt;% count(location, sort = TRUE)
+```
+
+```
+## # A tibble: 4 x 2
+##   location     n
+##   &lt;fct&gt;    &lt;int&gt;
+## 1 sf        3706
+## 2 other     2034
+## 3 oakland    822
+## 4 berkeley   438
+```
+
+
+```r
+main_data %&gt;% select(starts_with("location")) %&gt;% head()
+```
+
+```
+## # A tibble: 6 x 4
+##   location_other location_sf location_all_else location_new
+##            &lt;dbl&gt;       &lt;dbl&gt;             &lt;dbl&gt;        &lt;dbl&gt;
+## 1              0           0                 1            0
+## 2              1           0                 0            0
+## 3              1           0                 0            0
+## 4              0           0                 0            0
+## 5              0           1                 0            0
+## 6              0           0                 0            0
 ```
 
 ---
@@ -3671,19 +3770,53 @@ pairwise_ints
 
 ```r
 main_data %&gt;%
-  group_by(sex_m, pets) %&gt;%
-  summarise(mean_w_dog = mean(w_dog)) %&gt;% ungroup() %&gt;%
-  mutate(gender = factor(ifelse(sex_m == 0, "women", "men"))) %&gt;%
-  ggplot(aes(pets, mean_w_dog, color = gender)) +
-  geom_line(aes(group = gender)) + geom_point() +
+  group_by(ethnicity_other, location_other) %&gt;%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %&gt;% ungroup() %&gt;%
+  mutate_at(vars("ethnicity_other", "location_other"), as.factor) %&gt;%
+  ggplot(aes(ethnicity_other, pct_cats, color = location_other)) +
+  geom_line(aes(group = location_other)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
   theme_light()
 ```
 
-&lt;img src="images/W_Dog-Interaction-1.png" width="90%" /&gt;
+&lt;img src="images/Ethnicity-Interaction-1.png" width="90%" /&gt;
 
 .insight[
 💡 Try stating what you see in words.
 ]
+
+---
+
+
+```r
+main_data %&gt;%
+  mutate(speaks_n_fluently = ifelse(speaks_n_fluently &gt;= 3, "3+", speaks_n_fluently)) %&gt;%
+  group_by(speaks_n_fluently, offspring_one_kid) %&gt;%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %&gt;% ungroup() %&gt;%
+  mutate_at(vars("speaks_n_fluently", "offspring_one_kid"), as.factor) %&gt;%
+  ggplot(aes(speaks_n_fluently, pct_cats, color = offspring_one_kid)) +
+  geom_line(aes(group = offspring_one_kid)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_light()
+```
+
+&lt;img src="images/Fluently-Interaction-1.png" width="90%" /&gt;
+
+---
+
+
+```r
+main_data %&gt;%
+  group_by(religion_laughing, ethnicity_white) %&gt;%
+  summarise(pct_cats = mean(pets == "cats"), n = n()) %&gt;% ungroup() %&gt;%
+  mutate_at(vars("religion_laughing", "ethnicity_white"), as.factor) %&gt;%
+  ggplot(aes(religion_laughing, pct_cats, color = ethnicity_white)) +
+  geom_line(aes(group = ethnicity_white)) + geom_point(aes(size = n)) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_light()
+```
+
+&lt;img src="images/Religion-Interaction-1.png" width="90%" /&gt;
 
 ---
 
@@ -3694,24 +3827,24 @@ ok_tr_interaction2 &lt;- full_features(ok_tr_interaction)
 rec_int_noint &lt;- rec_eng_commonsense
 
 rec_int_sex &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
-  update_role(essays, new_role = "discarded") %&gt;%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_zv(all_numeric()) %&gt;%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %&gt;%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %&gt;%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
   step_interact(~starts_with("sex"):all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3738,39 +3871,37 @@ topmain_ints
 ```
 
 ```
-## ~w_cat:w_cats + w_cat:w_dog + w_cat:w_art + w_cat:t_essays_n_commas + 
-##     w_cat:drinks_socially + w_cat:drugs_sometimes + w_cat:job_marketing + 
-##     w_cat:location_sf + w_cat:religion_christian + w_cat:status_other1 + 
-##     w_cat:offspring_no_kids_TRUE. + w_cat:part_white_TRUE. + 
-##     w_cats:w_dog + w_cats:w_art + w_cats:t_essays_n_commas + 
-##     w_cats:drinks_socially + w_cats:drugs_sometimes + w_cats:job_marketing + 
-##     w_cats:location_sf + w_cats:religion_christian + w_cats:status_other1 + 
-##     w_cats:offspring_no_kids_TRUE. + w_cats:part_white_TRUE. + 
-##     w_dog:w_art + w_dog:t_essays_n_commas + w_dog:drinks_socially + 
-##     w_dog:drugs_sometimes + w_dog:job_marketing + w_dog:location_sf + 
-##     w_dog:religion_christian + w_dog:status_other1 + w_dog:offspring_no_kids_TRUE. + 
-##     w_dog:part_white_TRUE. + w_art:t_essays_n_commas + w_art:drinks_socially + 
-##     w_art:drugs_sometimes + w_art:job_marketing + w_art:location_sf + 
-##     w_art:religion_christian + w_art:status_other1 + w_art:offspring_no_kids_TRUE. + 
-##     w_art:part_white_TRUE. + t_essays_n_commas:drinks_socially + 
-##     t_essays_n_commas:drugs_sometimes + t_essays_n_commas:job_marketing + 
-##     t_essays_n_commas:location_sf + t_essays_n_commas:religion_christian + 
-##     t_essays_n_commas:status_other1 + t_essays_n_commas:offspring_no_kids_TRUE. + 
-##     t_essays_n_commas:part_white_TRUE. + drinks_socially:drugs_sometimes + 
-##     drinks_socially:job_marketing + drinks_socially:location_sf + 
-##     drinks_socially:religion_christian + drinks_socially:status_other1 + 
-##     drinks_socially:offspring_no_kids_TRUE. + drinks_socially:part_white_TRUE. + 
-##     drugs_sometimes:job_marketing + drugs_sometimes:location_sf + 
-##     drugs_sometimes:religion_christian + drugs_sometimes:status_other1 + 
-##     drugs_sometimes:offspring_no_kids_TRUE. + drugs_sometimes:part_white_TRUE. + 
-##     job_marketing:location_sf + job_marketing:religion_christian + 
-##     job_marketing:status_other1 + job_marketing:offspring_no_kids_TRUE. + 
-##     job_marketing:part_white_TRUE. + location_sf:religion_christian + 
-##     location_sf:status_other1 + location_sf:offspring_no_kids_TRUE. + 
-##     location_sf:part_white_TRUE. + religion_christian:status_other1 + 
-##     religion_christian:offspring_no_kids_TRUE. + religion_christian:part_white_TRUE. + 
-##     status_other1:offspring_no_kids_TRUE. + status_other1:part_white_TRUE. + 
-##     offspring_no_kids_TRUE.:part_white_TRUE.
+## ~age:w_cat + age:w_cats + age:w_dog + age:w_art + age:w_sci + 
+##     age:w_my_cat + age:w_my_dog + age:body_type_all_else + age:drinks_all_else + 
+##     age:drugs_sometimes + age:location_sf + age:religion_christian + 
+##     age:status_all_else + w_cat:w_cats + w_cat:w_dog + w_cat:w_art + 
+##     w_cat:w_sci + w_cat:w_my_cat + w_cat:w_my_dog + w_cat:body_type_all_else + 
+##     w_cat:drinks_all_else + w_cat:drugs_sometimes + w_cat:location_sf + 
+##     w_cat:religion_christian + w_cat:status_all_else + w_cats:w_dog + 
+##     w_cats:w_art + w_cats:w_sci + w_cats:w_my_cat + w_cats:w_my_dog + 
+##     w_cats:body_type_all_else + w_cats:drinks_all_else + w_cats:drugs_sometimes + 
+##     w_cats:location_sf + w_cats:religion_christian + w_cats:status_all_else + 
+##     w_dog:w_art + w_dog:w_sci + w_dog:w_my_cat + w_dog:w_my_dog + 
+##     w_dog:body_type_all_else + w_dog:drinks_all_else + w_dog:drugs_sometimes + 
+##     w_dog:location_sf + w_dog:religion_christian + w_dog:status_all_else + 
+##     w_art:w_sci + w_art:w_my_cat + w_art:w_my_dog + w_art:body_type_all_else + 
+##     w_art:drinks_all_else + w_art:drugs_sometimes + w_art:location_sf + 
+##     w_art:religion_christian + w_art:status_all_else + w_sci:w_my_cat + 
+##     w_sci:w_my_dog + w_sci:body_type_all_else + w_sci:drinks_all_else + 
+##     w_sci:drugs_sometimes + w_sci:location_sf + w_sci:religion_christian + 
+##     w_sci:status_all_else + w_my_cat:w_my_dog + w_my_cat:body_type_all_else + 
+##     w_my_cat:drinks_all_else + w_my_cat:drugs_sometimes + w_my_cat:location_sf + 
+##     w_my_cat:religion_christian + w_my_cat:status_all_else + 
+##     w_my_dog:body_type_all_else + w_my_dog:drinks_all_else + 
+##     w_my_dog:drugs_sometimes + w_my_dog:location_sf + w_my_dog:religion_christian + 
+##     w_my_dog:status_all_else + body_type_all_else:drinks_all_else + 
+##     body_type_all_else:drugs_sometimes + body_type_all_else:location_sf + 
+##     body_type_all_else:religion_christian + body_type_all_else:status_all_else + 
+##     drinks_all_else:drugs_sometimes + drinks_all_else:location_sf + 
+##     drinks_all_else:religion_christian + drinks_all_else:status_all_else + 
+##     drugs_sometimes:location_sf + drugs_sometimes:religion_christian + 
+##     drugs_sometimes:status_all_else + location_sf:religion_christian + 
+##     location_sf:status_all_else + religion_christian:status_all_else
 ```
 
 ---
@@ -3778,24 +3909,24 @@ topmain_ints
 
 ```r
 rec_int_topmain &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
-  update_role(essays, new_role = "discarded") %&gt;%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_zv(all_numeric()) %&gt;%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %&gt;%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %&gt;%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
   step_interact(topmain_ints) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3806,26 +3937,24 @@ rec_int_topmain &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
 
 ```r
 rec_int_topints &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
-  update_role(essays, new_role = "discarded") %&gt;%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_zv(all_numeric()) %&gt;%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %&gt;%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %&gt;%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
-  {if (!"smokes_when.drinking" %in% .$var_info$variable)
-    step_mutate(., smokes_when.drinking = 0)} %&gt;%
   step_interact(topint_ints) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_nzv(all_numeric(), freq_cut = 99/1) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3833,24 +3962,24 @@ rec_int_topints &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
 
 ```r
 rec_int_all &lt;- recipe(pets ~ ., data = ok_tr_interaction2) %&gt;%
-  update_role(essays, new_role = "discarded") %&gt;%
   step_textfeature(essays, prefix = "t",
                    extract_functions = my_text_funs) %&gt;%
+  update_role(essays, new_role = "discarded") %&gt;%
   step_mutate_at(starts_with("t_"), fn = ~ifelse(is.na(.x), 0, .x)) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  step_zv(all_numeric()) %&gt;%
-  step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
+  step_other(
+    all_nominal(), -has_role("discarded"), -all_outcomes(),
+    other = "all_else", threshold = 0.1) %&gt;%
   step_novel(
-    body_type, diet, drugs, job, sign, religion, smokes, drinks, education) %&gt;%
+    all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_dummy(all_nominal(), -all_outcomes(),
              -has_role("discarded"), one_hot = FALSE) %&gt;%
   step_interact(~all_numeric():all_numeric()) %&gt;%
-  step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_nzv(all_numeric(), freq_cut = 95/5) %&gt;%
-  step_upsample(pets, over_ratio = 1)
+  step_upsample(pets, over_ratio = 1, seed = 42)
 ```
 
 ---
@@ -3942,10 +4071,11 @@ cv_splits_tune &lt;- vfold_cv(ok_tr_tuning2, v = 10, strata = pets)
 
 ```r
 tune_res &lt;- tune_grid(object = mod_en_tune,
-                      preprocessor = rec_int_topints,
+                      preprocessor = rec_eng_commonsense,
                       resamples = cv_splits_tune,
                       grid = en_grid,
-                      metrics = metric_set(roc_auc))
+                      metrics = metric_set(roc_auc),
+                      control = control_grid(verbose = TRUE))
 
 collect_metrics_tune_res &lt;- collect_metrics(tune_res)
 
@@ -3957,16 +4087,16 @@ collect_metrics_tune_res
 ## # A tibble: 77 x 7
 ##     penalty mixture .metric .estimator  mean     n std_err
 ##       &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
-##  1 0.000001     0   roc_auc binary     0.761    10  0.0167
-##  2 0.000001     0.1 roc_auc binary     0.753    10  0.0175
-##  3 0.000001     0.2 roc_auc binary     0.753    10  0.0175
-##  4 0.000001     0.3 roc_auc binary     0.753    10  0.0175
-##  5 0.000001     0.4 roc_auc binary     0.753    10  0.0175
-##  6 0.000001     0.5 roc_auc binary     0.753    10  0.0174
-##  7 0.000001     0.6 roc_auc binary     0.754    10  0.0175
-##  8 0.000001     0.7 roc_auc binary     0.754    10  0.0174
-##  9 0.000001     0.8 roc_auc binary     0.753    10  0.0175
-## 10 0.000001     0.9 roc_auc binary     0.754    10  0.0175
+##  1 0.000001     0   roc_auc binary     0.775    10  0.0173
+##  2 0.000001     0.1 roc_auc binary     0.768    10  0.0168
+##  3 0.000001     0.2 roc_auc binary     0.767    10  0.0167
+##  4 0.000001     0.3 roc_auc binary     0.767    10  0.0167
+##  5 0.000001     0.4 roc_auc binary     0.766    10  0.0167
+##  6 0.000001     0.5 roc_auc binary     0.766    10  0.0167
+##  7 0.000001     0.6 roc_auc binary     0.767    10  0.0168
+##  8 0.000001     0.7 roc_auc binary     0.767    10  0.0168
+##  9 0.000001     0.8 roc_auc binary     0.767    10  0.0168
+## 10 0.000001     0.9 roc_auc binary     0.767    10  0.0167
 ## # ... with 67 more rows
 ```
 
@@ -3995,16 +4125,16 @@ show_best(tune_res, n = 10, metric = "roc_auc")
 ## # A tibble: 10 x 7
 ##    penalty mixture .metric .estimator  mean     n std_err
 ##      &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
-##  1    0.01     1   roc_auc binary     0.772    10  0.0144
-##  2    0.1      0.1 roc_auc binary     0.772    10  0.0146
-##  3    0.01     0.9 roc_auc binary     0.772    10  0.0148
-##  4    0.01     0.7 roc_auc binary     0.772    10  0.0151
-##  5    0.01     0.8 roc_auc binary     0.772    10  0.0149
-##  6    0.01     0.6 roc_auc binary     0.772    10  0.0155
-##  7    0.01     0.5 roc_auc binary     0.772    10  0.0157
-##  8    0.01     0.4 roc_auc binary     0.771    10  0.0161
-##  9    0.01     0.3 roc_auc binary     0.769    10  0.0163
-## 10    0.1      0   roc_auc binary     0.768    10  0.0153
+##  1    0.01     0.6 roc_auc binary     0.783    10  0.0166
+##  2    0.01     0.7 roc_auc binary     0.783    10  0.0165
+##  3    0.01     0.5 roc_auc binary     0.783    10  0.0168
+##  4    0.01     0.8 roc_auc binary     0.783    10  0.0165
+##  5    0.01     0.9 roc_auc binary     0.783    10  0.0163
+##  6    0.01     0.4 roc_auc binary     0.783    10  0.0169
+##  7    0.01     1   roc_auc binary     0.782    10  0.0160
+##  8    0.01     0.3 roc_auc binary     0.781    10  0.0170
+##  9    0.1      0   roc_auc binary     0.781    10  0.0166
+## 10    0.1      0.1 roc_auc binary     0.779    10  0.0157
 ```
 
 .insight[
@@ -4044,7 +4174,7 @@ ok_tr_combined &lt;- full_features(
 
 ok_tr_cutoff2 &lt;- full_features(ok_tr_cutoff)
 
-rec_cutoff &lt;- rec_int_topints %&gt;%
+rec_cutoff &lt;- rec_eng_commonsense %&gt;%
   prep(ok_tr_combined)
 
 ok_tr_for_cutoff &lt;- rec_cutoff %&gt;%
@@ -4053,7 +4183,7 @@ ok_tr_for_cutoff &lt;- rec_cutoff %&gt;%
 ok_te_for_cutoff &lt;- rec_cutoff %&gt;%
   bake(ok_tr_cutoff2)
 
-mod_lr_cutoff &lt;- logistic_reg(penalty = 0.01, mixture = 1) %&gt;%
+mod_lr_cutoff &lt;- logistic_reg(penalty = 0.01, mixture = 0.5) %&gt;%
   set_engine("glmnet")
 
 mod_lr_cutoff &lt;- mod_lr_cutoff %&gt;%
@@ -4082,17 +4212,17 @@ coords(roc_obj, x = cutoffs,
 
 ```
 ##                    0.1       0.2       0.3       0.4       0.5       0.6
-## accuracy    0.18655693 0.2496571 0.4046639 0.5514403 0.7009602 0.7901235
-## recall      1.00000000 0.9583333 0.9250000 0.7666667 0.5750000 0.3750000
-## precision   0.16830295 0.1750381 0.2070896 0.2352941 0.2923729 0.3658537
-## specificity 0.02627258 0.1100164 0.3021346 0.5090312 0.7257800 0.8719212
-## npv         1.00000000 0.9305556 0.9533679 0.9171598 0.8965517 0.8762376
-##                   0.7        0.8        0.9
-## accuracy    0.8340192 0.83950617 0.83813443
-## recall      0.2583333 0.08333333 0.03333333
-## precision   0.4920635 0.58823529 0.66666667
-## specificity 0.9474548 0.98850575 0.99671593
-## npv         0.8663664 0.84550562 0.83955740
+## accuracy    0.21124829 0.3004115 0.4471879 0.5747599 0.7229081 0.7997257
+## recall      1.00000000 0.9833333 0.8916667 0.7250000 0.5916667 0.4416667
+## precision   0.17266187 0.1884984 0.2152918 0.2390110 0.3169643 0.4015152
+## specificity 0.05582923 0.1658456 0.3596059 0.5451560 0.7487685 0.8702791
+## npv         1.00000000 0.9805825 0.9439655 0.9095890 0.9029703 0.8877722
+##                   0.7       0.8        0.9
+## accuracy    0.8312757 0.8504801 0.84362140
+## recall      0.2833333 0.1666667 0.06666667
+## precision   0.4788732 0.6896552 0.80000000
+## specificity 0.9392447 0.9852217 0.99671593
+## npv         0.8693009 0.8571429 0.84422809
 ```
 
 ---
@@ -4138,7 +4268,7 @@ okcupid_test2 %&gt;% count(pets) %&gt;% mutate(pct = n / sum(n))
 okcupid_test_baked &lt;- rec_cutoff %&gt;%
   bake(okcupid_test2)
 
-mod_lr_test &lt;- logistic_reg(penalty = 0.01, mixture = 1) %&gt;%
+mod_lr_test &lt;- logistic_reg(penalty = 0.01, mixture = 0.5) %&gt;%
   set_engine("glmnet")
 
 mod_lr_test &lt;- mod_lr_test %&gt;%
@@ -4158,7 +4288,7 @@ roc_auc(pred_test, truth, .pred_cats)
 ## # A tibble: 1 x 3
 ##   .metric .estimator .estimate
 ##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
-## 1 roc_auc binary         0.776
+## 1 roc_auc binary         0.790
 ```
 
 ---
@@ -4192,11 +4322,11 @@ coords(roc_obj, x = cutoffs,
 
 ```
 ##                   0.3       0.5        0.9
-## accuracy    0.4042929 0.7189394 0.83888889
-## recall      0.9418070 0.6967841 0.02756508
-## precision   0.2094687 0.3321168 0.85714286
-## specificity 0.2981554 0.7233142 0.99909283
-## npv         0.9628906 0.9235521 0.83879157
+## accuracy    0.4530303 0.7323232 0.85050505
+## recall      0.9157734 0.6860643 0.09954058
+## precision   0.2207457 0.3438219 0.94202899
+## specificity 0.3616571 0.7414575 0.99879044
+## npv         0.9560352 0.9228453 0.84888204
 ```
 
 ---
@@ -4214,28 +4344,28 @@ tidy(mod_lr_test) %&gt;%
 
 ```
 ## # A tibble: 20 x 3
-##    term                                      estimate  lambda
-##    &lt;chr&gt;                                        &lt;dbl&gt;   &lt;dbl&gt;
-##  1 w_dog                                       0.643  0.00961
-##  2 (Intercept)                                 0.329  0.00961
-##  3 w_cats                                     -0.181  0.00961
-##  4 religion_christian                          0.179  0.00961
-##  5 age                                        -0.174  0.00961
-##  6 w_cat                                      -0.161  0.00961
-##  7 drinks_socially                             0.157  0.00961
-##  8 job_marketing                               0.155  0.00961
-##  9 location_sf                                 0.147  0.00961
-## 10 drugs_sometimes                            -0.141  0.00961
-## 11 body_type_thin                             -0.140  0.00961
-## 12 part_white_TRUE.                           -0.125  0.00961
-## 13 religion_jewish                             0.120  0.00961
-## 14 job_hardware                               -0.119  0.00961
-## 15 status_other1                              -0.113  0.00961
-## 16 body_type_average                          -0.107  0.00961
-## 17 diet_vegetarian                            -0.0957 0.00961
-## 18 orientation_straight_x_religion_christian   0.0942 0.00961
-## 19 offspring_no_kids_TRUE.                     0.0906 0.00961
-## 20 part_asian_TRUE.                            0.0878 0.00961
+##    term               estimate lambda
+##    &lt;chr&gt;                 &lt;dbl&gt;  &lt;dbl&gt;
+##  1 w_my_cat             -2.08  0.0102
+##  2 w_my_dog              1.60  0.0102
+##  3 w_kitt               -1.06  0.0102
+##  4 (Intercept)          -0.834 0.0102
+##  5 religion_christian    0.821 0.0102
+##  6 w_cats               -0.815 0.0102
+##  7 w_have_cat           -0.759 0.0102
+##  8 w_love_dog            0.699 0.0102
+##  9 w_dog                 0.612 0.0102
+## 10 body_type_all_else   -0.571 0.0102
+## 11 diet_all_else        -0.535 0.0102
+## 12 status_all_else      -0.505 0.0102
+## 13 w_pupp                0.441 0.0102
+## 14 drugs_sometimes      -0.426 0.0102
+## 15 job_all_else         -0.418 0.0102
+## 16 ethnicity_white      -0.416 0.0102
+## 17 body_type_average    -0.391 0.0102
+## 18 drugs_all_else       -0.364 0.0102
+## 19 w_have_a_dog          0.350 0.0102
+## 20 religion_all_else     0.345 0.0102
 ```
 
 ---
