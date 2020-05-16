@@ -91,6 +91,14 @@ lines(x_wide, y_wide, col = "red")
 
 ---
 
+<img src="images/covid19_whitehouse_cubicfit.png" style="width: 80%" />
+
+---
+
+<img src="images/covid19_whitehouse_bi.png" style="width: 80%" />
+
+---
+
 ### It would have been much nicer if we could...
 
 ```{r LR-Good, echo=FALSE, out.width="50%"}
