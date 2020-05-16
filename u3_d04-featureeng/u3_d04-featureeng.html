@@ -2623,8 +2623,8 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [08:04:05.443] early stopping at 20 iteration 
-## INFO  [08:04:05.504] early stopping at 20 iteration 
+## INFO  [11:57:41.845] early stopping at 20 iteration 
+## INFO  [11:57:41.894] early stopping at 20 iteration 
 ##   w1 w2   w3   w4  w5 w6   w7  w8 w9  w10
 ## 1  0  0 0.05 0.05 0.1  0 0.05 0.7  0 0.05
 ```
@@ -2846,7 +2846,6 @@ rec_eng_notext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   update_role(starts_with("w_"), essays, new_role = "discarded") %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -2862,7 +2861,6 @@ rec_eng_textfeat &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -2883,7 +2881,6 @@ rec_eng_fulltext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -2899,7 +2896,6 @@ rec_eng_hashtext &lt;- recipe(pets ~ ., data = ok_tr_eng3) %&gt;%
   step_log(income, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
   step_zv(all_numeric()) %&gt;%
-  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %&gt;%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %&gt;%
@@ -3013,9 +3009,6 @@ rec_eng_commonsense &lt;- recipe(pets ~ ., data = ok_tr_eng4) %&gt;%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %&gt;%
   step_meanimpute(income) %&gt;%
-  # step_zv(all_numeric()) %&gt;%
-  # step_normalize(all_numeric(), -has_role("discarded")) %&gt;%
-  # step_other(ends_with("yesno"), other = "other", threshold = 0.1) %&gt;%
   step_other(
     all_nominal(), -has_role("discarded"), -all_outcomes(),
     other = "all_else", threshold = 0.1) %&gt;%
@@ -3704,6 +3697,8 @@ main_data %&gt;% select(starts_with("ethnicity")) %&gt;% head()
 ## 6               1               0                  0             0
 ```
 
+---
+
 What are those people with all `ethnicity` columns with zero?
 
 
@@ -3769,8 +3764,7 @@ main_data %&gt;% select(starts_with("location")) %&gt;% head()
 
 
 ```r
-main_data %&gt;%
-  group_by(ethnicity_other, location_other) %&gt;%
+main_data %&gt;% group_by(ethnicity_other, location_other) %&gt;%
   summarise(pct_cats = mean(pets == "cats"), n = n()) %&gt;% ungroup() %&gt;%
   mutate_at(vars("ethnicity_other", "location_other"), as.factor) %&gt;%
   ggplot(aes(ethnicity_other, pct_cats, color = location_other)) +

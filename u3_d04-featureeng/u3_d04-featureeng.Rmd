@@ -2131,7 +2131,6 @@ rec_eng_notext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   update_role(starts_with("w_"), essays, new_role = "discarded") %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
-  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2147,7 +2146,6 @@ rec_eng_textfeat <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2167,7 +2165,6 @@ rec_eng_fulltext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, starts_with("t_"), -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2183,7 +2180,6 @@ rec_eng_hashtext <- recipe(pets ~ ., data = ok_tr_eng3) %>%
   step_log(income, offset = 1) %>%
   step_meanimpute(income) %>%
   step_zv(all_numeric()) %>%
-  # step_normalize(all_numeric(), -has_role("discarded")) %>%
   step_other(all_nominal(), -has_role("discarded"), other = "other1") %>%
   step_novel(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
   step_modeimpute(all_nominal(), -has_role("discarded"), -all_outcomes()) %>%
@@ -2359,9 +2355,6 @@ rec_eng_commonsense <- recipe(pets ~ ., data = ok_tr_eng4) %>%
   step_log(income, starts_with("len_"), starts_with("t_"),
            -t_essays_sent_bing, offset = 1) %>%
   step_meanimpute(income) %>%
-  # step_zv(all_numeric()) %>%
-  # step_normalize(all_numeric(), -has_role("discarded")) %>%
-  # step_other(ends_with("yesno"), other = "other", threshold = 0.1) %>%
   step_other(
     all_nominal(), -has_role("discarded"), -all_outcomes(),
     other = "all_else", threshold = 0.1) %>%
@@ -2834,6 +2827,8 @@ ok_tr_combined %>% count(ethnicity, sort = TRUE)
 main_data %>% select(starts_with("ethnicity")) %>% head()
 ```
 
+---
+
 What are those people with all `ethnicity` columns with zero?
 
 ```{r}
@@ -2856,8 +2851,7 @@ main_data %>% select(starts_with("location")) %>% head()
 ---
 
 ```{r Ethnicity-Interaction, out.width="90%", fig.asp=0.5}
-main_data %>%
-  group_by(ethnicity_other, location_other) %>%
+main_data %>% group_by(ethnicity_other, location_other) %>%
   summarise(pct_cats = mean(pets == "cats"), n = n()) %>% ungroup() %>%
   mutate_at(vars("ethnicity_other", "location_other"), as.factor) %>%
   ggplot(aes(ethnicity_other, pct_cats, color = location_other)) +
