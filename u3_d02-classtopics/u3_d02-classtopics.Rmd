@@ -55,9 +55,8 @@ class: section-slide
 
 Let's tackle just a few issues:
 
-- Imbalanced Classes
-- Multiple Classes
 - Not enough labelled data and data labeling is expensive
+- Imbalanced Classes
 
 ---
 
@@ -128,7 +127,7 @@ time-consuming, or expensive to obtain.
 ### Active Learning Scenarios
 
 1. **Membership Query Synthesis**: You get to choose which (maybe theoretical) points you'd want $y$ labelled for.
-2. **Stream-Based Selective Sampling**: You get a 1 point at a time and decide which ones you'd like to query and which to discard.
+2. **Stream-Based Selective Sampling**: You get 1 point at a time and decide which ones you'd like to query and which to discard.
 3. **Pool-Based Sampling**: You have a large collecetion of unlabelled points at your disposal, you need to send the "best ones" for labelling
 
 <img src="images/active_learning_scenarios.png" style="width: 70%" />
@@ -151,7 +150,7 @@ time-consuming, or expensive to obtain.
 
 Let $\hat{y}_i$ be the predicted classes with $i$th highest score (probability), for observations $x$ under some model $\theta$.
 
-So $\hat{y}_1 = \arg\max{P_{\theta}(y|x)}$ are the actual predicted classes, $\hat{y}_2$ is the second choices, etc.
+So $\hat{y}_1 = \arg\max{P_{\theta}(y|x)}$ are the actual predicted classes, $\hat{y}_2$ are the second choices, etc.
 
 * Least Confidence: Choose those observations for which $P_{\theta}(\hat{y}_1|x)$ is smallest:
 
@@ -411,7 +410,7 @@ sptfy_tr_large_with_unc %>%
 
 ---
 
-So far it's only interesting. Will sending the observations our model is most curious about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
+So far it's only interesting. Will sending the observations our model is most curious about to the "oracle" prove to increase test accuracy better than random observations? See full code in slides Rmd files.
 
 ```{r, echo=FALSE}
 active_learning_uncertainty_iteration <- function(i, unc_metric, n, debug = TRUE) {
@@ -490,7 +489,7 @@ simul_uncertainty %>%
   ggplot(aes(n, acc, color = unc_metric)) +
   geom_point() +
   geom_line() +
-  labs(x = "No. of added observations", y = "Accuracy", color = "uncertainty") +
+  labs(x = "No. of added observations", y = "Test Accuracy", color = "uncertainty") +
   scale_x_continuous(breaks = n_seq) +
   scale_y_continuous(breaks = seq(0.3, 0.5, 0.02),
                      labels = percent_format(accuracy = 1)) +
@@ -558,7 +557,7 @@ sptfy_tr_large_with_qbc %>%
 
 ---
 
-Will sending the observations our commitee is in most disagreement about to the "oracle" prove to increase accuracy better than random observations? See full code in slides Rmd files.
+Will sending the observations our commitee is in most disagreement about to the "oracle" prove to increase test accuracy better than random observations? See full code in slides Rmd files.
 
 ```{r, echo=FALSE}
 active_learning_qbc_iteration <- function(i, qbc_metric, n, debug = TRUE) {
@@ -643,7 +642,7 @@ simul_qbc %>%
   ggplot(aes(n, acc, color = qbc_metric)) +
   geom_point() +
   geom_line() +
-  labs(x = "No. of added observations", y = "Accuracy", color = "QBC") +
+  labs(x = "No. of added observations", y = "Test Accuracy", color = "QBC") +
   scale_x_continuous(breaks = n_seq) +
   scale_y_continuous(breaks = seq(0.3, 0.50, 0.02),
                      labels = percent_format(accuracy = 1)) +
@@ -670,7 +669,7 @@ class: section-slide
 ### Typical examples of Imbalanced Classes scenarios
 
 - Rare diseases: [this](https://www.kaggle.com/c/hivprogression) dataset contains genetic data for 1,000 HIV patients, 206 out of 1,000 patients improved after 16 weeks of therapy
-- Conversion/Sell/CTR rates: [this]() dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
+- Conversion/Sell/CTR rates: [this](https://www.kaggle.com/c/avazu-ctr-prediction) dataset contains 10 days of Click-Through-Rate data for Avazu mobile ads, ~6.8M clicked out of ~40.4M
 - Fraud detection: [this](https://www.kaggle.com/mlg-ulb/creditcardfraud) dataset contains credit card transactions for a major European CC, 492 frauds out of 284,807 transactions
 
 ---
@@ -780,7 +779,7 @@ dim(ok_train2)
 
 Use the first training set to choose a GBT model to maximize AUC with 5-fold CV:
 
-```{r}
+```{r, warning=FALSE}
 library(tune)
 
 mod_gbt_spec <- boost_tree(mode = "classification",
@@ -926,7 +925,7 @@ report_accuracy_and_auc(true_class, pred_gbt, cutoff = 0.17)
 
 ### Cost aware training: Case weights
 
-For example, in `glm()` you can simply specify a `weights`:
+For example, in `glm()` you can simply specify a `weights` param:
 
 > when the elements of weights are positive integers *w_i*, each response *y_i* is the mean of *w_i* unit-weight observations
 
@@ -1046,7 +1045,7 @@ report_accuracy_and_auc(true_class, pred_nb)
 
 ### Down Sampling
 
-Yes, down sampling the majority class, usually to make it the same amount as the minority class (but you can tune this parameter as any other.
+Yes, down sampling the majority class, usually to make it the same amount as the minority class (but you can tune this parameter as any other).
 
 You'd be surprised.
 
@@ -1117,7 +1116,7 @@ report_accuracy_and_auc(true_class, pred_gbt)
 
 [Chawla et. al. (2002)](https://arxiv.org/pdf/1106.1813.pdf) developed SMOTE (Synthetic Minority Over-sampling Technique) which is a up sampling technique.
 
-The authors claim that a hybrid combination of SMOTE and regular down sampling works best, that's why SMOTE is sometimes refered as "hybrid" sampling algo itself
+The authors claim that a hybrid combination of SMOTE and regular down sampling works best, that's why SMOTE is sometimes referred to as a "hybrid" sampling algo itself.
 
 But the up sampling does not simply replicates the minority class...
 
@@ -1216,7 +1215,7 @@ report_accuracy_and_auc(true_class, pred_gbt)
 
 - The optimal choice would be for a classification model to output a *score*, rather than a class, and have the client's system interpret that score for different applications
 
-- However, if a class output is required, consider output a $k+1$ class: "I don't know"
+- However, if a class output is required, consider outputting a $k+1$ class: "I don't know"
 
 - In the case of classifying cats vs. dogs people - it makes sense!
 
