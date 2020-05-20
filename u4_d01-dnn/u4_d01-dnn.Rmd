@@ -881,6 +881,6 @@ model.fit(X, y_categorical, batch_size=100, epochs=50,
 
 class: section-slide
 
-# Deep Neural Networks
+# Keras (The Beloved)
 
 ---
