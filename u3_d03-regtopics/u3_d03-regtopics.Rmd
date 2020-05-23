@@ -45,8 +45,8 @@ library(tidyverse)
 
 class: section-slide
 
-# MARS
-#### (Multivariate Adaptive Regression Splines)
+#  Introduction to Splines
+
 ---
 
 ### What's the No. 1 complaint about LR?
@@ -96,6 +96,13 @@ lines(x_wide, y_wide, col = "red")
 ---
 
 <img src="images/covid19_whitehouse_bi.png" style="width: 100%" />
+
+---
+
+class: section-slide
+
+# MARS
+#### (Multivariate Adaptive Regression Splines)
 
 ---
 
@@ -234,7 +241,7 @@ Then the growing of trees algorithm is really...
 
 ---
 
-### Recursive Partitioning as a For loop
+### Recursive Partitioning as a Nested For Loop
 
 <img src="images/cart_algo1.png" style="width: 100%" />
 
@@ -345,7 +352,7 @@ Cons:
 
 class: section-slide
 
-# Intro to Splines
+# B-Splines
 
 ---
 
@@ -390,6 +397,12 @@ head(lm_manual$fit)
 head(lm_bs$fit)
 ```
 
+---
+
+```{r}
+head(mm_bs, 5)
+```
+
 The `splines::bs()` will parametrize `x` slightly differently:
 
 ```{r}
@@ -398,7 +411,8 @@ mm_bs_manual <- as.matrix(
         (x - 0) / (3.1 - 0) * ifelse(x > 0 & x <= 3.1, 1, 0) +
           (8 - x) / (8 - 3.1) * ifelse(x > 3.1 & x <= 8, 1, 0),
         (x - 3.1) / (8 - 3.1) * ifelse(x > 3.1 & x <= 8, 1, 0)))
-max(abs(mm_bs - mm_bs_manual))
+
+head(mm_bs_manual, 5)
 ```
 
 ---
@@ -522,7 +536,18 @@ In general, `bs()` fits B-splines, which is a special paramterization of the sim
   - `df = 4` would produce `degree = 3` and one knot, the median
   - `df = 6` would produce `degree = 3` and 3 knots, Q1, Q2 and Q3
 - There are other splines: Natural splines (see `splines::ns()`), Penalized splines
-- For retrieving the regression formula for a `lm()` object fitted on `bs()` see the [SplinesUtils](https://github.com/ZheyuanLi/SplinesUtils) package and [this](https://stackoverflow.com/questions/44739192/export-fitted-regression-splines-constructed-by-bs-or-ns-as-piecewise-poly) SO answer.
+- For retrieving the regression formula for a `lm()` object fitted on `bs()` see the [SplinesUtils](https://github.com/ZheyuanLi/SplinesUtils) package and [this](https://stackoverflow.com/questions/44739192/export-fitted-regression-splines-constructed-by-bs-or-ns-as-piecewise-poly) SO answer
+- What is it good for, really? See next week.
+
+---
+
+### Few Excellent Books
+
+.pull-left[
+
+<img src = "images/gam_r_cover.jpg" style="width: 85%">
+
+]
 
 ---
 

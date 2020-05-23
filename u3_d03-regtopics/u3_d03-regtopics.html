@@ -51,8 +51,8 @@ layout: true
 
 class: section-slide
 
-# MARS
-#### (Multivariate Adaptive Regression Splines)
+#  Introduction to Splines
+
 ---
 
 ### What's the No. 1 complaint about LR?
@@ -82,6 +82,13 @@ class: section-slide
 ---
 
 &lt;img src="images/covid19_whitehouse_bi.png" style="width: 100%" /&gt;
+
+---
+
+class: section-slide
+
+# MARS
+#### (Multivariate Adaptive Regression Splines)
 
 ---
 
@@ -240,7 +247,7 @@ Then the growing of trees algorithm is really...
 
 ---
 
-### Recursive Partitioning as a For loop
+### Recursive Partitioning as a Nested For Loop
 
 &lt;img src="images/cart_algo1.png" style="width: 100%" /&gt;
 
@@ -392,7 +399,7 @@ Cons:
 
 class: section-slide
 
-# Intro to Splines
+# B-Splines
 
 ---
 
@@ -489,6 +496,22 @@ head(lm_bs$fit)
 ## 0.8511751 1.6915318 2.5318884 3.3722450 4.2126016 5.0529582
 ```
 
+---
+
+
+```r
+head(mm_bs, 5)
+```
+
+```
+##   intercept      base1 base2
+## 1         1 0.00000000     0
+## 2         1 0.03225806     0
+## 3         1 0.06451613     0
+## 4         1 0.09677419     0
+## 5         1 0.12903226     0
+```
+
 The `splines::bs()` will parametrize `x` slightly differently:
 
 
@@ -498,11 +521,17 @@ mm_bs_manual &lt;- as.matrix(
         (x - 0) / (3.1 - 0) * ifelse(x &gt; 0 &amp; x &lt;= 3.1, 1, 0) +
           (8 - x) / (8 - 3.1) * ifelse(x &gt; 3.1 &amp; x &lt;= 8, 1, 0),
         (x - 3.1) / (8 - 3.1) * ifelse(x &gt; 3.1 &amp; x &lt;= 8, 1, 0)))
-max(abs(mm_bs - mm_bs_manual))
+
+head(mm_bs_manual, 5)
 ```
 
 ```
-## [1] 2.220446e-16
+##      [,1]       [,2] [,3]
+## [1,]    1 0.00000000    0
+## [2,]    1 0.03225806    0
+## [3,]    1 0.06451613    0
+## [4,]    1 0.09677419    0
+## [5,]    1 0.12903226    0
 ```
 
 ---
@@ -687,7 +716,18 @@ In general, `bs()` fits B-splines, which is a special paramterization of the sim
   - `df = 4` would produce `degree = 3` and one knot, the median
   - `df = 6` would produce `degree = 3` and 3 knots, Q1, Q2 and Q3
 - There are other splines: Natural splines (see `splines::ns()`), Penalized splines
-- For retrieving the regression formula for a `lm()` object fitted on `bs()` see the [SplinesUtils](https://github.com/ZheyuanLi/SplinesUtils) package and [this](https://stackoverflow.com/questions/44739192/export-fitted-regression-splines-constructed-by-bs-or-ns-as-piecewise-poly) SO answer.
+- For retrieving the regression formula for a `lm()` object fitted on `bs()` see the [SplinesUtils](https://github.com/ZheyuanLi/SplinesUtils) package and [this](https://stackoverflow.com/questions/44739192/export-fitted-regression-splines-constructed-by-bs-or-ns-as-piecewise-poly) SO answer
+- What is it good for, really? See next week.
+
+---
+
+### Few Excellent Books
+
+.pull-left[
+
+&lt;img src = "images/gam_r_cover.jpg" style="width: 85%"&gt;
+
+]
 
 ---
 
