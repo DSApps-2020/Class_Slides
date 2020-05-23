@@ -95,7 +95,7 @@ lines(x_wide, y_wide, col = "red")
 
 ---
 
-<img src="images/covid19_whitehouse_bi.png" style="width: 80%" />
+<img src="images/covid19_whitehouse_bi.png" style="width: 100%" />
 
 ---
 
@@ -194,6 +194,8 @@ lines(x2, rep(mean(y2), length(x2)), col = "red")
 
 Let $B_m(X)= \prod_{k=1}^{K_m}I(X_{v(km)} \in R_{km}) = \prod_{k=1}^{K_m}I(\pm X_{v(km)} \mp t_{km} \ge 0)$
 
+Where $m$ is the branch (leaf) number, $K_m$ is the number of splits that gave rise to $B_m$, $X_{v(km)}$ is the variable at split $k$ at branch $m$, and $t_{km}$ is the split value.
+
 Following [Friedman (1991)](https://projecteuclid.org/euclid.aos/1176347963), let:
 
 $$H(z) =
@@ -202,17 +204,37 @@ $$H(z) =
    0 & \mbox{otherwise}
  \end{cases}$$
 
+(a.k.a a *step* function)
+
 So: $B_m(X)= \prod_{k=1}^{K_m}H[s_{km}(X_{v(km)} - t_{km})]$ where $s_{km}=\pm 1$
-
-And: $\hat{y} = g(X) = \sum_m \beta_mB_m(X)$
-
-And: $LOF(g)$ is the Lack of Fit function for $g(X)$, typically the $SSE$ critetion
-
-And: Switch all our $\beta$s to $\alpha$s
 
 ---
 
+So, Each branch $m$ of the tree is just a multiplication of step functions!
+
+With $\beta_m$ at each leaf.
+
+And how does one decide on the next split?
+
+"For all branches currently in the model, for all variables, for all values, find the $(m^*, v^*, t^*)$ combination which decreases most the SSE criterion, if *from this stage* we binary split branch $m^*$ by variable $X_{v^*}$ on $t^*$"
+
+In step function jargon:
+
+"For all branches currently in the model, for all variables, for all values, find the $(m^*, v^*, t^*)$ combination which decreases most the SSE criterion, if $B_{m^*}$ will be replaced by its product with the step function $H[+(X_{v^*} - t^*)]$ and with the addition of a new branch which is the product of $B_{m^*}$ and the reflected step function $H[-(X_{v^*} - t^*)]$"
+
+---
+
+And, $\hat{y} = g(X) = \sum_m \beta_mB_m(X)$
+
+And, $LOF(g)$ is the Lack of Fit function for $g(X)$, typically the $SSE$ critetion
+
+And, Switch all our $\beta$s to $\alpha$s
+
 Then the growing of trees algorithm is really...
+
+---
+
+### Recursive Partitioning as a For loop
 
 <img src="images/cart_algo1.png" style="width: 100%" />
 
@@ -327,7 +349,7 @@ class: section-slide
 
 ---
 
-We've seen that if we know the knot we could fit MARS via `lm()`
+We've seen that if we know the knot we can fit MARS via `lm()`
 
 ```{r, echo=FALSE}
 set.seed(42)
@@ -473,7 +495,7 @@ ncol(bs(x, degree = 3, knots = c(3.1, 5)))
 
 ---
 
-But the matrix itself is slightly different than we would have expected.
+But the matrix itself is slightly different than what we would have expected.
 
 ```{r}
 head(mm_bs2)
