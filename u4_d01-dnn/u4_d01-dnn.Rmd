@@ -469,7 +469,7 @@ def lr_nn(X, y, batch_size, epochs):
   n = X.shape[0]
   steps = int(n / batch_size)
   for i in range(epochs):
-    print('epoch %d/%d:' % (i, epochs))
+    print('epoch %d/%d:' % (i + 1, epochs))
     permute = np.random.permutation(n)
     X_perm = X[permute, :]
     y_perm = y[permute]
@@ -497,10 +497,10 @@ Binary Logistic Regression, is in fact a single neuron firing a sigmoid probabil
 
 ### LR as NN in `Keras`
 
-```{python, eval=FALSE}
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.optimizers import SGD
+```{python}
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import SGD
 
 model = Sequential()
 model.add(Dense(1, input_shape=(X.shape[1], ),
@@ -508,53 +508,27 @@ model.add(Dense(1, input_shape=(X.shape[1], ),
 sgd = SGD(lr=0.1)
 model.compile(loss='binary_crossentropy', optimizer=sgd)
 model.fit(X, y, batch_size=100, epochs=50)
-
-# Once tensorflow will have a build for python 3.8...
-
-# Epoch 1/50
-# 1000/1000 [==============================] - 0s 43us/step - loss: 1.0820
-# Epoch 2/50
-# 1000/1000 [==============================] - 0s 9us/step - loss: 0.8610
-# Epoch 3/50
-# 1000/1000 [==============================] - 0s 10us/step - loss: 0.7155
-# Epoch 4/50
-# 1000/1000 [==============================] - 0s 12us/step - loss: 0.6256
-# Epoch 5/50
-# 1000/1000 [==============================] - 0s 9us/step - loss: 0.5699
-# Epoch 6/50
-# 1000/1000 [==============================] - 0s 11us/step - loss: 0.5338
-# Epoch 7/50
-# 1000/1000 [==============================] - 0s 10us/step - loss: 0.5091
-# Epoch 8/50
-
 ```
 
 ---
 
 See that it makes sense:
 
-```{python, eval=FALSE}
+```{python}
 beta_hat = model.get_weights() # Note Keras gives a list of weights!
+beta_hat
+```
 
-# [array([[1.0378177],
-#        [1.9981958]], dtype=float32)]
 
-pred = model.predict_proba(X)
+```{python}
+pred = model.predict(X)
+pred[:3]
+```
 
-# array([[0.06305372],
-#        [0.15950003],
-#        [0.08662305],
-#        [0.1727513 ],
-#        [0.28716186]]...
 
-# See that it makes sense
+```{python}
 pred_manual = 1/(1+np.exp(-np.dot(X, beta_hat[0])))
-
-# array([[0.06305372],
-#        [0.15950003],
-#        [0.08662305],
-#        [0.1727513 ],
-#        [0.28716186]]...
+pred_manual[:3]
 ```
 
 ---
@@ -599,8 +573,8 @@ So the architecture for 2 classes would be:
 
 And in `Keras` we would do:
 
-```{python, eval=FALSE}
-from keras.utils import to_categorical
+```{python}
+from tensorflow.keras.utils import to_categorical
 
 y_categorical = to_categorical(y)
 model = Sequential()
@@ -609,53 +583,30 @@ model.add(Dense(2, input_shape=(X.shape[1], ),
 sgd = SGD(lr=0.1)
 model.compile(loss='categorical_crossentropy', optimizer=sgd)
 model.fit(X, y_categorical, batch_size=100, epochs=50)
-
-# Epoch 1/50
-# 1000/1000 [==============================] - 0s 34us/step - loss: 0.5485
-# Epoch 2/50
-# 1000/1000 [==============================] - 0s 9us/step - loss: 0.4942
-# Epoch 3/50
-# 1000/1000 [==============================] - 0s 12us/step - loss: 0.4643
-# Epoch 4/50
-# 1000/1000 [==============================] - 0s 10us/step - loss: 0.4476
-# Epoch 5/50
-# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4381
-# Epoch 6/50
-# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4326
-# Epoch 7/50
-# 1000/1000 [==============================] - 0s 10us/step - loss: 0.4293
-# Epoch 8/50
-# 1000/1000 [==============================] - 0s 13us/step - loss: 0.4273
 ```
 
 ---
 
 See that it makes sense:
 
-```{python, eval=FALSE}
+```{python}
 W = model.get_weights()
+W
+```
 
-# [array([[-0.14954337,  0.9368226 ],
-#        [-1.6922047 ,  0.40227336]], dtype=float32)]
 
-pred = model.predict_proba(X)
+```{python}
+pred = model.predict(X)
+pred[:3]
+```
 
-# array([[0.9441268 , 0.05587323],
-#        [0.8506812 , 0.14931884],
-#        [0.9219005 , 0.07809943],
-#        [0.83749175, 0.16250822],
-#        [0.7218378 , 0.27816215]...
 
+```{python}
 Z = np.dot(X, W[0])
 Z_exp = np.exp(Z)
 Z_exp_sum = Z_exp.sum(axis=1)[:, None]
 pred_manual = Z_exp / Z_exp_sum
-
-# array([[0.9441268 , 0.05587323],
-#        [0.8506812 , 0.14931884],
-#        [0.9219005 , 0.07809943],
-#        [0.83749175, 0.16250822],
-#        [0.7218378 , 0.27816215]...
+pred_manual[:3]
 ```
 
 ---
@@ -686,25 +637,29 @@ model.add(Dense(2, activation='softmax'))
 sgd = SGD(lr=0.1)
 model.compile(loss='categorical_crossentropy', optimizer=sgd)
 model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
-
 model.summary()
-# Model: "sequential_1"
-# _________________________________________________________________
-# Layer (type)                 Output Shape              Param #
-# =================================================================
-# dense_1 (Dense)              (None, 4)                 12
-# _________________________________________________________________
-# dense_2 (Dense)              (None, 2)                 10
-# =================================================================
-# Total params: 22
-# Trainable params: 22
-# Non-trainable params: 0
-# _________________________________________________________________
 ```
 
+```{python, echo=FALSE}
+model = Sequential()
+model.add(Dense(4, input_shape=(X.shape[1], ), activation='sigmoid'))
+model.add(Dense(2, activation='softmax'))
+sgd = SGD(lr=0.1)
+model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
+model.summary()
+```
 ---
 
 See that it makes sense:
+
+```{python, echo=FALSE}
+W1, b1, W2, b2 = model.get_weights()
+W1 = np.vstack([b1, W1])
+W2 = np.vstack([b2, W2])
+Xb = np.hstack((np.ones(n).reshape((n, 1)), X))
+pred = model.predict(X)
+```
 
 ```{python, eval=FALSE}
 W1, b1, W2, b2 = model.get_weights()
@@ -724,29 +679,25 @@ W2.shape # (5, 2)
 Xb = np.hstack((np.ones(n).reshape((n, 1)), X))
 Xb.shape # (1000, 3)
 
-pred = model.predict_proba(X)
+pred = model.predict(X)
 
-# array([[0.90093774, 0.09906219],
-#        [0.8220466 , 0.17795345],
-#        [0.8905323 , 0.10946769],
-#        [0.8115638 , 0.18843625],
-#        [0.7119013 , 0.2880987 ]]...
+pred[:3]
+```
+
+```{python, echo=FALSE}
+pred[:3]
 ```
 
 ---
 
-```{python, eval=FALSE}
-Z = 1/(1+np.exp(-np.dot(Xb, W1)))
+```{python}
+Z = 1/(1 + np.exp(-np.dot(Xb, W1)))
 Zb = np.hstack((np.ones(n).reshape((n, 1)), Z))
 Z2_exp = np.exp(np.dot(Zb, W2))
 Z2_exp_sum = Z2_exp.sum(axis=1)[:, None]
 pred_manual = Z2_exp / Z2_exp_sum
 
-# array([[0.90093774, 0.09906219],
-#        [0.8220466 , 0.17795345],
-#        [0.8905323 , 0.10946769],
-#        [0.8115638 , 0.18843625],
-#        [0.7119013 , 0.2880987 ]]...
+pred_manual[:3]
 ```
 
 ---
@@ -814,7 +765,7 @@ Where $P(W)$ would typically be:
 L1/L2 Regularization in `Keras`:
 
 ```{python, eval=FALSE}
-from keras import regularizers
+from tensorflow.keras import regularizers
 
 model = Sequential()
 model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu',
@@ -846,7 +797,7 @@ During each epoch, individual neurons are either "dropped out" of the net with p
 Dropout in `Keras` (the `rate` parameter is the "fraction of the input units to drop"):
 
 ```{python, eval=FALSE}
-from keras.layers import Dropout
+from tensorflow.keras.layers import Dropout
 
 model = Sequential()
 model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu'))
@@ -864,7 +815,7 @@ model.fit(X, y_categorical, batch_size=100, epochs=50, verbose=0)
 Since NN are trained iteratively and are particularly useful on large datasets it is common to monitor the model performance using an additional validation set, or some of the training set. If you see no improvement in the model's performance (e.g. decrease in loss) for a few epochs - stop training.
 
 ```{python, eval=FALSE}
-from keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping
 
 model = Sequential()
 model.add(Dense(4, input_shape=(X.shape[1], ), activation='relu'))
