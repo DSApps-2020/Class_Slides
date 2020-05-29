@@ -4,7 +4,7 @@
     <title>Feature Engineering</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-05-16" />
+    <meta name="date" content="2020-05-29" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-05-16
+### 2020-05-29
 
 ---
 
@@ -416,7 +416,7 @@ Strategy: Divide training data into 6 samples for 6 main decision/steps/tunings:
 5. Cutoff choice
 
 .insight[
-💡 We assume these decisions are additive or independent of each other. Does it have to be and what can we do if we suspect not? (Remember we are a Statisticians!)
+💡 We assume these decisions are additive or independent of each other. Does it have to be and what can we do if we suspect not? (Remember we are Statisticians!)
 ]
 
 ---
@@ -592,7 +592,7 @@ ok_tr_missing %&gt;%
 
 ---
 
-Girl, you don't always need a plot...
+You don't always need a plot...
 
 
 ```r
@@ -2293,7 +2293,7 @@ It's not a good idea because
 - The distribution isn't even
 
 But there are advantages too!
-- I *did* reduce the dimensionality from 100 to 6 dummy variables
+- I *did* reduce the dimensionality from 70 to 6 dummy variables
 - Fast
 - Generalizes well: any new `location` can be mapped this way
 - Scales: I can do this for millions of `location`s, no dictionary needed to store in memory
@@ -2578,7 +2578,7 @@ rec_eng_catdog &lt;- recipe(pets ~ ., data = ok_tr_eng2) %&gt;%
 - to stem or not to stem?
   - "plays", "playing", ["playa"](https://www.urbandictionary.com/define.php?term=Playa)
 - sentiment features
-  - not just no. of "hate" vs. love
+  - not just no. of "hate" vs. "love"
   - also no. of "you" and "I"
 - stop words or not to stop words?
 - TF-IDF or not to TF-IDF
@@ -2623,8 +2623,8 @@ print(textfeatures::word_dims(
 ```
 
 ```
-## INFO  [11:57:41.845] early stopping at 20 iteration 
-## INFO  [11:57:41.894] early stopping at 20 iteration 
+## INFO  [18:26:47.235] early stopping at 20 iteration 
+## INFO  [18:26:47.294] early stopping at 20 iteration 
 ##   w1 w2   w3   w4  w5 w6   w7  w8 w9  w10
 ## 1  0  0 0.05 0.05 0.1  0 0.05 0.7  0 0.05
 ```
@@ -2681,7 +2681,7 @@ We'll take [Kuhn &amp; Johnson (2019)](http://www.feat.engineering/index.html) a
 1. Filter 1-gram tokens (words) with at least X occurrences
 2. Calculate the odds ratio `\(\frac{P(w|cats)}{1- P(w|cats)} / \frac{P(w|dogs)}{1- P(w|dogs)}\)` where `\(P(w|cats)\)` is the % of cats people who used the word `\(w\)` at least once in all essays
 3. Calculate a p-value with a FDR correction
-4. Choose words with OR of at least |2| and FDR value of maximum `\(10^{-5}\)`
+4. Choose words with ~~OR of at least |2| and~~ FDR value of maximum `\(10^{-4}\)`
 
 Then use resampling to see if these have any effect on AUC.
 
@@ -2937,7 +2937,7 @@ cv_res_eng_meds &lt;- cv_res_eng %&gt;%
 
 ---
 
-### Haven't forgot about our other categorical variables
+#### Haven't forgot about our other categorical variables
 
 Let's use some common sense (see code!).
 
@@ -3359,7 +3359,8 @@ recipe(income ~ age, ok_tr_eng) %&gt;%
 - increasing the computational time required for training a model
 - decreasing the predictive performance
 - complicating the predictor importance calculation.
-By including any potential predictor, we end up with a sub-optimal model.
+
+&gt; By including any potential predictor, we end up with a sub-optimal model.
 
 [Kuhn &amp; Johnson (2019)](http://www.feat.engineering/index.html)
 
@@ -4030,7 +4031,7 @@ class: section-slide
 
 ---
 
-### Everything is a Tunable
+### Everything is Tunable
 
 .insight[
 💡 I can think of at least 5 semi-random quantitative decisions so far, can you?
