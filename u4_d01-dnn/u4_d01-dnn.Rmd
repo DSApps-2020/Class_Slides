@@ -43,6 +43,33 @@ class: title-slide
 library(tidyverse)
 ```
 
+```{python, echo=FALSE, message=FALSE, warning=FALSE}
+# Seed value (can actually be different for each attribution step)
+seed_value= 0
+
+# 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+
+# 2. Set `python` built-in pseudo-random generator at a fixed value
+import random
+random.seed(seed_value)
+
+# 3. Set `numpy` pseudo-random generator at a fixed value
+import numpy as np
+np.random.seed(seed_value)
+
+# 4. Set `tensorflow` pseudo-random generator at a fixed value
+import tensorflow as tf
+tf.random.set_seed(seed_value)
+
+# 5. Configure a new global `tensorflow` session
+# from keras import backend as K
+# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+# K.set_session(sess)
+```
+
 class: section-slide
 
 # Logistic Regression as *we* know it
@@ -794,6 +821,8 @@ During each epoch, individual neurons are either "dropped out" of the net with p
 
 ---
 
+Why does it work? You could look at Dropout as an ensemble of neural networks! Each neuron can either count or not at each training step, so after 1K training steps you have virtually trained 1K slightly different models out of $2^N$ possible (where $N$ is no. of neurons).
+
 Dropout in `Keras` (the `rate` parameter is the "fraction of the input units to drop"):
 
 ```{python, eval=FALSE}
@@ -830,8 +859,297 @@ model.fit(X, y_categorical, batch_size=100, epochs=50,
 
 ---
 
+### Batch Normalization
+
+---
+
 class: section-slide
 
 # Keras (The Beloved)
 
 ---
+
+### Keras is an API
+
+- [Keras](https://keras.io/) is a high-level API "designed for human beings, not machines" developed by [François Chollet](https://twitter.com/fchollet)
+- It bridges to some popular DL backends such as [Tensorflow](https://www.tensorflow.org/), [Theano](http://deeplearning.net/software/theano/), [Apache MXNet](https://mxnet.apache.org/)
+- But it is best integrated with Tensorflow, by Google. In fact, the formal docs of Keras now say:
+
+```{python, eval=FALSE}
+import tensorflow as tf
+from tensorflow import keras
+```
+
+- "ease of use does not come at the cost of reduced flexibility"
+- Seamless integration with the Pandasverse
+- Keras itself has a surprisingly great API in R, by [RStudio](https://keras.rstudio.com/)
+- You should know the competition by Facebook: [PyTorch](https://pytorch.org/)
+
+---
+
+### Malaria!
+
+The [Malaria](https://lhncbc.nlm.nih.gov/publication/pub9932) dataset contains over 27K (processed and segmented) cell images with equal instances of parasitized and uninfected cells, from hundreds of patients in Bangaladesh. The images were taken by a mobile application that runs on a standard Android smartphone attached to a conventional light microscope. The goal is "reduce the burden for microscopists in resource-constrained regions and improve diagnostic accuracy".
+
+This dataset is part of the [`tensorflow_dataset`](https://www.tensorflow.org/datasets) library which gives you easy access to dozens of varied datasets.
+
+Here I will take only ~10% of the images as a Numpy array and resize them all to 100x100 pixels, for the sake of speed.
+
+---
+
+```{python Malaria, out.width="65%"}
+import tensorflow_datasets as tfds
+from skimage.transform import resize
+
+malaria, info = tfds.load('malaria', split='train', with_info=True)
+fig = tfds.show_examples(malaria, info)
+```
+
+---
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+images = []
+labels = []
+for example in tfds.as_numpy(malaria):
+  images.append(resize(example['image'], (100, 100)))
+  labels.append(example['label'])
+  if len(images) == 2500:
+    break
+  
+X = np.array(images)
+y = np.array(labels)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+
+X_train = X_train.flatten().reshape((X_train.shape[0], -1))
+X_test = X_test.flatten().reshape((X_test.shape[0], -1))
+
+print(X_train.shape)
+print(X_test.shape)
+```
+
+---
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(penalty='none', max_iter=100, random_state=42)
+lr.fit(X_train, y_train)
+
+lr.score(X_test, y_test)
+```
+
+---
+
+#### The `Sequential()` API
+
+```{python}
+from tensorflow import keras
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+
+model = Sequential()
+model.add(Dense(300, input_shape=(30000,), activation='relu'))
+model.add(Dense(100, activation='relu'))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+```
+
+Alternatively we could:
+
+```{python, echo=FALSE}
+keras.backend.clear_session()
+```
+
+```{python}
+model = Sequential([
+  Dense(300, input_shape=(30000,), activation='relu'),
+  Dense(100, activation='relu'),
+  Dense(50, activation='relu'),
+  Dense(1, activation='sigmoid')
+])
+```
+
+---
+
+Make sure you get these numbers:
+
+```{python}
+model.summary()
+```
+
+.insight[
+`r emo::ji("bulb")` Are you at all worried?
+]
+---
+
+Access layers and their weights:
+
+```{python}
+model.layers
+```
+
+```{python}
+model.layers[0].name
+```
+
+```{python}
+W1, b1 = model.get_layer('dense').get_weights()
+
+print(W1.shape)
+W1
+```
+
+---
+
+Compiling your model:
+
+```{python}
+model.compile(loss="binary_crossentropy",
+  optimizer="adam",
+  metrics=["accuracy"])
+```
+
+For more initialization schemes, losses, metrics and optimizers:
+- https://keras.io/api/layers/initializers/
+- https://keras.io/api/losses/
+- https://keras.io/api/optimizers/
+- https://keras.io/api/metrics/
+
+---
+
+Fitting the model:
+
+```{python}
+from tensorflow.keras.callbacks import EarlyStopping
+
+callbacks = [EarlyStopping(monitor='val_loss', patience=5,
+  restore_best_weights=True)]
+
+history = model.fit(X_train, y_train,
+  batch_size=100, epochs=50,
+  validation_split=0.1, callbacks=callbacks)
+```
+
+---
+
+See later the `history` object's many fields.
+
+```{python History, out.width="100%", fig.asp=0.5}
+import pandas as pd
+
+pd.DataFrame(history.history).plot()
+plt.grid(True)
+plt.show()
+```
+
+---
+
+Evaluate on test set:
+
+```{python}
+model.evaluate(X_test, y_test)
+```
+
+```{python}
+from sklearn.metrics import confusion_matrix
+
+y_pred = (model.predict(X_test) > 0.5).astype(int).reshape(y_test.shape)
+pd.DataFrame(
+  confusion_matrix(y_test, y_pred), 
+  index=['true:yes', 'true:no'], 
+  columns=['pred:yes', 'pred:no']
+)
+```
+
+---
+
+Tuning params:
+
+```{python}
+from tensorflow.keras.layers import InputLayer
+from tensorflow.keras.optimizers import SGD
+
+def malaria_model(n_hidden=1, n_neurons=30, lrt=3e-3):
+  model = Sequential()
+  model.add(InputLayer(input_shape=(30000, )))
+  for layer in range(n_hidden):
+    model.add(Dense(n_neurons, activation='relu'))
+  model.add(Dense(1, activation='sigmoid'))
+  model.compile(loss="binary_crossentropy",
+    optimizer=SGD(lr=lrt),
+    metrics=["accuracy"])
+  return model
+
+keras_clf = keras.wrappers.scikit_learn.KerasClassifier(malaria_model)
+```
+
+---
+
+```{python, eval=FALSE}
+from scipy.stats import reciprocal
+from sklearn.model_selection import RandomizedSearchCV
+
+params = {
+  'n_hidden': [0, 1, 2, 3],
+  'n_neurons': np.arange(1, 100),
+  'lrt': reciprocal(3e-4, 3e-2)
+}
+
+rnd_search_cv = RandomizedSearchCV(keras_clf, params, cv=5,
+  n_iter=10)
+rnd_search_cv.fit(X_train, y_train, epochs=50,
+  validation_split=0.1, callbacks=callbacks)
+
+print(rnd_search_cv2.best_score_)
+print(rnd_search_cv2.best_params_)
+```
+
+```{python, echo=FALSE}
+# as this takes a while...
+print(0.6630000114440918)
+print({'lrt': 0.01678485252717544, 'n_hidden': 0, 'n_neurons': 15})
+```
+
+See also sklearn's [`GridSearchCV()`](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV) and [KerasTuner](https://blog.tensorflow.org/2020/01/hyperparameter-tuning-with-keras-tuner.html) for a more robust solution.
+---
+
+Saving and restoring a model:
+
+```{python}
+model.save('malaria.h5')
+```
+
+Then:
+
+```{python}
+model = keras.models.load_model('malaria.h5')
+model.predict(X_test[:3])
+```
+
+The HDF5 model saves the model's architechture and hyperparameters, and all weights matrices and biases.
+
+Also see the `ModelCheckPoint()` callback.
+
+```{python, echo=FALSE}
+import os
+os.remove('malaria.h5')
+```
+
+---
+
+### Few Excellent Books
+
+.pull-left[
+
+<img src = "images/geron_cover.jpg" style="width: 95%">
+
+]
+
+.pull-right[
+
+<img src = "images/chollet_cover.png" style="width: 100%">
+
+]
