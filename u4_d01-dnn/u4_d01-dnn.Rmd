@@ -943,7 +943,7 @@ lr.score(X_test, y_test)
 
 ---
 
-#### The `Sequential()` API
+#### The `Sequential` API
 
 ```{python}
 from tensorflow import keras
@@ -1114,6 +1114,7 @@ print({'lrt': 0.01678485252717544, 'n_hidden': 0, 'n_neurons': 15})
 ```
 
 See also sklearn's [`GridSearchCV()`](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV) and [KerasTuner](https://blog.tensorflow.org/2020/01/hyperparameter-tuning-with-keras-tuner.html) for a more robust solution.
+
 ---
 
 Saving and restoring a model:
@@ -1136,6 +1137,197 @@ Also see the `ModelCheckPoint()` callback.
 ```{python, echo=FALSE}
 import os
 os.remove('malaria.h5')
+```
+
+---
+
+#### The `Functional` API
+
+This is a playground!
+
+For more flexibility become familiar with the Functional API:
+
+```{python}
+keras.backend.clear_session()
+
+from tensorflow.keras.layers import Input
+from tensorflow.keras import Model
+
+image_input = Input(shape=(30000,))
+hidden1 = Dense(300, activation='relu')(image_input)
+hidden2 = Dense(100, activation='relu')(hidden1)
+hidden3 = Dense(50, activation='relu')(hidden2)
+output_class = Dense(1, activation='sigmoid')(hidden3)
+model = Model(inputs=[image_input], outputs=[output_class])
+```
+
+Then, as usual:
+```{python, eval=FALSE}
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+history = model.fit(X_train, y_train, batch_size=100, epochs=1, validation_split=0.1)
+```
+
+---
+
+```{python}
+from tensorflow.keras import utils
+
+utils.plot_model(model, 'images/functional01.png', show_shapes=True)
+```
+
+<img src = "images/functional01.png" style="width: 45%">
+
+---
+
+How about another Regression output, to predict say an ordinal $y$ score of the severity of parasitization?
+
+```{python}
+keras.backend.clear_session()
+
+y_train_ordinal = np.random.normal(size=y_train.shape[0])
+y_test_ordinal = np.random.normal(size=y_test.shape[0])
+
+image_input = Input(shape=(30000,))
+hidden1 = Dense(300, activation='relu')(image_input)
+hidden2 = Dense(100, activation='relu')(hidden1)
+hidden3 = Dense(50, activation='relu')(hidden2)
+output_class = Dense(1, activation='sigmoid', name='out_class')(hidden3)
+output_score = Dense(1, name='out_score')(hidden3)
+model = Model(inputs=[image_input], outputs=[output_class, output_score])
+```
+
+---
+
+```{python}
+utils.plot_model(model, 'images/functional02.png', show_shapes=True)
+```
+
+<img src = "images/functional02.png" style="width: 70%">
+---
+
+Then,
+
+```{python}
+model.compile(
+  loss={'out_class': 'binary_crossentropy', 'out_score': 'mse'},
+  loss_weights={'out_class': 0.8, 'out_score': 0.2},
+  optimizer='adam',
+  metrics={'out_class': 'accuracy', 'out_score': 'mse'})
+
+history = model.fit(X_train,
+  {'out_class': y_train, 'out_score': y_train_ordinal},
+  batch_size=100, epochs=1, validation_split=0.1)
+```
+
+---
+
+```{python}
+loss_total, loss_class, loss_score, acc_class, mse_score = \
+  model.evaluate(X_test,
+    {'out_class': y_test, 'out_score': y_test_ordinal},
+    verbose=0)
+  
+print(loss_total)
+print(loss_class)
+print(loss_score)
+print(acc_class)
+print(mse_score)
+```
+
+---
+
+```{python}
+y_pred_class, y_pred_score = model.predict(X_test)
+
+y_pred_class[:5]
+
+y_pred_score[:5]
+```
+
+---
+
+How about some additional features (say height and weight of patient) you wish to connect straight to the last unit?
+
+```{python}
+keras.backend.clear_session()
+
+from tensorflow.keras.layers import Concatenate
+
+X_train_ex = np.random.normal(size=(X_train.shape[0], 2))
+X_test_ex = np.random.normal(size=(X_test.shape[0], 2))
+
+image_input = Input(shape=(30000,))
+extra_input = Input(shape=(2,))
+hidden1 = Dense(300, activation='relu')(image_input)
+hidden2 = Dense(100, activation='relu')(hidden1)
+hidden3 = Dense(50, activation='relu')(hidden2)
+concat = Concatenate()([hidden3, extra_input])
+output_class = Dense(1, activation='sigmoid', name='out_class')(concat)
+output_score = Dense(1, name='out_score')(concat)
+model = Model(inputs=[image_input, extra_input],
+  outputs=[output_class, output_score])
+```
+
+---
+
+```{python}
+utils.plot_model(model, 'images/functional03.png', show_shapes=True)
+```
+
+<img src = "images/functional03.png" style="width: 70%">
+
+---
+
+```{python}
+model.compile(
+  loss={'out_class': 'binary_crossentropy', 'out_score': 'mse'},
+  loss_weights={'out_class': 0.8, 'out_score': 0.2},
+  optimizer='adam',
+  metrics={'out_class': 'accuracy', 'out_score': 'mse'})
+
+history = model.fit([X_train, X_train_ex],
+  [y_train, y_train_ordinal],
+  batch_size=100, epochs=1, validation_split=0.1, verbose=0)
+  
+y_pred_class, y_pred_score = model.predict([X_test, X_test_ex])
+```
+
+---
+
+#### The `Subclassing` API
+
+Take full control! (at the cost of Keras not having your back...)
+
+- subclass the `Model` class
+- implement the constructor `__init__()` and `call()` methods
+- inside `call()` you are the Boss (if/else, for loops, Tensorflow actions)
+
+---
+
+```{python}
+class MyWeirdModel(Model):
+  
+  def __init__(self, activation='relu', **kwargs):
+    super().__init__(**kwargs)
+    self.hidden1 = Dense(300, activation=activation)
+    self.hidden2 = Dense(100, activation='relu')
+    self.hidden3 = Dense(50, activation='relu')
+    self.concat = Concatenate()
+    self.output_class = Dense(1, activation='sigmoid', name='out_class')
+    self.output_score = Dense(1, name='out_score')
+  
+  def call(self, inputs):
+    image_input, extra_input = inputs
+    hidden1 = self.hidden1(image_input)
+    hidden2 = self.hidden2(hidden1)
+    hidden3 = self.hidden3(hidden2)
+    concat = self.concat([hidden3, extra_input])
+    output_class = self.output_class(concat)
+    output_score = self.output_score(concat)
+    return output_class, output_score
+
+model = MyWeirdModel()
 ```
 
 ---
