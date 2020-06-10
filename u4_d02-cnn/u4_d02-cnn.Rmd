@@ -43,8 +43,367 @@ class: title-slide
 library(tidyverse)
 ```
 
+```{python, echo=FALSE, message=FALSE, warning=FALSE}
+# Seed value (can actually be different for each attribution step)
+seed_value= 0
+
+# 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+
+# 2. Set `python` built-in pseudo-random generator at a fixed value
+import random
+random.seed(seed_value)
+
+# 3. Set `numpy` pseudo-random generator at a fixed value
+import numpy as np
+np.random.seed(seed_value)
+
+# 4. Set `tensorflow` pseudo-random generator at a fixed value
+import tensorflow as tf
+tf.random.set_seed(seed_value)
+
+# 5. Configure a new global `tensorflow` session
+# from keras import backend as K
+# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+# K.set_session(sess)
+```
+
 class: section-slide
 
 # Understanding Images
 
 ---
+
+```{python Logo, out.width="60%"}
+import matplotlib.pyplot as plt
+from matplotlib.image import imread
+
+logo = imread('../DSApps_logo.jpg')
+
+plt.imshow(logo)
+plt.show()
+```
+
+---
+
+```{python}
+print(type(logo))
+
+print(logo.shape)
+
+print(logo[:4, :4, 0])
+
+print(logo.min(), logo.max())
+
+print(logo.dtype, logo.size * logo.itemsize)
+```
+
+---
+
+### Red channel
+
+.pull-left[
+
+```{python Logo-Red, out.width="100%"}
+red = logo[:, :, 0]
+plt.imshow(red,
+  cmap='gray')
+plt.show()
+```
+
+]
+
+.pull-right[
+```{python Logo-Red-Hist, out.width="100%"}
+fig = plt.hist(red.flatten(),
+  color = 'r')
+fig = plt.ylim(0, 1700000)
+plt.show()
+```
+
+]
+
+---
+
+### Green channel
+
+.pull-left[
+
+```{python Logo-Green, out.width="100%"}
+green = logo[:, :, 1]
+plt.imshow(green,
+  cmap='gray')
+plt.show()
+```
+
+]
+
+.pull-right[
+```{python Logo-Green-Hist, out.width="100%"}
+fig = plt.hist(green.flatten(),
+  color = 'g')
+fig = plt.ylim(0, 1700000)
+plt.show()
+```
+
+]
+
+---
+
+### Blue channel
+
+.pull-left[
+
+```{python Logo-Blue, out.width="100%"}
+blue = logo[:, :, 2]
+plt.imshow(blue,
+  cmap='gray')
+plt.show()
+```
+
+]
+
+.pull-right[
+```{python Logo-Blue-Hist, out.width="100%"}
+fig = plt.hist(blue.flatten(),
+  color = 'b')
+fig = plt.ylim(0, 1700000)
+plt.show()
+```
+
+]
+
+---
+
+### Until Convolutional Networks
+
+.insight[
+`r emo::ji("bulb")` So how many features is that? `r emo::ji("laughing")` `r emo::ji("laughing")` `r emo::ji("laughing")`
+]
+
+- In 1998 LeCun et. al. published [LeNet-5](https://ieeexplore.ieee.org/abstract/document/726791) for digit recognition
+- But it wasn't until 2012 when Alex Krizhevsky, Ilya Sutskever and Geoffrey Hinton published [AlexNet](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf) when the Deep Learning mania really took off.
+
+Until then:
+
+1. Treat it as a regular high-dimensional ML problem
+2. Image feature engineering
+
+---
+
+class: section-slide
+
+# Convolutional Layer (2D)
+
+---
+
+### What is Convolution?
+
+<img src="images/convolution_wiki.png" style="width: 100%" />
+
+---
+
+### The Convolutional Layer
+
+<img src="images/conv01.png" style="width: 60%" />
+
+.font80percent[Source: [Geron 2019](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/)]
+
+- First layer: every neuron has a "receptive field", it is focused on a specific rectangle of the image, usually 2x2, 3x3
+- Second layer: every neuron has a receptive field in the first layer
+- Etc.
+
+---
+
+### More specifically
+
+<img src="images/conv02.png" style="width: 60%" />
+
+.font80percent[Source: [Geron 2019](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/)]
+
+- The $[i,j]$ neuron looks at the rectangle at rows $i$ to $i + f_h - 1$, columns $j$ to $j + f_w - 1$
+- Zero Padding: adds 0s around the image to make the next layer the same dimensions
+
+---
+
+### Filters
+
+But what does the neuron actually *do*?
+
+All neurons in a layer learn a single *filter* the size of their receptive field, the $f_h, f_w$ rectangle.
+
+Suppose $f_h=f_w=3$ and the first layer learned the $W_{3x3}$ filter:
+
+```{python}
+W = np.array(
+  [
+    [0, 1, 0],
+    [0, 1, 0],
+    [0, 1, 0]
+  ]
+)
+```
+
+---
+
+$X$ is the 5x5 image, suppose it has a single color channel (i.e. grayscale), sort of a smiley:
+
+```{python}
+X = np.array(
+  [
+    [0,   1,  0,  1,  0],
+    [0,   1,  0,  1,  0],
+    [0,   0,  0,  0,  0],
+    [1,   0,  0,  0,  1],
+    [0,   1,  1,  1,  0]
+  ]
+)
+```
+
+Each nuron in the new layer $Z$ would be the sum of elementwise multiplication of all 3x3 pixels/neurons in its receptive field with $W_{3x3}$:
+
+$Z_{i,j} = b + \sum_{u=0}^{f_h-1}\sum_{v=0}^{f_w-1}X_{i+u,j+v}W_{u,v}$
+
+---
+
+### Good God, Excel?
+
+<img src="images/conv03.png" style="width: 100%" />
+
+.insight[
+`r emo::ji("bulb")` What low-level feature did this layer learn to look for? What pattern will make its neurons most positive (i.e. will "turn them on")?
+]
+
+---
+
+### Another filter
+
+<img src="images/conv04.png" style="width: 100%" />
+
+.insight[
+`r emo::ji("bulb")` What low-level feature did this layer learn to look for? What pattern will make its neurons most positive (i.e. will "turn them on")?
+]
+
+---
+
+### Convolving with Tensorflow
+
+```{python}
+import tensorflow as tf
+
+ny = imread('images/new_york.jpg').mean(axis=2)
+ny4D = np.array([ny.reshape(ny.shape[0], ny.shape[1], 1)])
+W4d = W.reshape(W.shape[0], W.shape[0], 1, 1)
+
+ny_convolved = tf.nn.conv2d(ny4D, W4d, strides=1, padding='SAME')
+```
+
+---
+
+.pull-left[
+
+```{python NY-Orig, out.width="100%"}
+plt.imshow(
+  ny,
+  cmap = 'gray')
+plt.show()
+```
+
+]
+
+.pull-right[
+
+```{python NY-Convolved, out.width="100%"}
+plt.imshow(
+  ny_convolved[0, :, :, 0],
+  cmap = 'gray')
+plt.show()
+```
+
+]
+
+---
+
+### Strides
+
+In many CNN architechtures layers tend to get smaller and smaller using *strides*:
+
+<img src="images/conv05.png" style="width: 60%" />
+
+- The $[i,j]$ neuron looks at the rectangle at rows $i \cdot s_h$ to $i \cdot s_h + f_h - 1$, columns $j \cdot s_w$ to $j \cdot s_w + f_w - 1$
+
+---
+
+### Stacking Feature Maps
+
+A convolutional layer is actually a 3D stack of a few of the 2D layers we described (a.k.a *Feature Maps*), each learns a single filter.
+
+<img src="images/conv06.png" style="width: 60%" />
+
+.font80percent[Source: [Geron 2019](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/)]
+
+---
+
+- Feature map 1 learns horizontal lines
+- Feature map 2 learns vertical lines
+- Feature map 3 learns diagonal lines
+- Etc.
+
+And each such feature map takes as inputs all feature maps (or color channels) in the previous layer, and sums:
+
+$Z_{i,j,k} = b_k + \sum_{u=0}^{f_h-1}\sum_{v=0}^{f_w-1}\sum_{k'=0}^{f_n-1}X_{i \cdot s_h+u,j \cdot s_w+v, k'} \cdot W_{u,v,k', k}$
+
+Where $f_n$ is the number of feature maps (or color channels) in the previous layer.
+
+- Feature map 1 with 3x3 filter x 3 color channels + 1 bias term = 28 params
+- Feature map 2 with 3x3 filter x 3 color channels+ 1 bias term = 28 params
+- Etc.
+
+---
+
+### And how does the network *learn* these filters?
+
+---
+
+### Pooling Layers
+
+---
+
+### Why does this work?
+
+- No longer a long 1D column of neurons, but 2D, taking into accout spatial realtions between pixels/neurons
+- First layer learns very low-level features, second layer learns higher level features, etc.
+- Shared weights - learn feature in one area of the image, generalize it to the entire image
+- Less weights --> smaller size, more feasible model, less prone to overfitting
+
+---
+
+### Too early to rejoice
+
+That's still quite a lot.
+
+- 100 x 100 RGB image
+- 100 feature maps in first layer of filter 3x3
+- (3 x 3 x 3 + 1) x 100 = 2800 params, not too bad
+- But 100 x 100 numbers in each feature map (x 100) = 1M numbers, each say takes 4B, that's 4MB for 1 image for 1 layer
+- Each number is a weighted sum of 3 x 3 x 3 = 27 numbers, so that's 1M x 27 = 27M multiplications for 1 layer...
+
+---
+
+class: section-slide
+
+# Back to Malaria!
+
+---
+
+class: section-slide
+
+# CNN Architectures
+
+---
+
+class: section-slide
+
+# Using Pre-trained Models
