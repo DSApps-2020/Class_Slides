@@ -72,7 +72,7 @@ tf.random.set_seed(seed_value)
 
 class: section-slide
 
-# Time is moving on
+# Time keeps moving on
 #### (Janis Joplin)
 
 ---
