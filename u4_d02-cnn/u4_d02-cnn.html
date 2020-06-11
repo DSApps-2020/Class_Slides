@@ -4,7 +4,7 @@
     <title>Convolutional Neural Networks</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-06-10" />
+    <meta name="date" content="2020-06-11" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-06-10
+### 2020-06-11
 
 ---
 
@@ -262,7 +262,7 @@ class: section-slide
 
 ---
 
-### Filters
+### Filters/Features/Kernels
 
 But what does the neuron actually *do*?
 
@@ -400,26 +400,13 @@ And each such feature map takes as inputs all feature maps (or color channels) i
 
 Where `\(f_n\)` is the number of feature maps (or color channels) in the previous layer.
 
-- Feature map 1 with 3x3 filter x 3 color channels + 1 bias term = 28 params
-- Feature map 2 with 3x3 filter x 3 color channels+ 1 bias term = 28 params
+- Feature map 1 with `\(f_h \cdot f_w\)` filter `\(\cdot f_n\)` color channels + 1 bias term (it's a filter *cube*!)
+- Feature map 2 with `\(f_h \cdot f_w\)` filter `\(\cdot f_n\)` color channels + 1 bias term
 - Etc.
 
 ---
 
 ### And how does the network *learn* these filters?
-
----
-
-### Pooling Layers
-
----
-
-### Why does this work?
-
-- No longer a long 1D column of neurons, but 2D, taking into accout spatial realtions between pixels/neurons
-- First layer learns very low-level features, second layer learns higher level features, etc.
-- Shared weights - learn feature in one area of the image, generalize it to the entire image
-- Less weights --&gt; smaller size, more feasible model, less prone to overfitting
 
 ---
 
@@ -432,6 +419,45 @@ That's still quite a lot.
 - (3 x 3 x 3 + 1) x 100 = 2800 params, not too bad
 - But 100 x 100 numbers in each feature map (x 100) = 1M numbers, each say takes 4B, that's 4MB for 1 image for 1 layer
 - Each number is a weighted sum of 3 x 3 x 3 = 27 numbers, so that's 1M x 27 = 27M multiplications for 1 layer...
+
+---
+
+### Pooling Layers
+
+A pooling layer "sums up" a convolutional layer, by taking the max or mean of the receptive field.
+
+No params!
+
+&lt;img src="images/conv07.png" style="width: 60%" /&gt;
+
+.font80percent[Source: [Geron 2019](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/)]
+
+---
+
+Usually with strides `\(s_w=s_h=f_w=f_h\)` and no padding (a.k.a `VALID`):
+
+&lt;img src="images/conv08.png" style="width: 100%" /&gt;
+
+---
+
+Clearly we're losing info.
+
+.insight[
+💡 A 2x2 max pooling layer would reduce the size of the previous layer by how many percents?
+]
+
+But maybe sometimes it's a *good* thing to ignore some neurons? Where did we get this crazy idea?
+
+---
+
+### Why do CNN work?
+
+- No longer a long 1D column of neurons, but 2D, taking into accout spatial realtions between pixels/neurons
+- First layer learns very low-level features, second layer learns higher level features, etc.
+- Shared weights --&gt; learn feature in one area of the image, generalize it to the entire image
+- Less weights --&gt; smaller size, more feasible model, less prone to overfitting
+- Invariance by Max Pooling
+- Less overfitting by Pooling 
 
 ---
 
