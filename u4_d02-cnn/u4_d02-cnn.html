@@ -446,7 +446,57 @@ Clearly we're losing info.
 💡 A 2x2 max pooling layer would reduce the size of the previous layer by how many percents?
 ]
 
-But maybe sometimes it's a *good* thing to ignore some neurons? Where did we get this crazy idea?
+But maybe sometimes it's a *good* thing to ignore some neurons? Where did we get this crazy idea from?
+
+---
+
+### Image Data Augmentation
+
+It's very hard to "augment" data about people, products, clicks.
+
+
+Images are different.
+
+- Translation
+- Rotation
+- Zooming
+- Flipping
+- Stretching
+
+.insight[
+💡 Are there some images or applications you wouldn't want augmentations or at least should go about it very carefully?
+]
+
+---
+
+In Keras you can augment "on the fly" as you train your model, here I'm just showing you this works:
+
+
+```python
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+idg = ImageDataGenerator(
+	rotation_range=30,
+	zoom_range=0.15,
+	width_shift_range=0.2,
+	height_shift_range=0.2,
+	shear_range=0.15,
+	horizontal_flip=True,
+	fill_mode='nearest'
+)
+
+ny_generator = idg.flow(ny4D, batch_size=1)
+
+nys = [ny_generator.next() for i in range(10)]
+```
+
+See the [ImageDataGenerator](https://keras.io/api/preprocessing/image/) for more.
+
+---
+
+
+
+&lt;img src="images/NY-Augmented-1.png" style="width: 100%" /&gt;
 
 ---
 
@@ -456,8 +506,9 @@ But maybe sometimes it's a *good* thing to ignore some neurons? Where did we get
 - First layer learns very low-level features, second layer learns higher level features, etc.
 - Shared weights --&gt; learn feature in one area of the image, generalize it to the entire image
 - Less weights --&gt; smaller size, more feasible model, less prone to overfitting
+- Less overfitting by Pooling
 - Invariance by Max Pooling
-- Less overfitting by Pooling 
+- Hardware/Software advancements enable processing of huge amounts of images
 
 ---
 
@@ -512,7 +563,7 @@ from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Dropou
 from tensorflow.keras.callbacks import EarlyStopping
 
 model = Sequential()
-model.add(Conv2D(32, input_shape=(X_train.shape[1:]),
+model.add(Conv2D(filters=32, input_shape=(X_train.shape[1:]),
   kernel_size=(3, 3), padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
@@ -593,7 +644,7 @@ history = model.fit(X_train, y_train, batch_size=100, epochs=50,
 ```python
 import pandas as pd
 
-pd.read_csv(history.history).plot
+pd.read_csv(history.history).plot()
 plt.grid(True)
 plt.show()
 ```
@@ -644,6 +695,10 @@ pd.DataFrame(
 Watch me reach ~94% accuracy with 100% of the data in [Google Colab](https://colab.research.google.com/drive/1i39eWL8e5Gl3rjoulh5WJMVOUgvM8h6_?usp=sharing).
 
 &lt;img src = "images/malaria_cnn_history_100pct.png" style="width: 60%"&gt;
+
+.insight[
+💡 Think about the researchers seeing this for the first time in 2012...
+]
 
 ---
 
@@ -752,6 +807,53 @@ plt.show()
 class: section-slide
 
 # CNN Architectures
+
+---
+
+### LeNet-5 (1998)
+
+&lt;img src = "images/lenet-5.png" style="width: 100%"&gt;
+
+.font80percent[Source: [LeCun et. al. 1998](http://www.dengfanxin.cn/wp-content/uploads/2016/03/1998Lecun.pdf)]
+
+You know you can implement this in just a few lines of Keras...
+
+---
+
+
+```python
+from tensorflow.keras.layers import Conv2D, AveragePooling2D,
+  Flatten, Dense
+from tensorflow.keras import Sequential
+
+model = keras.Sequential()
+
+model.add(Conv2D(filters=6, kernel_size=(3, 3),
+  activation='relu', input_shape=(32,32,1)))
+model.add(AveragePooling2D())
+model.add(Conv2D(16, kernel_size=(3, 3), activation='relu'))
+model.add(AveragePooling2D())
+model.add(Flatten())
+model.add(Dense(120, activation='relu'))
+model.add(Dense(84, activation='relu'))
+model.add(Dense(10, activation = 'softmax'))
+```
+
+---
+
+### AlexNet (2012)
+
+&lt;img src = "images/alexnet.png" style="width: 100%"&gt;
+
+.font80percent[Source: [Krizhevsky et. al. 2012](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)]
+
+See a Keras impementation e.g. [here](https://engmrk.com/alexnet-implementation-using-keras/)
+
+---
+
+### ResNet (2015)
+
+152 layers.
 
 ---
 
