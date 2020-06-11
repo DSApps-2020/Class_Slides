@@ -1,0 +1,78 @@
+---
+title: "Recurrent Neural Networks"
+subtitle: "Applications of Data Science"
+author: "Giora Simchoni"
+institute: "Stat. and OR Department, TAU"
+date: "`r Sys.Date()`"
+output_dir: "images"
+output:
+  xaringan::moon_reader:
+    css: "../slides.css"
+    seal: false
+    chakra: "../libs/remark-latest.min.js"
+    includes:
+      in_header: "../header.html"
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+class: logo-slide
+
+---
+
+class: title-slide
+
+### Recurrent Neural Networks
+
+### Applications of Data Science - Class 18
+
+### Giora Simchoni
+
+#### `gsimchoni@gmail.com and add #dsapps in subject`
+
+### Stat. and OR Department, TAU
+### `r Sys.Date()`
+
+---
+```{r child = "../setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+```{python, echo=FALSE, message=FALSE, warning=FALSE}
+# Seed value (can actually be different for each attribution step)
+seed_value= 0
+
+# 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+
+# 2. Set `python` built-in pseudo-random generator at a fixed value
+import random
+random.seed(seed_value)
+
+# 3. Set `numpy` pseudo-random generator at a fixed value
+import numpy as np
+np.random.seed(seed_value)
+
+# 4. Set `tensorflow` pseudo-random generator at a fixed value
+import tensorflow as tf
+tf.random.set_seed(seed_value)
+
+# 5. Configure a new global `tensorflow` session
+# from keras import backend as K
+# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+# K.set_session(sess)
+```
+
+class: section-slide
+
+# Time is moving on
+#### (Janis Joplin)
+
+---
