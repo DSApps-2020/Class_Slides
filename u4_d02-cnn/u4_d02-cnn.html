@@ -467,6 +467,288 @@ class: section-slide
 
 ---
 
+
+```python
+import tensorflow_datasets as tfds
+from skimage.transform import resize
+from sklearn.model_selection import train_test_split
+
+malaria, info = tfds.load('malaria', split='train', with_info=True)
+
+images = []
+labels = []
+for example in tfds.as_numpy(malaria):
+  images.append(resize(example['image'], (100, 100)).astype(np.float32))
+  labels.append(example['label'])
+  if len(images) == 2500:
+    break
+  
+X = np.array(images)
+y = np.array(labels)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+
+print(X_train.shape)
+```
+
+```
+## (2000, 100, 100, 3)
+```
+
+```python
+print(X_test.shape)
+```
+
+```
+## (500, 100, 100, 3)
+```
+
+---
+
+
+```python
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+
+model = Sequential()
+model.add(Conv2D(32, input_shape=(X_train.shape[1:]),
+  kernel_size=(3, 3), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Flatten())
+model.add(Dropout(0.5))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy',
+  optimizer='adam', metrics=['accuracy'])
+```
+
+---
+
+
+```python
+model.summary()
+```
+
+```
+## Model: "sequential"
+## _________________________________________________________________
+## Layer (type)                 Output Shape              Param #   
+## =================================================================
+## conv2d (Conv2D)              (None, 100, 100, 32)      896       
+## _________________________________________________________________
+## max_pooling2d (MaxPooling2D) (None, 50, 50, 32)        0         
+## _________________________________________________________________
+## conv2d_1 (Conv2D)            (None, 48, 48, 64)        18496     
+## _________________________________________________________________
+## max_pooling2d_1 (MaxPooling2 (None, 24, 24, 64)        0         
+## _________________________________________________________________
+## flatten (Flatten)            (None, 36864)             0         
+## _________________________________________________________________
+## dropout (Dropout)            (None, 36864)             0         
+## _________________________________________________________________
+## dense (Dense)                (None, 1)                 36865     
+## =================================================================
+## Total params: 56,257
+## Trainable params: 56,257
+## Non-trainable params: 0
+## _________________________________________________________________
+```
+
+---
+
+
+```python
+from tensorflow.keras import utils
+
+utils.plot_model(model, 'images/malaria_cnn.png', show_shapes=True)
+```
+
+&lt;img src = "images/malaria_cnn.png" style="width: 40%"&gt;
+
+---
+
+
+```python
+callbacks = [EarlyStopping(monitor='val_loss', patience=5)]
+history = model.fit(X_train, y_train, batch_size=100, epochs=50,
+  validation_split=0.1, callbacks=callbacks)
+
+# Epoch 1/50
+# 
+#  1/18 [&gt;.............................] - ETA: 0s - loss: 0.6919 - accuracy: 0.5000
+#  2/18 [==&gt;...........................] - ETA: 8s - loss: 0.6895 - accuracy: 0.5600
+#  3/18 [====&gt;.........................] - ETA: 11s - loss: 0.7002 - accuracy: 0.5433
+#  4/18 [=====&gt;........................] - ETA: 11s - loss: 0.7009 - accuracy: 0.5275
+#  5/18 [=======&gt;......................] - ETA: 11s - loss: 0.6954 - accuracy: 0.5420
+#  6/18 [=========&gt;....................] - ETA: 10s - loss: 0.6925 - accuracy: 0.5550
+#  7/18 [==========&gt;...................] - ETA: 9s - loss: 0.6882 - accuracy: 0.5714 
+```
+
+
+---
+
+
+```python
+import pandas as pd
+
+pd.read_csv(history.history).plot
+plt.grid(True)
+plt.show()
+```
+
+&lt;img src="images/History-1.png" width="100%" /&gt;
+
+---
+
+### Last time we got to 66% accuracy after tuning...
+
+
+
+
+```python
+from sklearn.metrics import confusion_matrix
+
+y_pred = (model.predict(X_test) &gt; 0.5).astype(int).reshape(y_test.shape)
+```
+
+
+```python
+np.mean(y_pred == y_test)
+```
+
+```
+## 0.766
+```
+
+
+```python
+pd.DataFrame(
+  confusion_matrix(y_test, y_pred), 
+  index=['true:yes', 'true:no'], 
+  columns=['pred:yes', 'pred:no']
+)
+```
+
+```
+##           pred:yes  pred:no
+## true:yes       191       71
+## true:no         46      192
+```
+
+---
+
+### And this is just 10% of the data.
+
+Watch me reach ~94% accuracy with 100% of the data in [Google Colab](https://colab.research.google.com/drive/1i39eWL8e5Gl3rjoulh5WJMVOUgvM8h6_?usp=sharing).
+
+&lt;img src = "images/malaria_cnn_history_100pct.png" style="width: 60%"&gt;
+
+---
+
+### Visualizing filters/kernels/features/weights
+
+
+
+
+```python
+W, b = model.get_layer('conv2d').get_weights()
+```
+
+
+```python
+W.shape
+```
+
+```
+## (3, 3, 3, 32)
+```
+
+
+
+```python
+W[:, :, 0, 0]
+```
+
+```
+## array([[-0.05327014,  0.05076471,  0.0883847 ],
+##        [-0.0933094 ,  0.14134812, -0.08010183],
+##        [ 0.08545554,  0.10305361,  0.14380825]], dtype=float32)
+```
+
+---
+
+First filter of 32:
+
+
+```python
+plt.subplot(1,3,1)
+plt.imshow(W[:, :, 0, 0], cmap='gray')
+plt.subplot(1,3,2)
+plt.imshow(W[:, :, 1, 0], cmap='gray')
+plt.subplot(1,3,3)
+plt.imshow(W[:, :, 2, 0], cmap='gray')
+plt.show()
+```
+
+&lt;img src="images/First-Filter-1.png" width="100%" /&gt;
+
+---
+
+### Visualizing Feature Maps
+
+
+```python
+cell = X_test[0, :, :, :].reshape(1, 100, 100, 3)
+
+plt.imshow(cell[0])
+plt.show()
+```
+
+&lt;img src="images/Cell-1.png" width="100%" /&gt;
+
+---
+
+
+```python
+from tensorflow.keras import Model
+
+model_1layer = Model(inputs=model.inputs,
+  outputs=model.layers[0].output)
+
+feature_maps = model_1layer.predict(cell)
+
+feature_maps.shape
+```
+
+
+```
+## (1, 100, 100, 32)
+```
+
+
+```python
+# source: https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
+width = 8
+height = 4
+ix = 1
+for _ in range(height):
+	for _ in range(width):
+		ax = plt.subplot(height, width, ix)
+		_ = ax.set_xticks([])
+		_ = ax.set_yticks([])
+		_ = plt.imshow(feature_maps[0, :, :, ix-1], cmap='gray')
+		ix += 1
+plt.show()
+```
+
+---
+
+&lt;img src="images/Feature-Maps-1.png" width="100%" /&gt;
+
+---
+
 class: section-slide
 
 # CNN Architectures
