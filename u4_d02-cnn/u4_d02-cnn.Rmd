@@ -416,7 +416,7 @@ Images are different.
 
 - Translation
 - Rotation
-- Zooming
+- Rescaling
 - Flipping
 - Stretching
 
@@ -734,6 +734,14 @@ class: section-slide
 
 ---
 
+### ImageNet
+
+<img src = "images/ImageNet.png" style="width: 100%">
+
+.font80percent[Source: [paperswithcode.com](https://paperswithcode.com/sota/image-classification-on-imagenet)]
+
+---
+
 ### LeNet-5 (1998)
 
 <img src = "images/lenet-5.png" style="width: 100%">
@@ -770,16 +778,90 @@ model.add(Dense(10, activation = 'softmax'))
 
 .font80percent[Source: [Krizhevsky et. al. 2012](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)]
 
-See a Keras impementation e.g. [here](https://engmrk.com/alexnet-implementation-using-keras/)
+See a Keras implementation e.g. [here](https://engmrk.com/alexnet-implementation-using-keras/)
 
 ---
 
 ### ResNet (2015)
 
-152 layers.
+.pull-left[
+
+<img src = "images/resnet.png" style="width: 25%">
+
+]
+
+.pull-right[
+
+- Source: [He et. al.](https://arxiv.org/pdf/1512.03385.pdf)
+- This is ResNet-34 (34 layers)
+- ResNet-152 (152 layers!) achieved 4.5% To-5 error rate with single model
+
+<img src = "images/ru.png" style="width: 80%">
+
+]
+
+---
+
+#### Residual Learning
+
+- "Is learning better networks as easy as stacking more layers?" Yes, but:
+- "When deeper networks are able to start converging, a degradation problem has been exposed: with the network depth increasing, accuracy gets saturated... and then degrades rapidly. Unexpectedly, such degradation is not caused by overfitting, and adding more layers to a suitably deep model leads to higher training error" (a.k.a the vanishing/exploding gradients problem)
+- With *Residual Learning* the activation from a previous layer is being added to the activation of a deeper layer in the network
+- The signal is allowed to propagate through the layers
+
+.insight[
+`r emo::ji("bulb")` The model learning $H(X)$ will be forced to learn $H(X) - X$, hence *residual* learning.
+]
 
 ---
 
 class: section-slide
 
 # Using Pre-trained Models
+
+---
+
+### Why are we working so hard?
+
+<img src = "images/keras_models.png" style="width: 70%">
+
+Look up [keras.io/api/applications/](https://keras.io/api/applications/)
+
+---
+
+```{python Johann}
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input, decode_predictions
+from skimage.transform import resize
+
+model = ResNet50(weights='imagenet')
+
+johann = imread('images/johann.jpg')
+
+fig = plt.imshow(johann)
+plt.show()
+```
+
+---
+
+```{python}
+johann = resize(johann, (224, 224))
+johann = johann.reshape(1, 224, 224, 3) * 255
+johann = preprocess_input(johann)
+
+johann_pred = model.predict(johann)
+
+print(johann_pred.shape)
+
+johann_breed = decode_predictions(johann_pred, top=5)
+
+for _, breed, score in johann_breed[0]:
+  print('%s: %.2f' % (breed, score))
+```
+
+---
+
+class: section-slide
+
+# Transfer Learning
+
+---

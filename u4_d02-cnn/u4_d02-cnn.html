@@ -4,7 +4,7 @@
     <title>Convolutional Neural Networks</title>
     <meta charset="utf-8" />
     <meta name="author" content="Giora Simchoni" />
-    <meta name="date" content="2020-06-11" />
+    <meta name="date" content="2020-06-12" />
     <head>
       <link rel="icon" href="../DSApps_logo.jpg" type="image/jpg"> 
       <link rel="shortcut icon" href="../DSApps_logo.jpg" type="image/jpg">
@@ -30,7 +30,7 @@ class: title-slide
 #### `gsimchoni@gmail.com and add #dsapps in subject`
 
 ### Stat. and OR Department, TAU
-### 2020-06-11
+### 2020-06-12
 
 ---
 
@@ -459,7 +459,7 @@ Images are different.
 
 - Translation
 - Rotation
-- Zooming
+- Rescaling
 - Flipping
 - Stretching
 
@@ -810,6 +810,14 @@ class: section-slide
 
 ---
 
+### ImageNet
+
+&lt;img src = "images/ImageNet.png" style="width: 100%"&gt;
+
+.font80percent[Source: [paperswithcode.com](https://paperswithcode.com/sota/image-classification-on-imagenet)]
+
+---
+
 ### LeNet-5 (1998)
 
 &lt;img src = "images/lenet-5.png" style="width: 100%"&gt;
@@ -847,19 +855,111 @@ model.add(Dense(10, activation = 'softmax'))
 
 .font80percent[Source: [Krizhevsky et. al. 2012](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)]
 
-See a Keras impementation e.g. [here](https://engmrk.com/alexnet-implementation-using-keras/)
+See a Keras implementation e.g. [here](https://engmrk.com/alexnet-implementation-using-keras/)
 
 ---
 
 ### ResNet (2015)
 
-152 layers.
+.pull-left[
+
+&lt;img src = "images/resnet.png" style="width: 25%"&gt;
+
+]
+
+.pull-right[
+
+- Source: [He et. al.](https://arxiv.org/pdf/1512.03385.pdf)
+- This is ResNet-34 (34 layers)
+- ResNet-152 (152 layers!) achieved 4.5% To-5 error rate with single model
+
+&lt;img src = "images/ru.png" style="width: 80%"&gt;
+
+]
+
+---
+
+#### Residual Learning
+
+- "Is learning better networks as easy as stacking more layers?" Yes, but:
+- "When deeper networks are able to start converging, a degradation problem has been exposed: with the network depth increasing, accuracy gets saturated... and then degrades rapidly. Unexpectedly, such degradation is not caused by overfitting, and adding more layers to a suitably deep model leads to higher training error" (a.k.a the vanishing/exploding gradients problem)
+- With *Residual Learning* the activation from a previous layer is being added to the activation of a deeper layer in the network
+- The signal is allowed to propagate through the layers
+
+.insight[
+💡 The model learning `\(H(X)\)` will be forced to learn `\(H(X) - X\)`, hence *residual* learning.
+]
 
 ---
 
 class: section-slide
 
 # Using Pre-trained Models
+
+---
+
+### Why are we working so hard?
+
+&lt;img src = "images/keras_models.png" style="width: 70%"&gt;
+
+Look up [keras.io/api/applications/](https://keras.io/api/applications/)
+
+---
+
+
+```python
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input, decode_predictions
+from skimage.transform import resize
+
+model = ResNet50(weights='imagenet')
+
+johann = imread('images/johann.jpg')
+
+fig = plt.imshow(johann)
+plt.show()
+```
+
+&lt;img src="images/Johann-1.png" width="672" /&gt;
+
+---
+
+
+```python
+johann = resize(johann, (224, 224))
+johann = johann.reshape(1, 224, 224, 3) * 255
+johann = preprocess_input(johann)
+
+johann_pred = model.predict(johann)
+
+print(johann_pred.shape)
+```
+
+```
+## (1, 1000)
+```
+
+```python
+johann_breed = decode_predictions(johann_pred, top=5)
+
+for _, breed, score in johann_breed[0]:
+  print('%s: %.2f' % (breed, score))
+```
+
+```
+## Norwegian_elkhound: 0.30
+## Eskimo_dog: 0.28
+## Siberian_husky: 0.17
+## German_shepherd: 0.14
+## malamute: 0.06
+```
+
+---
+
+class: section-slide
+
+# Transfer Learning
+
+---
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
