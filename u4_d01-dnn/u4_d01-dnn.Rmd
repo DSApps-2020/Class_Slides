@@ -155,7 +155,6 @@ import matplotlib.pyplot as plt
 n = 1000
 q = 2
 X = np.random.normal(size = n * q).reshape((n, q))
-# X_with_intercept = np.hstack((np.ones(n).reshape((n, 1)), X))
 beta = np.arange(1, q + 1) # [1, 2]
 p = 1 / (1 + np.exp(-np.dot(X, beta)))
 y = np.random.binomial(1, p, size = n)
@@ -224,7 +223,7 @@ plot_sim()
 
 ---
 
-Let's do 50 more:
+Let's do 10 more:
 
 ```{python LR-Sim-Guess10, out.width = "50%"}
 for i in range(10):
