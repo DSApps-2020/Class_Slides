@@ -397,7 +397,7 @@ Let's re-write $-l(\beta)$ as a composite function:
 
 - Multiplying $\beta$ by $x_i$ will be $z_i = z(\beta) = x_i\beta$
 - Applying the sigmoid $g^{-1}$ will be $p_i = g^{-1}(z_i) = \frac{1}{1 + e^{-z_i}}$
-- Calculating the (minus) Cross Entropy will be: $l_i = l(p_i) = y_i\ln(p_i) + (1-p_i)\ln(1 - p_i)$
+- Calculating the (minus) Cross Entropy will be: $l_i = l(p_i) = y_i\ln(p_i) + (1-y_i)\ln(1 - p_i)$
 - So one element of $-l(\beta)$ will be: $l_i(p_i(z_i(\beta)))$
 
 Hence, Forward.
