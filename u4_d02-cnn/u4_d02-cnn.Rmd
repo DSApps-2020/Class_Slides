@@ -865,3 +865,260 @@ class: section-slide
 # Transfer Learning
 
 ---
+
+### Got Data?
+
+<img src="images/dog_barking.jpg" style="width: 55%" />
+
+- I want a model that would be able to tell a barking dog vs. a non-barking dog.
+- I have only 100 images of barking dogs and 100 images of non-barking dogs, I lazily saved from Google Images.
+- I use `ImageDataGenerator` to augment my training set and build my go-to CNN.
+
+---
+
+```{python}
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+train_datagen = ImageDataGenerator(
+  rotation_range = 30,
+	zoom_range = 0.15,
+	width_shift_range = 0.2,
+	height_shift_range = 0.2,
+	shear_range = 0.15,
+	horizontal_flip = True,
+	fill_mode = 'nearest'
+)
+
+valid_datagen = ImageDataGenerator()
+test_datagen = ImageDataGenerator()
+```
+
+```{python}
+train_generator = train_datagen.flow_from_directory(
+  'dogs/train/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = True,
+  seed = 42
+)
+```
+
+---
+
+```{python}
+valid_generator = valid_datagen.flow_from_directory(
+  'dogs/valid/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = False,
+  seed = 42
+)
+
+test_generator = test_datagen.flow_from_directory(
+  'dogs/test/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = False,
+  seed = 42
+)
+
+```
+
+---
+
+```{python}
+model = Sequential()
+model.add(Conv2D(filters=32, input_shape=((224, 224, 3)),
+  kernel_size=(3, 3), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Flatten())
+model.add(Dropout(0.5))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy',
+  optimizer='adam', metrics=['accuracy'])
+
+step_size_train = 50
+step_size_valid = valid_generator.n // valid_generator.batch_size
+step_size_test = test_generator.n // test_generator.batch_size
+
+callbacks = [EarlyStopping(monitor='val_loss', patience=5,
+  restore_best_weights=True)]
+
+history = model.fit(train_generator, steps_per_epoch = step_size_train,
+  epochs = 50, callbacks = callbacks, validation_data = valid_generator,
+  validation_steps = step_size_valid, verbose = 0)
+```
+
+---
+
+```{python}
+y_true = test_generator.classes
+y_pred = model.predict(test_generator, steps = step_size_test)
+y_pred = (y_pred > 0.5).astype(int).reshape(y_true.shape)
+
+print(np.mean(y_true == y_pred))
+
+pd.DataFrame(
+  confusion_matrix(y_true, y_pred), 
+  index=['true:yes', 'true:no'], 
+  columns=['pred:yes', 'pred:no']
+)
+```
+
+---
+
+For my next trick I shall need someone else's hard work.
+
+```{python, warning=FALSE, message=FALSE}
+from tensorflow.keras.applications.mobilenet import MobileNet, preprocess_input
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras import Model
+
+base_model = MobileNet(weights='imagenet', include_top=False)
+```
+
+---
+
+```{python}
+l = base_model.output
+l = GlobalAveragePooling2D()(l)
+out = Dense(1, activation='sigmoid')(l)
+
+model = Model(inputs = base_model.input, outputs = out)
+
+for layer in model.layers[:20]:
+    layer.trainable = False
+for layer in model.layers[20:]:
+    layer.trainable = True
+
+model.compile(loss='binary_crossentropy',
+  optimizer='adam', metrics=['accuracy'])
+```
+
+---
+
+```{python}
+train_datagen = ImageDataGenerator(
+  preprocessing_function = preprocess_input,
+  rotation_range = 30,
+	zoom_range = 0.15,
+	width_shift_range = 0.2,
+	height_shift_range = 0.2,
+	shear_range = 0.15,
+	horizontal_flip = True,
+	fill_mode = 'nearest'
+)
+
+valid_datagen = ImageDataGenerator(
+  preprocessing_function = preprocess_input
+)
+
+test_datagen = ImageDataGenerator(
+  preprocessing_function = preprocess_input
+)
+
+```
+
+---
+
+```{python}
+train_generator = train_datagen.flow_from_directory(
+  'dogs/train/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = True,
+  seed = 42
+)
+
+valid_generator = valid_datagen.flow_from_directory(
+  'dogs/valid/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = False,
+  seed = 42
+)
+```
+
+---
+
+```{python}
+test_generator = test_datagen.flow_from_directory(
+  'dogs/test/',
+  target_size = (224,224),
+  color_mode = 'rgb',
+  batch_size = 10,
+  class_mode = 'binary',
+  shuffle = False,
+  seed = 42
+)
+
+step_size_train = 50
+step_size_valid = valid_generator.n // valid_generator.batch_size
+step_size_test = test_generator.n // test_generator.batch_size
+
+callbacks = [EarlyStopping(monitor='val_loss', patience=5,
+  restore_best_weights=True)]
+
+history = model.fit(train_generator, steps_per_epoch = step_size_train,
+  epochs = 50, callbacks = callbacks, validation_data = valid_generator,
+  validation_steps = step_size_valid, verbose = 0)
+```
+
+---
+
+```{python}
+y_true = test_generator.classes
+y_pred = model.predict(test_generator, steps = step_size_test)
+y_pred = (y_pred > 0.5).astype(int).reshape(y_true.shape)
+
+print(np.mean(y_true == y_pred))
+
+pd.DataFrame(
+  confusion_matrix(y_true, y_pred), 
+  index=['true:yes', 'true:no'], 
+  columns=['pred:yes', 'pred:no']
+)
+```
+
+---
+
+### What just happened?
+
+- The ImageNet networks have learned to differentiate between 120 dog breeds!
+- Clearly there's some knowledge about dogs gained in the low-level layers (features)
+- Freezing those layers and harnessing that output for our purpose makes sense
+- Think of it as a "warm start"
+- After a few epochs try to unfreeze the low layers then use a very small learning rate for a few additional epochs, to gain some more predictive power
+
+---
+
+class: section-slide
+
+# Other Computer Vision Tasks
+
+---
+
+### What's Next?
+
+- Localization
+- Object Detection
+- Segmentation
+- Captioning
+- 3D Reconstruction
+- Restoration
+- Pose Estimation
+- GANs GANs GANs
+- Doing it all on Video
+- And doing it all in real time, on your phone or in your car
